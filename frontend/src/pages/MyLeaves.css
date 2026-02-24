@@ -1,0 +1,229 @@
+.leaves-container {
+    padding: 8px;
+    max-width: 100%;
+    margin: 0 auto;
+}
+
+.leaves-header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.leaves-page-title {
+    font-size: 20px;
+    font-weight: 500;
+    color: #4a5568;
+    margin: 0;
+}
+
+.apply-leave-btn {
+    background-color: #8b5cf6;
+    /* purple */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.apply-leave-btn:hover {
+    background-color: #7c3aed;
+}
+
+.leaves-search-card {
+    background: #ffffff;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 24px;
+    border: 1px solid #edf2f7;
+    width: 320px;
+}
+
+.leaves-search-card label {
+    display: block;
+    font-size: 13px;
+    color: #4a5568;
+    margin-bottom: 8px;
+}
+
+.leaves-search-input {
+    width: 300px;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #4a5568;
+    background-color: #f7fafc;
+    outline: none;
+}
+
+.leaves-search-input::placeholder {
+    color: #a0aec0;
+}
+
+.leaves-table-wrapper {
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #edf2f7;
+    overflow-x: auto;
+    padding: 0;
+}
+
+.leaves-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.leaves-table th {
+    background-color: #ffffff;
+    color: #a0aec0;
+    /* light gray for headers */
+    font-size: 11px;
+    font-weight: 700;
+    padding: 16px;
+    border-bottom: 1px solid #edf2f7;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.leaves-table th .filter-icon {
+    margin-left: 6px;
+    vertical-align: middle;
+    color: #cbd5e1;
+    cursor: pointer;
+}
+
+.leaves-table td {
+    padding: 16px;
+    border-bottom: 1.8px solid #edf2f7;
+    color: #2d3748;
+    font-size: 13px;
+    font-weight: 500;
+    vertical-align: top;
+}
+
+.leaves-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+
+.leave-type-col {
+    color: #1a202c !important;
+}
+
+.chevron-right {
+    color: #cbd5e1;
+    margin-right: 8px;
+    font-size: 10px;
+}
+
+.to-date-col .date-main {
+    color: #2d3748;
+    margin-bottom: 4px;
+}
+
+.to-date-col .date-sub {
+    color: #a0aec0;
+    font-size: 11px;
+    font-weight: 400;
+}
+
+.remarks-col {
+    max-width: 250px;
+    color: #4a5568 !important;
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: center;
+    min-width: 85px;
+}
+
+.badge-blue {
+    background-color: #0084ff;
+    color: white;
+}
+
+.badge-yellow {
+    background-color: #f5a623;
+    color: white;
+}
+
+.badge-green {
+    background-color: #008000;
+    color: white;
+}
+
+/* Pagination container */
+.leaves-pagination-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px;
+    background: #ffffff;
+    border-top: 1px solid #edf2f7;
+    font-size: 13px;
+    color: #718096;
+}
+
+.entries-select {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.entries-dropdown {
+    padding: 4px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    outline: none;
+    color: #4a5568;
+}
+
+.entries-info {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.paginate-btn {
+    background: transparent;
+    border: none;
+    color: #4a5568;
+    padding: 6px 12px;
+    font-size: 13px;
+    cursor: pointer;
+    border-radius: 8px;
+    border-color: #9dabc4;
+    border-style: solid;
+    border-width: 1.5px;
+}
+
+.paginate-btn:hover:not(.disabled) {
+    background-color: #f1f5f9;
+}
+
+.paginate-btn.active {
+    background-color: #8b5cf6;
+    color: white;
+}
+
+.paginate-btn.disabled {
+    color: #cbd5e1;
+    cursor: not-allowed;
+}

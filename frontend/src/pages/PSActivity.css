@@ -1,0 +1,130 @@
+.courses-container.ps-activity-container {
+    padding: 12px 12px;
+    background-color: #f4f7fe;
+    min-height: calc(100vh - 70px);
+}
+
+.ps-activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 32px;
+}
+
+.ps-title-section {
+    flex: 1;
+}
+
+.ps-page-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a202c;
+    margin-bottom: 8px;
+    margin-top: 0;
+}
+
+.ps-page-subtitle {
+    font-size: 14px;
+    color: #718096;
+    margin: 0;
+}
+
+.ps-search-wrapper {
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 8px 16px;
+    width: 280px;
+}
+
+.ps-search-icon {
+    color: #a0aec0;
+    margin-right: 12px;
+}
+
+.ps-search-input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    width: 100%;
+    color: #4a5568;
+}
+
+.ps-search-input::placeholder {
+    color: #a0aec0;
+}
+
+.ps-section {
+    margin-bottom: 32px;
+}
+
+.ps-section-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 16px;
+}
+
+.ps-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 350px));
+    gap: 20px;
+}
+
+.ps-activity-card {
+    background: #ffffff;
+    border-radius: 12px;
+    height: 38px;
+    width: 280px;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #edf2f7;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.ps-activity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: #e2e8f0;
+}
+
+.ps-card-icon-wrapper {
+    width: 44px;
+    height: 44px;
+    border-radius: 25%;
+    background-color: #8b5cf6;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #ffffff;
+    flex-shrink: 0;
+    margin-right: 16px;
+}
+
+.ps-card-content {
+    flex: 1;
+}
+
+.ps-card-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0 0 4px 0;
+}
+
+.ps-card-subtitle {
+    font-size: 12px;
+    color: #718096;
+    margin: 0;
+}
+
+.ps-card-arrow {
+    color: #a0aec0;
+    margin-left: 16px;
+}
