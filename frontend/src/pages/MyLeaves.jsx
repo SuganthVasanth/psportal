@@ -143,18 +143,71 @@ const MOCK_LEAVES = [
     }
 ];
 
+function formatDate(d) {
+    if (!d) return "";
+    const date = new Date(d);
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+}
+
+function getDurationDays(fromStr, toStr) {
+    const from = new Date(fromStr);
+    const to = new Date(toStr);
+    const diff = Math.max(0, Math.ceil((to - from) / (24 * 60 * 60 * 1000))) + 1;
+    return diff === 1 ? "1 day" : `${diff} days`;
+}
+
 export default function MyLeaves() {
+    const [leaves, setLeaves] = useState(() => [...MOCK_LEAVES]);
     const [searchTerm, setSearchTerm] = useState("");
     const [entriesCount, setEntriesCount] = useState(10);
+    const [showApplyModal, setShowApplyModal] = useState(false);
+    const [form, setForm] = useState({
+        leaveType: "GP",
+        fromDate: "",
+        toDate: "",
+        remarks: ""
+    });
 
     const filteredLeaves = searchTerm.trim()
-        ? MOCK_LEAVES.filter(
+        ? leaves.filter(
             (leave) =>
                 (leave.leaveType && leave.leaveType.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (leave.remarks && leave.remarks.toLowerCase().includes(searchTerm.toLowerCase()))
         )
-        : MOCK_LEAVES;
+        : leaves;
     const displayLeaves = filteredLeaves.slice(0, Number(entriesCount));
+
+    const openApplyModal = () => {
+        setForm({ leaveType: "GP", fromDate: "", toDate: "", remarks: "" });
+        setShowApplyModal(true);
+    };
+
+    const closeApplyModal = () => setShowApplyModal(false);
+
+    const handleApplyLeave = (e) => {
+        e.preventDefault();
+        if (!form.fromDate || !form.toDate) return;
+        const from = new Date(form.fromDate);
+        const to = new Date(form.toDate);
+        if (to < from) {
+            alert("To date must be on or after from date.");
+            return;
+        }
+        const newLeave = {
+            id: Date.now(),
+            leaveType: form.leaveType,
+            type: "Leave",
+            fromDate: formatDate(form.fromDate),
+            toDate: formatDate(form.toDate),
+            gateIn: "-",
+            duration: getDurationDays(form.fromDate, form.toDate),
+            remarks: form.remarks || "-",
+            parentStatus: "Pending",
+            status: "Pending"
+        };
+        setLeaves((prev) => [newLeave, ...prev]);
+        closeApplyModal();
+    };
 
     return (
         <div className="dashboard-layout leaves-layout">
@@ -178,7 +231,7 @@ export default function MyLeaves() {
                 <div className="leaves-container">
                     <div className="leaves-header-row">
                         <h1 className="leaves-page-title">My Leaves</h1>
-                        <button className="apply-leave-btn">Apply Leave</button>
+                        <button type="button" className="apply-leave-btn" onClick={openApplyModal}>Apply Leave</button>
                     </div>
 
                     <div className="leaves-search-card">
@@ -228,7 +281,9 @@ export default function MyLeaves() {
                                             </span>
                                         </td>
                                         <td>
-                                            <span className="status-badge badge-green">{leave.status}</span>
+                                            <span className={`status-badge ${leave.status === "Completed" ? "badge-green" : "badge-yellow"}`}>
+                                                {leave.status}
+                                            </span>
                                         </td>
                                     </tr>
                                 ))}
@@ -265,6 +320,58 @@ export default function MyLeaves() {
                     </div>
                 </div>
             </main>
+
+            {showApplyModal && (
+                <div className="leave-modal-overlay" onClick={closeApplyModal}>
+                    <div className="leave-modal" onClick={(e) => e.stopPropagation()}>
+                        <h2>Apply Leave</h2>
+                        <form className="leave-modal-form" onSubmit={handleApplyLeave}>
+                            <div className="form-group">
+                                <label>Leave Type</label>
+                                <select
+                                    value={form.leaveType}
+                                    onChange={(e) => setForm((f) => ({ ...f, leaveType: e.target.value }))}
+                                    required
+                                >
+                                    {LEAVE_TYPES.map((t) => (
+                                        <option key={t} value={t}>{t}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>From Date</label>
+                                <input
+                                    type="date"
+                                    value={form.fromDate}
+                                    onChange={(e) => setForm((f) => ({ ...f, fromDate: e.target.value }))}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>To Date</label>
+                                <input
+                                    type="date"
+                                    value={form.toDate}
+                                    onChange={(e) => setForm((f) => ({ ...f, toDate: e.target.value }))}
+                                    required
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label>Remarks</label>
+                                <textarea
+                                    placeholder="Reason for leave..."
+                                    value={form.remarks}
+                                    onChange={(e) => setForm((f) => ({ ...f, remarks: e.target.value }))}
+                                />
+                            </div>
+                            <div className="leave-modal-actions">
+                                <button type="button" className="btn-cancel" onClick={closeApplyModal}>Cancel</button>
+                                <button type="submit" className="btn-submit">Submit</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
