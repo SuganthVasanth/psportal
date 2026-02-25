@@ -9,34 +9,45 @@ const MOCK_PROFILE = {
     avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Suganth"
 };
 
+// Leave types: SP (Special), GP (General Purpose), Sick Leave, etc.
+export const LEAVE_TYPES = ["SP", "GP", "Sick Leave", "Emergency", "Leave"];
+
+function getParentStatusBadgeClass(parentStatus) {
+    if (!parentStatus) return "badge-yellow";
+    const s = parentStatus.toLowerCase();
+    if (s === "approved") return "badge-green";
+    if (s === "rejected") return "badge-red";
+    return "badge-yellow"; // Pending or unknown
+}
+
 const MOCK_LEAVES = [
     {
         id: 1,
-        leaveType: "Leave",
+        leaveType: "Sick Leave",
         type: "Leave",
         fromDate: "Feb 21, 2026",
         toDate: "Feb 22, 2026",
         gateIn: "Feb 22, 2026, 05:46 PM",
         duration: "2 days",
         remarks: "Going to hospital",
-        parentStatus: "Pending",
+        parentStatus: "Approved",
         status: "Completed"
     },
     {
         id: 2,
-        leaveType: "Leave",
+        leaveType: "Sick Leave",
         type: "Leave",
         fromDate: "Feb 18, 2026",
         toDate: "Feb 19, 2026",
         gateIn: "Feb 18, 2026, 06:37 PM",
         duration: "2 days",
         remarks: "Going to hospital",
-        parentStatus: "Pending",
+        parentStatus: "Rejected",
         status: "Completed"
     },
     {
         id: 3,
-        leaveType: "Leave",
+        leaveType: "GP",
         type: "Leave",
         fromDate: "Feb 16, 2026",
         toDate: "Feb 17, 2026",
@@ -48,38 +59,38 @@ const MOCK_LEAVES = [
     },
     {
         id: 4,
-        leaveType: "Leave",
+        leaveType: "SP",
         type: "Leave",
         fromDate: "Feb 16, 2026",
         toDate: "Feb 17, 2026",
         gateIn: "Feb 16, 2026, 09:39 PM",
         duration: "1 day",
         remarks: "Going for hospital",
-        parentStatus: "Pending",
+        parentStatus: "Approved",
         status: "Completed"
     },
     {
         id: 5,
-        leaveType: "Leave",
+        leaveType: "GP",
         type: "Leave",
         fromDate: "Feb 7, 2026",
         toDate: "Feb 9, 2026",
         gateIn: "Feb 8, 2026, 06:49 PM",
         duration: "2 days",
         remarks: "Going for a marriage function",
-        parentStatus: "Pending",
+        parentStatus: "Approved",
         status: "Completed"
     },
     {
         id: 6,
-        leaveType: "Leave",
+        leaveType: "GP",
         type: "Leave",
         fromDate: "Jan 24, 2026",
         toDate: "Jan 27, 2026",
         gateIn: "Jan 26, 2026, 05:02 PM",
         duration: "4 days",
         remarks: "Going Home",
-        parentStatus: "Pending",
+        parentStatus: "Rejected",
         status: "Completed"
     },
     {
@@ -91,12 +102,12 @@ const MOCK_LEAVES = [
         gateIn: "Jan 18, 2026, 09:36 PM",
         duration: "6 days",
         remarks: "Going home",
-        parentStatus: "Pending",
+        parentStatus: "Approved",
         status: "Completed"
     },
     {
         id: 8,
-        leaveType: "Leave",
+        leaveType: "Sick Leave",
         type: "Leave",
         fromDate: "Jan 11, 2026",
         toDate: "Jan 11, 2026",
@@ -108,26 +119,26 @@ const MOCK_LEAVES = [
     },
     {
         id: 9,
-        leaveType: "Leave",
+        leaveType: "Emergency",
         type: "Leave",
         fromDate: "Jan 9, 2026",
         toDate: "Jan 10, 2026",
         gateIn: "Jan 9, 2026, 08:02 PM",
         duration: "1 day",
-        remarks: "Goin to hospital",
-        parentStatus: "Pending",
+        remarks: "Going to hospital",
+        parentStatus: "Approved",
         status: "Completed"
     },
     {
         id: 10,
-        leaveType: "Leave",
+        leaveType: "SP",
         type: "Leave",
         fromDate: "Dec 31, 2025",
         toDate: "Jan 5, 2026",
         gateIn: "Jan 4, 2026, 06:08 PM",
         duration: "6 days",
         remarks: "Going home",
-        parentStatus: "Pending",
+        parentStatus: "Approved",
         status: "Completed"
     }
 ];
@@ -135,6 +146,15 @@ const MOCK_LEAVES = [
 export default function MyLeaves() {
     const [searchTerm, setSearchTerm] = useState("");
     const [entriesCount, setEntriesCount] = useState(10);
+
+    const filteredLeaves = searchTerm.trim()
+        ? MOCK_LEAVES.filter(
+            (leave) =>
+                (leave.leaveType && leave.leaveType.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                (leave.remarks && leave.remarks.toLowerCase().includes(searchTerm.toLowerCase()))
+        )
+        : MOCK_LEAVES;
+    const displayLeaves = filteredLeaves.slice(0, Number(entriesCount));
 
     return (
         <div className="dashboard-layout leaves-layout">
@@ -187,7 +207,7 @@ export default function MyLeaves() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {MOCK_LEAVES.map((leave) => (
+                                {displayLeaves.map((leave) => (
                                     <tr key={leave.id}>
                                         <td className="leave-type-col">
                                             <span className="chevron-right">&gt;</span> {leave.leaveType}
@@ -203,7 +223,9 @@ export default function MyLeaves() {
                                         <td>{leave.duration}</td>
                                         <td className="remarks-col">{leave.remarks}</td>
                                         <td>
-                                            <span className="status-badge badge-yellow">{leave.parentStatus}</span>
+                                            <span className={`status-badge ${getParentStatusBadgeClass(leave.parentStatus)}`}>
+                                                {leave.parentStatus || "Pending"}
+                                            </span>
                                         </td>
                                         <td>
                                             <span className="status-badge badge-green">{leave.status}</span>
@@ -229,7 +251,7 @@ export default function MyLeaves() {
                             </div>
 
                             <div className="entries-info">
-                                Showing 1 to 10 of 11 entries
+                                Showing 1 to {displayLeaves.length} of {filteredLeaves.length} entries
                             </div>
 
                             <div className="pagination-controls">

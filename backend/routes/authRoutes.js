@@ -21,6 +21,7 @@
 
 // module.exports = router;
 const express = require("express");
+const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
@@ -29,6 +30,45 @@ require("dotenv").config();
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Email/password login (for super admin and other password-based users)
+router.post("/login", async (req, res) => {
+  try {
+    const { email, password } = req.body;
+    if (!email || !password) {
+      return res.status(400).json({ message: "Email and password required" });
+    }
+    const user = await User.findOne({ email }).select("+password").populate("roles");
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+    if (!user.password) {
+      return res.status(401).json({ message: "This account uses Google sign-in. Please sign in with Google." });
+    }
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+    const roleNames = (user.roles || []).map((r) => r.role_name);
+    const token = jwt.sign(
+      { userId: user._id, roles: roleNames, email: user.email },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+    res.json({
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+        roles: roleNames,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Login failed" });
+  }
+});
 
 router.post("/google", async (req, res) => {
   try {

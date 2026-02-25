@@ -1,0 +1,6 @@
+{
+  "_id": { "$oid": "674000000000000000000001" },
+  "role_name": "super_admin",
+  "description": "Full system access. Can manage all users, roles, courses, slots, movement passes, and dashboard data.",
+  "is_system_role": true
+}

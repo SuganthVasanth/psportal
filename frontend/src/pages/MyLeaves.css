@@ -139,29 +139,37 @@
     color: #4a5568 !important;
 }
 
-.status-badge {
+/* Status badges - ensure visibility in leaves table */
+.leaves-table .status-badge {
     display: inline-block;
     padding: 6px 14px;
     border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 12px;
+    font-weight: 600;
     text-align: center;
     min-width: 85px;
+    border: none;
+    line-height: 1.2;
 }
 
-.badge-blue {
-    background-color: #0084ff;
-    color: white;
+.leaves-table .status-badge.badge-blue {
+    background-color: #0084ff !important;
+    color: #fff !important;
 }
 
-.badge-yellow {
-    background-color: #f5a623;
-    color: white;
+.leaves-table .status-badge.badge-yellow {
+    background-color: #eab308 !important;
+    color: #1f2937 !important;
 }
 
-.badge-green {
-    background-color: #008000;
-    color: white;
+.leaves-table .status-badge.badge-green {
+    background-color: #16a34a !important;
+    color: #fff !important;
+}
+
+.leaves-table .status-badge.badge-red {
+    background-color: #dc2626 !important;
+    color: #fff !important;
 }
 
 /* Pagination container */

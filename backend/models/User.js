@@ -22,6 +22,7 @@ const userSchema = new mongoose.Schema({
     type: String,
     unique: true
   },
+  password: { type: String, select: false }, // for email/password login; not returned by default
   google_id: String,
   roles: [{
     type: mongoose.Schema.Types.ObjectId,

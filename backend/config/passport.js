@@ -4,8 +4,9 @@ const User = require("../models/User");
 const Role = require("../models/Role");
 const jwt = require("jsonwebtoken");
 
-passport.use(
-  new GoogleStrategy(
+if (process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET) {
+  passport.use(
+    new GoogleStrategy(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
@@ -39,6 +40,9 @@ passport.use(
       }
     }
   )
-);
+  );
+} else {
+  console.warn("Google OAuth not configured: set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in .env to enable.");
+}
 
 module.exports = passport;
