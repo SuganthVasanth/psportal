@@ -139,9 +139,39 @@
     color: #4a5568 !important;
 }
 
-/* Status badges - ensure visibility in leaves table */
-.leaves-table .status-badge {
+.leave-actions-cell {
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.leave-delete-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.leave-delete-btn:hover {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+}
+
+/* Leave table status badges - unique class names to avoid conflict with other pages */
+.leave-cell-badge {
+    vertical-align: middle;
+}
+
+.leaves-table .leave-status-badge {
     display: inline-block;
+    position: static;
     padding: 6px 14px;
     border-radius: 9999px;
     font-size: 12px;
@@ -152,24 +182,29 @@
     line-height: 1.2;
 }
 
-.leaves-table .status-badge.badge-blue {
-    background-color: #0084ff !important;
-    color: #fff !important;
+.leaves-table .leave-status-badge.badge-blue {
+    background-color: #0084ff;
+    color: #fff;
 }
 
-.leaves-table .status-badge.badge-yellow {
-    background-color: #eab308 !important;
-    color: #1f2937 !important;
+.leaves-table .leave-status-badge.badge-purple {
+    background-color: #7c3aed;
+    color: #fff;
 }
 
-.leaves-table .status-badge.badge-green {
-    background-color: #16a34a !important;
-    color: #fff !important;
+.leaves-table .leave-status-badge.badge-yellow {
+    background-color: #eab308;
+    color: #1f2937;
 }
 
-.leaves-table .status-badge.badge-red {
-    background-color: #dc2626 !important;
-    color: #fff !important;
+.leaves-table .leave-status-badge.badge-green {
+    background-color: #16a34a;
+    color: #fff;
+}
+
+.leaves-table .leave-status-badge.badge-red {
+    background-color: #dc2626;
+    color: #fff;
 }
 
 /* Pagination container */
@@ -277,6 +312,7 @@
 
 .leave-modal-form select,
 .leave-modal-form input[type="date"],
+.leave-modal-form input[type="datetime-local"],
 .leave-modal-form textarea {
     width: 100%;
     padding: 10px 12px;
@@ -287,7 +323,8 @@
     box-sizing: border-box;
 }
 
-.leave-modal-form textarea {
+.leave-modal-form textarea,
+.leave-modal-form .input-remarks {
     min-height: 80px;
     resize: vertical;
 }
@@ -317,11 +354,244 @@
     background: #e2e8f0;
 }
 
-.leave-modal-actions .btn-submit {
+.leave-modal-actions .btn-submit,
+.leave-modal-actions .btn-submit-leave {
     background: #8b5cf6;
     color: white;
 }
 
-.leave-modal-actions .btn-submit:hover {
+.leave-modal-actions .btn-submit:hover,
+.leave-modal-actions .btn-submit-leave:hover {
     background: #7c3aed;
 }
+
+/* Apply for Leave modal (reference layout) */
+.leave-apply-modal {
+    max-width: 460px;
+}
+
+.leave-apply-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.leave-apply-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+.leave-type-select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #2d3748;
+    background: #fff;
+    cursor: pointer;
+}
+
+.form-row-datetime {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.form-group-inline {
+    flex: 1;
+}
+
+.form-group-inline label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #4a5568;
+    margin-bottom: 6px;
+}
+
+.input-datetime {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-size: 14px;
+    color: #2d3748;
+    box-sizing: border-box;
+}
+
+.leave-apply-actions {
+    margin-top: 24px;
+    gap: 12px;
+}
+
+.leave-apply-actions .btn-cancel {
+    background: #dc2626;
+    color: white;
+}
+
+.leave-apply-actions .btn-cancel:hover {
+    background: #b91c1c;
+}
+
+.leave-apply-actions .btn-submit-leave {
+    background: #8b5cf6;
+    color: white;
+    padding: 10px 20px;
+}
+
+.leave-apply-actions .btn-submit-leave:hover {
+    background: #7c3aed;
+}
+
+/* Clickable row */
+.leave-row-clickable {
+    cursor: pointer;
+}
+
+/* Leave Details Modal (like reference) */
+.leave-details-modal {
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+}
+
+.leave-details-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #edf2f7;
+}
+
+.leave-details-header h2 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+}
+
+.leave-details-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    line-height: 1;
+    color: #718096;
+    cursor: pointer;
+    padding: 0 4px;
+}
+
+.leave-details-close:hover {
+    color: #1a202c;
+}
+
+.leave-details-body {
+    padding: 24px;
+    overflow-y: auto;
+}
+
+.leave-details-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 12px;
+    margin-bottom: 16px;
+}
+
+.leave-details-label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #718096;
+    min-width: 90px;
+}
+
+.leave-details-value {
+    font-size: 14px;
+    color: #2d3748;
+}
+
+.leave-details-cancel-row {
+    margin-top: 16px;
+    margin-bottom: 8px;
+}
+
+.leave-cancel-leave-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #dc2626;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.leave-cancel-leave-btn:hover {
+    background: #dc2626;
+    color: white;
+    border-color: #dc2626;
+}
+
+.leave-details-approval-section {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid #edf2f7;
+}
+
+.leave-details-approval-block {
+    margin-bottom: 20px;
+}
+
+.leave-details-approval-block:last-child {
+    margin-bottom: 0;
+}
+
+.leave-details-approval-title {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #4a5568;
+    margin-bottom: 8px;
+}
+
+.leave-details-approval-block .leave-status-badge {
+    display: inline-block;
+    position: static;
+    padding: 6px 14px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    margin-right: 8px;
+}
+
+.leave-details-approval-by {
+    display: block;
+    font-size: 13px;
+    color: #2d3748;
+    margin-top: 4px;
+}
+
+.leave-details-approval-label {
+    display: block;
+    font-size: 12px;
+    color: #718096;
+    margin-top: 2px;
+}
+
+.leave-details-modal .leave-status-badge.badge-blue { background-color: #0084ff; color: #fff; }
+.leave-details-modal .leave-status-badge.badge-purple { background-color: #7c3aed; color: #fff; }
+.leave-details-modal .leave-status-badge.badge-green { background-color: #16a34a; color: #fff; }
+.leave-details-modal .leave-status-badge.badge-red { background-color: #dc2626; color: #fff; }
+.leave-details-modal .leave-status-badge.badge-yellow { background-color: #eab308; color: #1f2937; }
