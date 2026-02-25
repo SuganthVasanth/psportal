@@ -1,59 +1,86 @@
-import React from "react";
+import React, { useState } from "react";
 import "./Login.css";
 import { GoogleLogin } from "@react-oauth/google";
-import { jwtDecode } from "jwt-decode";
+
+const API_BASE = "http://localhost:5000";
+
+function storeAuthAndRedirect(data) {
+  localStorage.setItem("token", data.token);
+  if (data.user) {
+    if (data.user.roles && data.user.roles.length > 0) {
+      const roles = data.user.roles.map((r) => (typeof r === "string" ? r : r.role_name || r).toLowerCase());
+      let primaryRole = "student";
+      if (roles.includes("super_admin")) primaryRole = "super_admin";
+      else if (roles.includes("admin")) primaryRole = "admin";
+      else primaryRole = roles[0];
+      localStorage.setItem("role", primaryRole);
+    } else {
+      localStorage.setItem("role", "student");
+    }
+    if (data.user.name) localStorage.setItem("userName", data.user.name);
+    else if (data.user.email) localStorage.setItem("userName", data.user.email.split("@")[0]);
+  }
+  window.location.href = "/dashboard";
+}
 
 export default function LoginPage() {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleGoogleSuccess = async (credentialResponse) => {
-    const response = await fetch("http://localhost:5000/api/auth/google", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        token: credentialResponse.credential,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (response.ok) {
-      console.log("Login Success Data:", data);
-
-      // Store token
-      localStorage.setItem("token", data.token);
-
-      // Determine highest privilege role to store in localStorage for the Dashboard
-      if (data.user && data.user.roles && data.user.roles.length > 0) {
-        const roles = data.user.roles.map(r => r.toLowerCase());
-        let primaryRole = "student"; // Default
-
-        if (roles.includes("super_admin")) {
-          primaryRole = "super_admin";
-        } else if (roles.includes("admin")) {
-          primaryRole = "admin";
-        } else if (roles.length > 0) {
-          primaryRole = roles[0];
-        }
-
-        localStorage.setItem("role", primaryRole);
-      } else {
-        localStorage.setItem("role", "student"); // fallback
+  const handleEmailLogin = async (e) => {
+    e.preventDefault();
+    setError("");
+    if (!email.trim() || !password) {
+      setError("Please enter email and password.");
+      return;
+    }
+    setLoading(true);
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password }),
+      });
+      const data = await response.json();
+      if (response.ok) {
+        storeAuthAndRedirect(data);
+        return;
       }
-
-      // alert("Login Successful!");
-
-      // Redirect to unified dashboard
-      window.location.href = "/dashboard";
-    } else {
-      console.error("Login Error:", data);
-      alert("Login Failed: " + data.message);
+      setError(data.message || "Login failed.");
+    } catch (err) {
+      setError("Cannot reach server. Is the backend running on port 5000?");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleGoogleError = () => {
-    console.log("Google Login Failed");
+  const handleGoogleSuccess = async (credentialResponse) => {
+    setError("");
+    try {
+      const response = await fetch(`${API_BASE}/api/auth/google`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: credentialResponse.credential }),
+      });
+      const data = await response.json().catch(() => ({}));
+      if (response.ok) {
+        storeAuthAndRedirect(data);
+      } else {
+        setError(data.message || "Google login failed.");
+      }
+    } catch (err) {
+      setError("Cannot reach server. Start the backend (port 5000) or use email/password.");
+    }
+  };
+
+  const handleGoogleError = (err) => {
+    if (err?.type === "idpif_restricted" || String(err).includes("origin")) {
+      setError("Google Sign-In: Add this page's URL to Google Cloud Console → Credentials → your OAuth client → Authorized JavaScript origins (e.g. http://localhost:5173).");
+    } else {
+      setError("Google Sign-In was cancelled or failed. Use email/password instead.");
+    }
   };
 
   return (
@@ -67,21 +94,41 @@ export default function LoginPage() {
 
         <h3 className="welcome-text">Hi, Welcome Back!</h3>
 
-        <div className="input-group">
-          <label>Username</label>
-          <input type="text" placeholder="Enter your username" />
-        </div>
+        {error && <div className="login-error-msg">{error}</div>}
 
-        <div className="input-group">
-          <label>Password</label>
-          <input type="password" placeholder="Enter your password" />
-        </div>
+        <form onSubmit={handleEmailLogin}>
+          <div className="input-group">
+            <label>Email</label>
+            <input
+              type="email"
+              placeholder="Enter your email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              disabled={loading}
+              autoComplete="email"
+            />
+          </div>
 
-        <button className="login-btn">Login</button>
+          <div className="input-group">
+            <label>Password</label>
+            <input
+              type="password"
+              placeholder="Enter your password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              disabled={loading}
+              autoComplete="current-password"
+            />
+          </div>
+
+          <button type="submit" className="login-btn" disabled={loading}>
+            {loading ? "Signing in…" : "Login"}
+          </button>
+        </form>
+
 
         <div className="divider">Or</div>
 
-        {/* 🔥 REAL GOOGLE LOGIN BUTTON */}
         <div className="google-btn-wrapper">
           <GoogleLogin
             onSuccess={handleGoogleSuccess}

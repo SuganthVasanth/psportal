@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
+const path = require("path");
 const fs = require("fs");
-require("dotenv").config({ path: "../.env" });
+require("dotenv").config({ path: path.join(__dirname, "..", ".env") });
 
 // Models
 const Student = require("../models/Student");
@@ -12,8 +13,8 @@ const seedDashboard = async () => {
         await mongoose.connect(process.env.MONGO_URI);
         console.log("Connected to MongoDB for Seeding Dashboard");
 
-        // Clear existing dashboard mock data
-        await Student.deleteMany({ register_no: "7376231CS323" });
+        // Clear existing dashboard mock data (by _id and register_no so we never get duplicate key)
+        await Student.deleteMany({ $or: [ { _id: "S_7376231CS323" }, { register_no: "7376231CS323" } ] });
 
         // 1. Create a mock Student linked to a fake user_id just for testing schema integrity
         // In a real app the User model handles Auth, but here we can just dummy a 24-char hex string
@@ -22,7 +23,6 @@ const seedDashboard = async () => {
         const newStudent = await Student.create({
             _id: "S_7376231CS323",
             user_id: mockUserId,
-            student_id: "STU-001",
             name: "SUGANTH R",
             register_no: "7376231CS323",
             profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=Suganth",
