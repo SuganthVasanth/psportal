@@ -1,6 +1,7 @@
 const Student = require("../models/Student");
 const PointTransaction = require("../models/PointTransaction");
 const StudentProgress = require("../models/StudentProgress");
+const StudentCourse = require("../models/StudentCourse");
 
 exports.getStudentDashboardData = async (req, res) => {
     try {
@@ -143,5 +144,24 @@ exports.getStudentDashboardData = async (req, res) => {
     } catch (error) {
         console.error("Dashboard Aggregation Error:", error);
         res.status(500).json({ message: "Failed to load dashboard data" });
+    }
+};
+
+exports.getMyCourses = async (req, res) => {
+    try {
+        const register_no = req.query.register_no;
+        if (!register_no) {
+            return res.status(400).json({ message: "register_no required" });
+        }
+        const courses = await StudentCourse.find({ register_no }).sort({ createdAt: 1 }).lean();
+        res.json(courses.map((c) => ({
+            id: c.course_id,
+            title: c.title,
+            image: c.image || "",
+            completed: c.completed || false,
+        })));
+    } catch (err) {
+        console.error("getMyCourses error:", err);
+        res.status(500).json({ message: "Failed to load my courses" });
     }
 };

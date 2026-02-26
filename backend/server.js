@@ -42,6 +42,14 @@ app.use("/api/superadmin", superadminRoutes);
 const bookingRoutes = require("./routes/bookingRoutes");
 app.use("/api", bookingRoutes);
 
+// Leaves: student leave applications (stored in MongoDB, overlap check on apply)
+const leaveRoutes = require("./routes/leaveRoutes");
+app.use("/api/leaves", leaveRoutes);
+
+// Seed: push fake students (and their courses, points) into MongoDB
+const seedRoutes = require("./routes/seedRoutes");
+app.use("/api/seed", seedRoutes);
+
 app.listen(5000, "0.0.0.0", () => {
   console.log("Server running on http://localhost:5000");
 });

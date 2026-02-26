@@ -1,9 +1,11 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import StudentSidebar from "../components/StudentSidebar";
 import { Filter, Trash2 } from "lucide-react";
 import "./MyLeaves.css";
 
-const MOCK_PROFILE = {
+const API_BASE = "http://localhost:5000";
+
+const FALLBACK_PROFILE = {
     register_no: "7376231CS323",
     name: "SUGANTH R",
     avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Suganth"
@@ -54,144 +56,6 @@ function getStatusBadgeClass(status) {
     return "badge-yellow";
 }
 
-const MOCK_LEAVES = [
-    {
-        id: 1,
-        leaveType: "SP",
-        type: "Leave",
-        fromDate: "Feb 21, 2026",
-        toDate: "Feb 25, 2026",
-        fromDateFull: "Feb 21, 2026, 04:31 PM",
-        toDateFull: "Feb 25, 2026, 08:30 AM",
-        gateOut: "-",
-        gateIn: "Feb 24, 2026, 06:50 PM",
-        duration: "4 days",
-        remarks: "family function",
-        parentStatus: "Approved",
-        status: "Approved",
-        wardenApproval: { status: "Approved", by: "AD11116 - PRIYADHARSHNI S" },
-        mentorApproval: { status: "Approved", by: "EC10811 - POUSIA S" }
-    },
-    {
-        id: 2,
-        leaveType: "Sick Leave",
-        type: "Leave",
-        fromDate: "Feb 18, 2026",
-        toDate: "Feb 19, 2026",
-        gateIn: "Feb 18, 2026, 06:37 PM",
-        duration: "2 days",
-        remarks: "Going to hospital",
-        parentStatus: "Rejected",
-        status: "Completed"
-    },
-    {
-        id: 3,
-        leaveType: "GP",
-        type: "Leave",
-        fromDate: "Feb 16, 2026",
-        toDate: "Feb 17, 2026",
-        gateIn: "Feb 16, 2026, 09:39 PM",
-        duration: "1 day",
-        remarks: "Going for hospital",
-        parentStatus: "Pending",
-        status: "Completed"
-    },
-    {
-        id: 4,
-        leaveType: "SP",
-        type: "Leave",
-        fromDate: "Feb 16, 2026",
-        toDate: "Feb 17, 2026",
-        fromDateFull: "Feb 16, 2026, 09:00 AM",
-        toDateFull: "Feb 17, 2026, 06:00 PM",
-        gateOut: "-",
-        gateIn: "Feb 16, 2026, 09:39 PM",
-        duration: "1 day",
-        remarks: "Going for hospital",
-        parentStatus: "Approved",
-        status: "Completed",
-        wardenApproval: { status: "Approved", by: "AD11116 - PRIYADHARSHNI S" },
-        mentorApproval: { status: "Approved", by: "EC10811 - POUSIA S" }
-    },
-    {
-        id: 5,
-        leaveType: "GP",
-        type: "Leave",
-        fromDate: "Feb 7, 2026",
-        toDate: "Feb 9, 2026",
-        gateIn: "Feb 8, 2026, 06:49 PM",
-        duration: "2 days",
-        remarks: "Going for a marriage function",
-        parentStatus: "Approved",
-        status: "Completed"
-    },
-    {
-        id: 6,
-        leaveType: "GP",
-        type: "Leave",
-        fromDate: "Jan 24, 2026",
-        toDate: "Jan 27, 2026",
-        gateIn: "Jan 26, 2026, 05:02 PM",
-        duration: "4 days",
-        remarks: "Going Home",
-        parentStatus: "Rejected",
-        status: "Completed"
-    },
-    {
-        id: 7,
-        leaveType: "OnDuty - Technical Competition",
-        type: "OD",
-        fromDate: "Jan 13, 2026",
-        toDate: "Jan 19, 2026",
-        fromDateFull: "Jan 13, 2026, 09:00 AM",
-        toDateFull: "Jan 19, 2026, 05:00 PM",
-        gateOut: "-",
-        gateIn: "Jan 18, 2026, 09:36 PM",
-        duration: "6 days",
-        remarks: "Duty - Technical Competition",
-        parentStatus: "Approved",
-        status: "Approved",
-        wardenApproval: { status: "Approved", by: "AD11116 - PRIYADHARSHNI S" },
-        mentorApproval: { status: "Approved", by: "EC10811 - POUSIA S" }
-    },
-    {
-        id: 8,
-        leaveType: "Sick Leave",
-        type: "Leave",
-        fromDate: "Jan 11, 2026",
-        toDate: "Jan 11, 2026",
-        gateIn: "Jan 11, 2026, 07:53 PM",
-        duration: "1 day",
-        remarks: "Going to hospital",
-        parentStatus: "Pending",
-        status: "Completed"
-    },
-    {
-        id: 9,
-        leaveType: "Emergency",
-        type: "Leave",
-        fromDate: "Jan 9, 2026",
-        toDate: "Jan 10, 2026",
-        gateIn: "Jan 9, 2026, 08:02 PM",
-        duration: "1 day",
-        remarks: "Going to hospital",
-        parentStatus: "Approved",
-        status: "Completed"
-    },
-    {
-        id: 10,
-        leaveType: "SP",
-        type: "Leave",
-        fromDate: "Dec 31, 2025",
-        toDate: "Jan 5, 2026",
-        gateIn: "Jan 4, 2026, 06:08 PM",
-        duration: "6 days",
-        remarks: "Going home",
-        parentStatus: "Approved",
-        status: "Completed"
-    }
-];
-
 function formatDate(d) {
     if (!d) return "";
     const date = new Date(d);
@@ -216,10 +80,35 @@ function getDurationDays(fromStr, toStr) {
 }
 
 export default function MyLeaves() {
-    const [leaves, setLeaves] = useState(() => [...MOCK_LEAVES]);
+    const [registerNo, setRegisterNo] = useState(() => localStorage.getItem("register_no"));
+    const studentName = localStorage.getItem("userName") || "";
+
+    const [profile, setProfile] = useState(FALLBACK_PROFILE);
+    const [leaves, setLeaves] = useState([]);
+    const [leavesLoading, setLeavesLoading] = useState(true);
+
+    // If logged in but register_no missing (e.g. old session), fetch it from /api/auth/me
+    useEffect(() => {
+        if (registerNo) return;
+        const token = localStorage.getItem("token");
+        if (!token) return;
+        fetch(`${API_BASE}/api/auth/me`, {
+            headers: { Authorization: `Bearer ${token}` },
+        })
+            .then((r) => r.ok ? r.json() : null)
+            .then((data) => {
+                if (data?.register_no) {
+                    localStorage.setItem("register_no", data.register_no);
+                    setRegisterNo(data.register_no);
+                }
+            })
+            .catch(() => {});
+    }, [registerNo]);
     const [searchTerm, setSearchTerm] = useState("");
     const [entriesCount, setEntriesCount] = useState(10);
     const [showApplyModal, setShowApplyModal] = useState(false);
+    const [applyError, setApplyError] = useState("");
+    const [applySubmitting, setApplySubmitting] = useState(false);
     const [selectedLeave, setSelectedLeave] = useState(null);
     const [form, setForm] = useState({
         leaveType: "Sick Leave",
@@ -227,6 +116,30 @@ export default function MyLeaves() {
         toDateTime: "",
         remarks: ""
     });
+
+    useEffect(() => {
+        if (registerNo) {
+            fetch(`${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`)
+                .then((r) => r.ok ? r.json() : null)
+                .then((data) => {
+                    if (data?.profile) setProfile({ ...FALLBACK_PROFILE, ...data.profile, register_no: data.profile.register_no || registerNo });
+                })
+                .catch(() => {});
+        }
+    }, [registerNo]);
+
+    useEffect(() => {
+        if (!registerNo) {
+            setLeavesLoading(false);
+            return;
+        }
+        setLeavesLoading(true);
+        fetch(`${API_BASE}/api/leaves/my-leaves?register_no=${encodeURIComponent(registerNo)}`)
+            .then((r) => r.ok ? r.json() : [])
+            .then((data) => setLeaves(Array.isArray(data) ? data : []))
+            .catch(() => setLeaves([]))
+            .finally(() => setLeavesLoading(false));
+    }, [registerNo]);
 
     const filteredLeaves = searchTerm.trim()
         ? leaves.filter(
@@ -239,6 +152,7 @@ export default function MyLeaves() {
 
     const openApplyModal = () => {
         setForm({ leaveType: "Sick Leave", fromDateTime: "", toDateTime: "", remarks: "" });
+        setApplyError("");
         setShowApplyModal(true);
     };
 
@@ -246,42 +160,66 @@ export default function MyLeaves() {
     const openDetailsModal = (leave) => setSelectedLeave(leave);
     const closeDetailsModal = () => setSelectedLeave(null);
 
-    const handleDeleteLeave = (e, leaveId) => {
+    const handleDeleteLeave = async (e, leaveId) => {
         e.stopPropagation();
         if (!window.confirm("Are you sure you want to delete this leave?")) return;
-        setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
-        if (selectedLeave?.id === leaveId) closeDetailsModal();
+        try {
+            const res = await fetch(`${API_BASE}/api/leaves/${leaveId}`, { method: "DELETE" });
+            if (res.ok) {
+                setLeaves((prev) => prev.filter((l) => l.id !== leaveId));
+                if (selectedLeave?.id === leaveId) closeDetailsModal();
+            } else {
+                const data = await res.json().catch(() => ({}));
+                alert(data.message || "Failed to delete leave.");
+            }
+        } catch (_) {
+            alert("Failed to delete leave.");
+        }
     };
 
-    const handleApplyLeave = (e) => {
+    const handleApplyLeave = async (e) => {
         e.preventDefault();
-        if (!form.fromDateTime || !form.toDateTime) return;
+        setApplyError("");
+        if (!form.fromDateTime || !form.toDateTime) {
+            setApplyError("Please select from and to date & time.");
+            return;
+        }
         const from = new Date(form.fromDateTime);
         const to = new Date(form.toDateTime);
         if (to < from) {
-            alert("To date & time must be on or after from date & time.");
+            setApplyError("To date & time must be on or after from date & time.");
             return;
         }
-        const isOnDuty = form.leaveType && String(form.leaveType).startsWith("OnDuty");
-        const newLeave = {
-            id: Date.now(),
-            leaveType: form.leaveType,
-            type: isOnDuty ? "OD" : "Leave",
-            fromDate: formatDate(form.fromDateTime),
-            toDate: formatDate(form.toDateTime),
-            fromDateFull: formatDateTime(form.fromDateTime),
-            toDateFull: formatDateTime(form.toDateTime),
-            gateOut: "-",
-            gateIn: "-",
-            duration: getDurationDays(form.fromDateTime, form.toDateTime),
-            remarks: form.remarks || "-",
-            parentStatus: "Pending",
-            status: "Pending",
-            wardenApproval: null,
-            mentorApproval: null
-        };
-        setLeaves((prev) => [newLeave, ...prev]);
-        closeApplyModal();
+        if (!registerNo) {
+            setApplyError("Please log in to apply for leave.");
+            return;
+        }
+        setApplySubmitting(true);
+        try {
+            const res = await fetch(`${API_BASE}/api/leaves/apply`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    register_no: registerNo,
+                    student_name: studentName,
+                    leaveType: form.leaveType,
+                    fromDateTime: form.fromDateTime,
+                    toDateTime: form.toDateTime,
+                    remarks: form.remarks || "",
+                }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (res.ok) {
+                setLeaves((prev) => [data, ...prev]);
+                closeApplyModal();
+            } else {
+                setApplyError(data.message || "Failed to apply leave. You may already have a leave for this time period.");
+            }
+        } catch (_) {
+            setApplyError("Could not reach server. Try again.");
+        } finally {
+            setApplySubmitting(false);
+        }
     };
 
     return (
@@ -292,10 +230,10 @@ export default function MyLeaves() {
                     <span>PCDP Portal</span>
                 </div>
                 <div className="top-nav-profile">
-                    <img src={MOCK_PROFILE.avatarUrl} alt="Profile" className="profile-avatar" />
+                    <img src={profile.avatarUrl} alt="Profile" className="profile-avatar" />
                     <div className="profile-info">
-                        <span className="profile-id">{MOCK_PROFILE.register_no}</span>
-                        <span className="profile-name">{MOCK_PROFILE.name}</span>
+                        <span className="profile-id">{profile.register_no}</span>
+                        <span className="profile-name">{profile.name}</span>
                     </div>
                 </div>
             </header>
@@ -320,6 +258,9 @@ export default function MyLeaves() {
                         />
                     </div>
 
+                    {leavesLoading ? (
+                        <p className="leaves-loading">Loading leaves...</p>
+                    ) : (
                     <div className="leaves-table-wrapper">
                         <table className="leaves-table">
                             <thead>
@@ -406,6 +347,7 @@ export default function MyLeaves() {
                         </div>
 
                     </div>
+                    )}
                 </div>
             </main>
 
@@ -460,7 +402,7 @@ export default function MyLeaves() {
                                         className="leave-cancel-leave-btn"
                                         onClick={() => {
                                             if (window.confirm("Are you sure you want to cancel this leave?")) {
-                                                setLeaves((prev) => prev.filter((l) => l.id !== selectedLeave.id));
+                                                handleDeleteLeave({ stopPropagation: () => {} }, selectedLeave.id);
                                                 closeDetailsModal();
                                             }
                                         }}
@@ -508,6 +450,7 @@ export default function MyLeaves() {
                             <button type="button" className="leave-details-close" onClick={closeApplyModal} aria-label="Close">×</button>
                         </div>
                         <form className="leave-modal-form" onSubmit={handleApplyLeave}>
+                            {applyError && <div className="leave-apply-error">{applyError}</div>}
                             <div className="form-group">
                                 <label>Leave Type</label>
                                 <select
@@ -553,8 +496,8 @@ export default function MyLeaves() {
                                 />
                             </div>
                             <div className="leave-modal-actions leave-apply-actions">
-                                <button type="button" className="btn-cancel" onClick={closeApplyModal}>Cancel</button>
-                                <button type="submit" className="btn-submit-leave">Submit Leave Request</button>
+                                <button type="button" className="btn-cancel" onClick={closeApplyModal} disabled={applySubmitting}>Cancel</button>
+                                <button type="submit" className="btn-submit-leave" disabled={applySubmitting}>{applySubmitting ? "Submitting…" : "Submit Leave Request"}</button>
                             </div>
                         </form>
                     </div>

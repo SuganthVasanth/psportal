@@ -155,9 +155,11 @@ export default function CourseDetails() {
               <div className="cd-details-card">
                 <h3 className="cd-card-title">Course Details</h3>
                 <p className="cd-course-name">{course.name}</p>
-                <button type="button" className="cd-book-slot-btn" onClick={() => setBookSlotOpen(true)}>
-                  Book a Slot
-                </button>
+                {!bookingForThisCourse && (
+                  <button type="button" className="cd-book-slot-btn" onClick={() => setBookSlotOpen(true)}>
+                    Book a Slot
+                  </button>
+                )}
               </div>
 
               {bookingForThisCourse && (

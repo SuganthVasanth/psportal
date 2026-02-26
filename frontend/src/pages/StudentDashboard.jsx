@@ -14,7 +14,8 @@ export default function StudentDashboard() {
             try {
                 // In a real scenario, you'd pass the auth token in headers
                 // For this mock integration, we pass the register number as a query param
-                const res = await axios.get("http://localhost:5000/api/dashboard/student?register_no=7376231CS323");
+                const registerNo = localStorage.getItem("register_no") || "7376231CS323";
+                const res = await axios.get(`http://localhost:5000/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
                 setDashboardData(res.data);
                 setLoading(false);
             } catch (err) {

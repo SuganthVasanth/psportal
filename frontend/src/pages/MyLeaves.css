@@ -35,6 +35,21 @@
     background-color: #7c3aed;
 }
 
+.leaves-loading {
+    padding: 24px;
+    color: #4a5568;
+    font-size: 14px;
+}
+
+.leave-apply-error {
+    background: #fef2f2;
+    color: #b91c1c;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    margin-bottom: 12px;
+}
+
 .leaves-search-card {
     background: #ffffff;
     border-radius: 8px;

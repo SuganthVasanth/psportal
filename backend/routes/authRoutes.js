@@ -26,10 +26,29 @@ const { OAuth2Client } = require("google-auth-library");
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Role = require("../models/Role");
+const Student = require("../models/Student");
 require("dotenv").config();
 
 const router = express.Router();
 const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Ensure student has a Student record and return register_no (create one if missing)
+async function ensureStudentRegisterNo(user) {
+  let student = await Student.findOne({ user_id: user._id }).lean();
+  if (student) return student.register_no;
+  const register_no = "STU" + user._id.toString().slice(-8).toUpperCase();
+  await Student.create({
+    _id: "S_" + register_no,
+    user_id: user._id,
+    name: user.name || user.email?.split("@")[0] || "Student",
+    register_no,
+    profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(register_no),
+    activity_points: 0,
+    department: "Computer Science and Engineering",
+    type: "dayscholar",
+  });
+  return register_no;
+}
 
 // Email/password login (for super admin and other password-based users)
 router.post("/login", async (req, res) => {
@@ -55,6 +74,11 @@ router.post("/login", async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
+    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    let register_no = null;
+    if (isStudent) {
+      register_no = await ensureStudentRegisterNo(user);
+    }
     res.json({
       token,
       user: {
@@ -62,6 +86,7 @@ router.post("/login", async (req, res) => {
         name: user.name,
         email: user.email,
         roles: roleNames,
+        ...(register_no && { register_no }),
       },
     });
   } catch (error) {
@@ -98,6 +123,11 @@ router.post("/google", async (req, res) => {
     }
 
     const roleNames = (user.roles || []).map(r => r.role_name);
+    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    let register_no = null;
+    if (isStudent) {
+      register_no = await ensureStudentRegisterNo(user);
+    }
 
     const appToken = jwt.sign(
       {
@@ -115,13 +145,43 @@ router.post("/google", async (req, res) => {
         id: user._id,
         name: user.name,
         email: user.email,
-        roles: roleNames
+        roles: roleNames,
+        ...(register_no && { register_no })
       }
     });
 
   } catch (error) {
     console.error(error);
     res.status(401).json({ message: "Invalid Google Token" });
+  }
+});
+
+// Return current user profile including register_no for students (so frontend can set it if missing)
+router.get("/me", async (req, res) => {
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return res.status(401).json({ message: "Token required" });
+    }
+    const token = authHeader.slice(7);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await User.findById(decoded.userId).populate("roles");
+    if (!user) return res.status(401).json({ message: "User not found" });
+    const roleNames = (user.roles || []).map((r) => r.role_name);
+    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    let register_no = null;
+    if (isStudent) {
+      register_no = await ensureStudentRegisterNo(user);
+    }
+    res.json({
+      id: user._id,
+      name: user.name,
+      email: user.email,
+      roles: roleNames,
+      ...(register_no && { register_no }),
+    });
+  } catch (err) {
+    res.status(401).json({ message: "Invalid or expired token" });
   }
 });
 

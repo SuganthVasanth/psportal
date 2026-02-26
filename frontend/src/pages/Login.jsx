@@ -19,6 +19,7 @@ function storeAuthAndRedirect(data) {
     }
     if (data.user.name) localStorage.setItem("userName", data.user.name);
     else if (data.user.email) localStorage.setItem("userName", data.user.email.split("@")[0]);
+    if (data.user.register_no) localStorage.setItem("register_no", data.user.register_no);
   }
   window.location.href = "/dashboard";
 }
@@ -88,7 +89,7 @@ export default function LoginPage() {
       <div className="login-card">
 
         <div className="logo-section">
-          <span className="logo-icon">⚙️</span>
+          <span className="logo-icon"></span>
           <h2>PCDP Portal</h2>
         </div>
 

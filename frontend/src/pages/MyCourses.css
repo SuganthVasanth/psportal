@@ -63,10 +63,29 @@
     overflow: hidden;
 }
 
+.my-course-image {
+    position: relative;
+}
+
 .my-course-image img {
     width: 100%;
     height: 13rem;
     object-fit: cover;
+}
+
+.my-course-badge {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+.my-course-badge.completed {
+    background: #10b981;
+    color: #fff;
 }
 
 .my-course-content {
