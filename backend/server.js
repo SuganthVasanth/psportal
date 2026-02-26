@@ -34,6 +34,10 @@ app.use("/api/dashboard", dashboardRoutes);
 const movementPassRoutes = require("./routes/movementPassRoutes");
 app.use("/api/movement-pass", movementPassRoutes);
 
-app.listen(5000, () => {
-  console.log("Server running on port 5000");
+// Super Admin dashboard data (roles, users, courses, venues, slots, leave types, settings)
+const superadminRoutes = require("./routes/superadminRoutes");
+app.use("/api/superadmin", superadminRoutes);
+
+app.listen(5000, "0.0.0.0", () => {
+  console.log("Server running on http://localhost:5000");
 });

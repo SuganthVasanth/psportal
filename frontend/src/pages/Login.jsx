@@ -50,7 +50,7 @@ export default function LoginPage() {
       }
       setError(data.message || "Login failed.");
     } catch (err) {
-      setError("Cannot reach server. Is the backend running on port 5000?");
+      setError("Cannot reach server. Start the backend: in psportal/backend run 'npm run dev' or 'node server.js'. Then try again.");
     } finally {
       setLoading(false);
     }
@@ -71,7 +71,7 @@ export default function LoginPage() {
         setError(data.message || "Google login failed.");
       }
     } catch (err) {
-      setError("Cannot reach server. Start the backend (port 5000) or use email/password.");
+      setError("Cannot reach server. Start the backend: in psportal/backend run 'npm run dev' or 'node server.js'.");
     }
   };
 
