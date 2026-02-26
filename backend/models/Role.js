@@ -13,7 +13,7 @@ const roleSchema = new mongoose.Schema({
     default: false   // true for super_admin, admin, student
   },
 
-  // permissions: [String]  // optional (future use)
+  accesses: { type: String, default: "" }  // e.g. "courses.view, leave.apply" for super admin dashboard
 });
 
 module.exports = mongoose.model("Role", roleSchema);

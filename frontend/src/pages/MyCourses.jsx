@@ -90,17 +90,17 @@ export default function MyCourses() {
                         </button>
                     </div>
 
-                    {/* Courses Grid */}
+                    {/* Courses Grid - click goes to course detail (materials + book slot) */}
                     <div className="my-courses-grid">
                         {MY_COURSES.map((course) => (
-                            <div className="my-course-card" key={course.id}>
+                            <Link to={`/course/${course.id}`} className="my-course-card" key={course.id}>
                                 <div className="my-course-image">
                                     <img src={course.image} alt={course.title} />
                                 </div>
                                 <div className="my-course-content">
                                     <h3 className="my-course-title">{course.title}</h3>
                                 </div>
-                            </div>
+                            </Link>
                         ))}
                     </div>
 

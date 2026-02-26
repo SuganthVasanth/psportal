@@ -3,9 +3,9 @@
  * Run from backend: node scripts/seedInitialData.js
  *
  * Users:
- *   vidulasanjana.ec23@bitsathy.ac.in  → super_admin
- *   vidula2005@gmail.com              → student
- *   svidula2005@gmail.com              → admin
+ *   vidulasanjana.ec23@bitsathy.ac.in  → admin
+ *   svidula2005@gmail.com              → student
+ *   vidula2005@gmail.com               → student
  */
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
@@ -23,9 +23,9 @@ const ROLES = [
 ];
 
 const USERS = [
-  { email: "vidulasanjana.ec23@bitsathy.ac.in", role_name: "super_admin", name: "Vidula Sanjana" },
+  { email: "vidulasanjana.ec23@bitsathy.ac.in", role_name: "admin", name: "Vidula Sanjana" },
+  { email: "svidula2005@gmail.com", role_name: "student", name: "S Vidula" },
   { email: "vidula2005@gmail.com", role_name: "student", name: "Vidula" },
-  { email: "svidula2005@gmail.com", role_name: "admin", name: "S Vidula" },
 ];
 
 async function seed() {

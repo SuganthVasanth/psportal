@@ -38,6 +38,10 @@ app.use("/api/movement-pass", movementPassRoutes);
 const superadminRoutes = require("./routes/superadminRoutes");
 app.use("/api/superadmin", superadminRoutes);
 
+// Student: active slots and book slot
+const bookingRoutes = require("./routes/bookingRoutes");
+app.use("/api", bookingRoutes);
+
 app.listen(5000, "0.0.0.0", () => {
   console.log("Server running on http://localhost:5000");
 });
