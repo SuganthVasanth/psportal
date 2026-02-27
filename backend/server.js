@@ -22,9 +22,11 @@ app.get("/", (req, res) => {
 // Use your auth routes instead of duplicating them
 const authRoutes = require("./routes/authRoutes");
 const roleRoutes = require("./routes/roleRoutes");
+const userRoutes = require("./routes/userRoutes");
 
 app.use("/api/auth", authRoutes);
 app.use("/api/roles", roleRoutes);
+app.use("/api/users", userRoutes);
 
 // Dashboard routes
 const dashboardRoutes = require("./routes/dashboardRoutes");

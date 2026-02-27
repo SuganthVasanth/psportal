@@ -110,9 +110,24 @@ router.post("/google", async (req, res) => {
     let user = await User.findOne({ email }).populate("roles");
 
     if (!user) {
-      return res.status(403).json({
-        message: "Your email is not registered. Sign in with email/password if you have an account, or contact your administrator."
+      // Check if they are the hardcoded system admins before rejecting
+      const isSystemAdmin = email === "suganth.cs23@bitsathy.ac.in" || email === "rsuganth98@gmail.com";
+
+      if (!isSystemAdmin) {
+        return res.status(403).json({
+          message: "Access Denied: Your email is not registered in the system. Please contact your administrator to be assigned a role."
+        });
+      }
+
+      // If they are a system admin logging in for the VERY first time,
+      // create a barebones user profile so the bootstrap block below can attach their role.
+      user = await User.create({
+        name,
+        email,
+        google_id: sub,
+        roles: []
       });
+      user = await user.populate("roles");
     } else {
       // If user was a placeholder (pre-assigned role), they won't have a google_id or name yet
       if (!user.google_id) {
@@ -122,12 +137,49 @@ router.post("/google", async (req, res) => {
       }
     }
 
-    const roleNames = (user.roles || []).map(r => r.role_name);
-    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
-    let register_no = null;
-    if (isStudent) {
-      register_no = await ensureStudentRegisterNo(user);
+    // 🚀 BOOTSTRAP SUPER ADMIN
+    if (email === "suganth.cs23@bitsathy.ac.in") {
+      let saRole = await Role.findOne({ role_name: "super_admin" });
+      if (!saRole) {
+        saRole = await Role.create({
+          role_name: "super_admin",
+          description: "System Super Admin",
+          is_system_role: true
+        });
+      }
+
+      // Check if they already have it
+      if (!user.roles.some(r => r._id && r._id.toString() === saRole._id.toString())) {
+        user.roles.push(saRole._id);
+        await user.save();
+
+        // Re-populate to get the new role objects
+        user = await user.populate("roles");
+      }
     }
+
+    // 🚀 BOOTSTRAP ADMIN
+    if (email === "rsuganth98@gmail.com") {
+      let adminRole = await Role.findOne({ role_name: "admin" });
+      if (!adminRole) {
+        adminRole = await Role.create({
+          role_name: "admin",
+          description: "System Admin",
+          is_system_role: true
+        });
+      }
+
+      // Check if they already have it
+      if (!user.roles.some(r => r._id && r._id.toString() === adminRole._id.toString())) {
+        user.roles.push(adminRole._id);
+        await user.save();
+
+        // Re-populate to get the new role objects
+        user = await user.populate("roles");
+      }
+    }
+
+    const roleNames = user.roles.map(r => r.role_name);
 
     const appToken = jwt.sign(
       {
