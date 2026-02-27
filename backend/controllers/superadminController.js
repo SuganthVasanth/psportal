@@ -246,7 +246,7 @@ exports.updateSlotTemplate = async (req, res) => {
 exports.getLeaveTypes = async (req, res) => {
   try {
     const list = await LeaveType.find().lean();
-    res.json(list.map((l) => ({ id: l._id.toString(), type: l.type, code: l.code })));
+    res.json(list.map((l) => ({ id: l._id.toString(), type: l.type, code: l.code, status: l.status || "Active" })));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -254,8 +254,9 @@ exports.getLeaveTypes = async (req, res) => {
 
 exports.createLeaveType = async (req, res) => {
   try {
-    const doc = await LeaveType.create({ type: req.body.type || "", code: req.body.code || "" });
-    res.status(201).json({ id: doc._id.toString(), type: doc.type, code: doc.code });
+    const status = req.body.status === "Inactive" ? "Inactive" : "Active";
+    const doc = await LeaveType.create({ type: req.body.type || "", code: req.body.code || "", status });
+    res.status(201).json({ id: doc._id.toString(), type: doc.type, code: doc.code, status: doc.status || "Active" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -263,9 +264,11 @@ exports.createLeaveType = async (req, res) => {
 
 exports.updateLeaveType = async (req, res) => {
   try {
-    const doc = await LeaveType.findByIdAndUpdate(req.params.id, { type: req.body.type, code: req.body.code }, { new: true });
+    const update = { type: req.body.type, code: req.body.code };
+    if (req.body.status !== undefined) update.status = req.body.status === "Inactive" ? "Inactive" : "Active";
+    const doc = await LeaveType.findByIdAndUpdate(req.params.id, update, { new: true });
     if (!doc) return res.status(404).json({ message: "Leave type not found" });
-    res.json({ id: doc._id.toString(), type: doc.type, code: doc.code });
+    res.json({ id: doc._id.toString(), type: doc.type, code: doc.code, status: doc.status || "Active" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

@@ -379,7 +379,7 @@ export default function SuperAdminDashboard() {
         </div>
         <div className="top-nav-profile">
           <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`}
+            src={`https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png`}
             alt="Profile"
             className="profile-avatar"
           />

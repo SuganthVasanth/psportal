@@ -63,7 +63,7 @@ async function seed() {
         user_id: userId,
         name: s.name,
         register_no: s.register_no,
-        profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(s.register_no),
+        profile_pic: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
         activity_points: s.activity_points,
         department: "Computer Science and Engineering",
         type: "dayscholar",

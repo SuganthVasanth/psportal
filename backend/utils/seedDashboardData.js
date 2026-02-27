@@ -25,7 +25,7 @@ const seedDashboard = async () => {
             user_id: mockUserId,
             name: "SUGANTH R",
             register_no: "7376231CS323",
-            profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=Suganth",
+            profile_pic: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
             activity_points: 15750,
             department: "Computer Science and Engineering",
             type: "dayscholar"

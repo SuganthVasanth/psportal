@@ -66,9 +66,8 @@ const NAV = [
     label: "Leaves",
     icon: FileText,
     sub: [
-      { id: "leave-types", label: "Leave types" },
-      { id: "leave-approval", label: "Leave approval flow" },
-      { id: "leave-workflow", label: "All leave types with workflow" },
+      { id: "leave-flow", label: "Leave Flow" },
+      { id: "all-leave-types", label: "All Leave Types" },
     ],
   },
   {
@@ -100,6 +99,7 @@ const ROLE_TAG_COLORS = {
   "hostel manager": "sa-tag-hostel",
   admin: "sa-tag-admin",
   super_admin: "sa-tag-super",
+  parents: "sa-tag-parents",
 };
 
 function getRoleTagClass(role) {
@@ -137,6 +137,8 @@ export default function AdminDashboard() {
     prerequisites: "",
   });
   const [leaveApprovalSteps, setLeaveApprovalSteps] = useState("mentor, warden, hostel_manager");
+  const [leaveFlowSelectedType, setLeaveFlowSelectedType] = useState("");
+  const [leaveFlowSteps, setLeaveFlowSteps] = useState([""]);
   const [createUserForm, setCreateUserForm] = useState({ email: "", name: "", roles: [] });
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -284,15 +286,32 @@ export default function AdminDashboard() {
         else setSlotsList((prev) => [...prev, data]);
       } else if (section === "leave-types") {
         const url = itemId ? `${base}/leave-types/${itemId}` : `${base}/leave-types`;
+        const status = item.status === "Inactive" ? "Inactive" : "Active";
         const res = await fetch(url, {
           method: itemId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type: item.type, code: item.code }),
+          body: JSON.stringify({ type: item.type, code: item.code, status }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to save leave type");
         if (itemId) setLeaveTypesList((prev) => prev.map((l) => (l.id === itemId ? data : l)));
         else setLeaveTypesList((prev) => [...prev, data]);
+
+        // Also save/update workflow for this leave type if provided
+        const wfStr = (item.workflow || "").trim();
+        if (wfStr) {
+          const existing = leaveWorkflowList.find((w) => w.leaveType === data.type);
+          const wfUrl = existing ? `${base}/leave-workflows/${existing.id}` : `${base}/leave-workflows`;
+          const resWf = await fetch(wfUrl, {
+            method: existing ? "PUT" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ leaveType: data.type, workflow: wfStr }),
+          });
+          const wfData = await resWf.json();
+          if (!resWf.ok) throw new Error(wfData.message || "Failed to save workflow");
+          if (existing) setLeaveWorkflowList((prev) => prev.map((w) => (w.id === existing.id ? wfData : w)));
+          else setLeaveWorkflowList((prev) => [...prev, wfData]);
+        }
       } else if (section === "leave-workflow") {
         const url = itemId ? `${base}/leave-workflows/${itemId}` : `${base}/leave-workflows`;
         const res = await fetch(url, {
@@ -377,7 +396,7 @@ export default function AdminDashboard() {
         </div>
         <div className="top-nav-profile">
           <img
-            src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(userName)}`}
+            src={`https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png`}
             alt="Profile"
             className="profile-avatar"
           />
@@ -685,43 +704,127 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Nav 4: Leave flow */}
-          {activeSub === "leave-types" && (
+          {/* Leaves: Leave Flow (create new leave types with flow) */}
+          {activeSub === "leave-flow" && (
             <div className="dashboard-card">
-              <h3 className="card-title">Leave types</h3>
-              <p className="card-subtitle">Add and manage leave type codes.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("leave-types", { type: "", code: "" })}><Plus size={16} /> Add leave type</button>
-              <table className="sa-table">
-                <thead><tr><th>Type</th><th>Code</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {leaveTypesList.map((row) => (
-                    <tr key={row.id}><td>{row.type}</td><td>{row.code}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("leave-types", row)}><Pencil size={14} /></button></td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "leave-approval" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Leave approval flow</h3>
-              <p className="card-subtitle">Define order of approvers (e.g. Mentor, Warden, Hostel Manager).</p>
+              <h3 className="card-title">Leave Flow</h3>
+              <p className="card-subtitle">Create a leave type and define its approval flow. First approver is always Parents, then choose up to 4 more roles.</p>
               <div className="sa-form-group">
-                <label>Approval steps</label>
-                <input type="text" placeholder="e.g. mentor, warden, hostel_manager" value={leaveApprovalSteps} onChange={(e) => setLeaveApprovalSteps(e.target.value)} />
+                <label>Leave type</label>
+                <input
+                  type="text"
+                  className="sa-input"
+                  placeholder="e.g. Sick Leave"
+                  value={leaveFlowSelectedType}
+                  onChange={(e) => setLeaveFlowSelectedType(e.target.value)}
+                />
+              </div>
+              <div className="sa-leave-flow-steps">
+                <div className="sa-flow-step-row">
+                  <span className="sa-flow-step-label">Parents</span>
+                  <span className={`sa-tag ${getRoleTagClass("parents")}`}>Parents</span>
+                </div>
+                {leaveFlowSteps.map((role, idx) => (
+                  <div key={idx} className="sa-flow-step-row">
+                    <span className="sa-flow-step-label">{`Step ${idx + 2}`}</span>
+                    <select
+                      value={role}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        setLeaveFlowSteps((prev) => {
+                          const next = [...prev];
+                          next[idx] = v;
+                          return next;
+                        });
+                      }}
+                      className="sa-flow-role-select"
+                    >
+                      <option value="">Select role...</option>
+                      {rolesList
+                        .filter((r) => (r.role || "").toLowerCase() !== "student")
+                        .map((r) => (
+                          <option key={r.id} value={r.role}>{r.role}</option>
+                        ))}
+                    </select>
+                    {role && (
+                      <span className={`sa-tag ${getRoleTagClass(role)}`}>{role}</span>
+                    )}
+                    {idx === leaveFlowSteps.length - 1 && idx < 4 && (
+                      <button
+                        type="button"
+                        className="sa-btn sa-btn-icon"
+                        title="Add next step"
+                        onClick={() => setLeaveFlowSteps((prev) => (prev.length < 5 ? [...prev, ""] : prev))}
+                      >
+                        <Plus size={18} />
+                      </button>
+                    )}
+                    {leaveFlowSteps.length > 1 && (
+                      <button
+                        type="button"
+                        className="sa-btn sa-btn-icon sa-btn-ghost"
+                        title="Remove step"
+                        onClick={() => setLeaveFlowSteps((prev) => prev.filter((_, i) => i !== idx))}
+                      >
+                        ×
+                      </button>
+                    )}
+                  </div>
+                ))}
               </div>
               <button
                 type="button"
                 className="sa-btn sa-btn-primary"
+                style={{ marginTop: 16 }}
+                disabled={!leaveFlowSelectedType.trim()}
                 onClick={async () => {
+                  const typeName = leaveFlowSelectedType.trim();
+                  if (!typeName) return;
+                  const extraSteps = leaveFlowSteps.filter(Boolean);
+                  const steps = ["Parents", ...extraSteps];
+                  const workflow = steps.join(", ");
                   try {
-                    const res = await fetch(`${API_BASE}/api/superadmin/settings`, {
-                      method: "PUT",
+                    const base = `${API_BASE}/api/superadmin`;
+                    // Ensure LeaveType exists (create if needed)
+                    const existingType = leaveTypesList.find((lt) => lt.type === typeName);
+                    let typeData = existingType || null;
+                    if (existingType) {
+                      const status = existingType.status === "Inactive" ? "Inactive" : "Active";
+                      const resType = await fetch(`${base}/leave-types/${existingType.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type: typeName, code: existingType.code, status }),
+                      });
+                      const dataType = await resType.json();
+                      if (!resType.ok) throw new Error(dataType.message || "Failed to save leave type");
+                      typeData = dataType;
+                      setLeaveTypesList((prev) => prev.map((l) => (l.id === dataType.id ? dataType : l)));
+                    } else {
+                      const defaultCode = typeName.split(" ").map((w) => w[0] || "").join("").toUpperCase() || "LV";
+                      const resType = await fetch(`${base}/leave-types`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ type: typeName, code: defaultCode, status: "Active" }),
+                      });
+                      const dataType = await resType.json();
+                      if (!resType.ok) throw new Error(dataType.message || "Failed to create leave type");
+                      typeData = dataType;
+                      setLeaveTypesList((prev) => [...prev, dataType]);
+                    }
+
+                    // Create or update workflow for this leave type
+                    const existingWf = leaveWorkflowList.find((w) => w.leaveType === typeName);
+                    const url = existingWf ? `${base}/leave-workflows/${existingWf.id}` : `${base}/leave-workflows`;
+                    const res = await fetch(url, {
+                      method: existingWf ? "PUT" : "POST",
                       headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ leaveApprovalSteps }),
+                      body: JSON.stringify({ leaveType: typeName, workflow }),
                     });
-                    if (!res.ok) throw new Error((await res.json()).message || "Failed to save");
-                    alert("Leave approval flow saved.");
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message || "Failed to save leave flow");
+                    if (existingWf) setLeaveWorkflowList((prev) => prev.map((w) => (w.id === existingWf.id ? data : w)));
+                    else setLeaveWorkflowList((prev) => [...prev, data]);
+                    alert("Leave flow saved.");
                   } catch (e) {
                     alert(e.message || "Save failed");
                   }
@@ -732,19 +835,39 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {activeSub === "leave-workflow" && (
+          {/* Leaves: All Leave Types */}
+          {activeSub === "all-leave-types" && (
             <div className="dashboard-card">
-              <h3 className="card-title">All leave types with workflow</h3>
-              <p className="card-subtitle">Edit and add new workflows.</p>
+              <h3 className="card-title">All Leave Types</h3>
+              <p className="card-subtitle">Edit leave types and their status. Use Active/Inactive to enable or disable.</p>
               <table className="sa-table">
-                <thead><tr><th>Leave type</th><th>Workflow</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Type</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
-                  {leaveWorkflowList.map((row) => (
-                    <tr key={row.id}><td>{row.leaveType}</td><td>{row.workflow}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("leave-workflow", row)}><Pencil size={14} /></button></td></tr>
+                  {leaveTypesList.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.type}</td>
+                      <td>{row.code}</td>
+                      <td>
+                        <span className={`sa-badge ${(row.status || "Active") === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>
+                          {row.status || "Active"}
+                        </span>
+                      </td>
+                      <td>
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-sm"
+                          onClick={() => {
+                            const wf = leaveWorkflowList.find((w) => w.leaveType === row.type);
+                            openEdit("leave-types", { ...row, status: row.status || "Active", workflow: wf?.workflow || "" });
+                          }}
+                        >
+                          <Pencil size={14} />
+                        </button>
+                      </td>
+                    </tr>
                   ))}
                 </tbody>
               </table>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginTop: 16 }} onClick={() => openAdd("leave-workflow", { leaveType: "", workflow: "" })}><Plus size={16} /> Add new</button>
             </div>
           )}
 
@@ -998,6 +1121,79 @@ export default function AdminDashboard() {
                 <>
                   <div className="sa-form-group"><label>Type</label><input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} placeholder="e.g. Sick Leave" /></div>
                   <div className="sa-form-group"><label>Code</label><input type="text" value={editModal.item.code || ""} onChange={(e) => setEditField("code", e.target.value)} placeholder="e.g. SL" /></div>
+                  <div className="sa-form-group">
+                    <label>Status</label>
+                    <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Leave flow</label>
+                    <p className="sa-form-hint">Click roles below to add; click × on a tag to remove.</p>
+                    <div className="sa-workflow-tags">
+                      {((editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean)).map((step) => (
+                        <span key={step} className={`sa-tag sa-tag-removable ${getRoleTagClass(step)}`}>
+                          {step}
+                          <button
+                            type="button"
+                            className="sa-tag-remove"
+                            onClick={() => {
+                              const steps = (editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean);
+                              setEditField("workflow", steps.filter((s) => s !== step).join(", "));
+                            }}
+                            aria-label={`Remove ${step}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                    <div className="sa-workflow-add">
+                      <span className="sa-workflow-add-label">Add step:</span>
+                      {(() => {
+                        const steps = (editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean);
+                        const parentsAdded = steps.includes("Parents");
+                        return (
+                          <>
+                            <button
+                              type="button"
+                              className={`sa-tag sa-tag-clickable ${getRoleTagClass("parents")} ${parentsAdded ? "sa-tag-added" : ""}`}
+                              onClick={() => {
+                                if (parentsAdded) return;
+                                const current = (editModal.item.workflow || "").trim();
+                                setEditField("workflow", current ? `Parents, ${current}` : "Parents");
+                              }}
+                              disabled={parentsAdded}
+                            >
+                              Parents
+                            </button>
+                            {rolesList
+                              .filter((r) => (r.role || "").toLowerCase() !== "student")
+                              .map((r) => {
+                                const role = r.role;
+                                const added = steps.includes(role);
+                                return (
+                                  <button
+                                    key={r.id}
+                                    type="button"
+                                    className={`sa-tag sa-tag-clickable ${getRoleTagClass(role)} ${added ? "sa-tag-added" : ""}`}
+                                    onClick={() => {
+                                      if (added) return;
+                                      const current = (editModal.item.workflow || "").trim();
+                                      setEditField("workflow", current ? `${current}, ${role}` : role);
+                                    }}
+                                    disabled={added}
+                                  >
+                                    {role}
+                                  </button>
+                                );
+                              })}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  </div>
                 </>
               )}
               {editModal.section === "leave-workflow" && (

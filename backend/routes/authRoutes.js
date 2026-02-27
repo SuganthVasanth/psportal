@@ -42,7 +42,7 @@ async function ensureStudentRegisterNo(user) {
     user_id: user._id,
     name: user.name || user.email?.split("@")[0] || "Student",
     register_no,
-    profile_pic: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(register_no),
+    profile_pic: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png" ,
     activity_points: 0,
     department: "Computer Science and Engineering",
     type: "dayscholar",

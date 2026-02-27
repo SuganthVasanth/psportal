@@ -23,7 +23,7 @@ const MOCK_MATERIALS = [
 const MOCK_PROFILE = {
   register_no: "7376231CS323",
   name: "SUGANTH R",
-  avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=Suganth",
+  avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
 };
 
 export default function CourseDetails() {

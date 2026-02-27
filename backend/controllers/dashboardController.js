@@ -17,7 +17,7 @@ exports.getStudentDashboardData = async (req, res) => {
                 profile: {
                     name: "Student",
                     register_no: register_no,
-                    avatarUrl: "https://api.dicebear.com/7.x/avataaars/svg?seed=" + encodeURIComponent(register_no),
+                    avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png/svg?seed=" + encodeURIComponent(register_no),
                     department: "Computer Science and Engineering"
                 },
                 points: {
@@ -116,7 +116,7 @@ exports.getStudentDashboardData = async (req, res) => {
             profile: {
                 name: student.name,
                 register_no: student.register_no,
-                avatarUrl: student.profile_pic || "https://api.dicebear.com/7.x/avataaars/svg?seed=Suganth",
+                avatarUrl: student.profile_pic || "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
                 department: student.department
             },
             points: {
