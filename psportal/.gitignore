@@ -1,0 +1,9 @@
+client_secret_638723048050-7c5ekrp7enjr51cudgvdmgijg06c4mur.apps.googleusercontent.com.json
+client_secret_638723048050-8205ving3kgof6vm3kpbte74jnc4f6le.apps.googleusercontent.com.json
+node_modules/
+backend/node_modules/
+frontend/node_modules/
+.env
+dist/
+build/
+seed_error.txt

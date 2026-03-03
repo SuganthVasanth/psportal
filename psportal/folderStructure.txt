@@ -1,0 +1,177 @@
+PS D:\VS CODE\Web Development\psportal> dir
+
+
+    Directory: D:\VS CODE\Web Development\psportal
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        20-02-2026  10:03 AM                backend
+d-----        20-02-2026  11:20 AM                frontend
+-a----        20-02-2026  11:20 AM              0 folderStructure.txt
+
+
+PS D:\VS CODE\Web Development\psportal> cd frontend
+PS D:\VS CODE\Web Development\psportal\frontend> dir
+
+
+    Directory: D:\VS CODE\Web Development\psportal\frontend
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        20-02-2026  09:16 AM                node_modules
+d-----        20-02-2026  09:13 AM                public
+d-----        20-02-2026  09:13 AM                src
+-a----        20-02-2026  09:12 AM            253 .gitignore
+-a----        20-02-2026  09:12 AM            758 eslint.config.js
+-a----        20-02-2026  11:20 AM              0 fol
+-a----        20-02-2026  09:20 AM            358 index.html
+-a----        20-02-2026  09:16 AM          99951 package-lock.json
+-a----        20-02-2026  09:13 AM            604 package.json
+-a----        20-02-2026  09:12 AM           1157 README.md
+-a----        20-02-2026  09:12 AM            161 vite.config.js
+
+
+PS D:\VS CODE\Web Development\psportal\frontend> cd src
+PS D:\VS CODE\Web Development\psportal\frontend\src> dir
+
+
+    Directory: D:\VS CODE\Web Development\psportal\frontend\src
+
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d-----        20-02-2026  09:13 AM                assets
+-a----        20-02-2026  09:12 AM            606 App.css
+-a----        20-02-2026  09:21 AM             97 App.jsx
+-a----        20-02-2026  09:22 AM            353 index.css
+-a----        20-02-2026  09:12 AM            229 main.jsx
+
+
+PS D:\VS CODE\Web Development\psportal\frontend\src> 
+
+
+
+
+🚀 STEP 1 — Backend Google Token Verification (VERY IMPORTANT)
+
+Right now Google login is only frontend-level.
+
+Next step:
+
+✅ Send Google token to backend
+✅ Verify token in backend
+✅ Create user if not exists
+✅ Assign default role (STUDENT)
+✅ Generate your own JWT
+✅ Store that JWT in frontend
+Why?
+
+Because:
+
+❌ You should NEVER trust frontend decoded token
+✅ Backend must verify with Google
+
+🚀 STEP 2 — Implement Role-Based Access Control (RBAC)
+
+Since your system has:
+
+SUPER_ADMIN
+
+ADMIN
+
+INTERN
+
+STUDENT
+
+DYNAMIC ROLES
+
+You now implement:
+
+authorize(["ADMIN"])
+authorize(["INTERN"])
+authorize(["SUPER_ADMIN"])
+
+So routes become protected.
+
+🚀 STEP 3 — Build User + Role Tables in Backend
+
+Now that Google login works, create:
+
+users
+roles
+user_roles
+
+Then:
+
+When user logs in first time → assign STUDENT role automatically.
+
+🚀 STEP 4 — Create Dashboard Based on Role
+
+After login:
+
+Redirect user based on role:
+
+Role	Redirect To
+STUDENT	/student-dashboard
+INTERN	/intern-dashboard
+ADMIN	/admin-dashboard
+SUPER_ADMIN	/super-admin-dashboard
+🚀 STEP 5 — Implement One Complete Flow End-to-End
+
+Don't build everything randomly.
+
+Pick ONE feature and complete it fully.
+
+Best choice:
+
+🔥 Implement "Slot Booking + Attendance + Test Start"
+
+Flow:
+
+Student registers for slot
+
+Intern marks attendance
+
+Student allowed to start assessment
+
+Student submits answers
+
+Marks saved
+
+Progress updated
+
+Complete this fully.
+
+🚀 STEP 6 — Then Implement Leave Flow
+
+After test flow works, move to:
+
+Student applies leave
+
+Parent approval
+
+Mentor approval
+
+Warden approval
+
+Final status update
+
+🔥 Suggested Order (Very Important)
+
+Do NOT jump randomly.
+
+Follow this exact order:
+
+1. Google Login (done ✅)
+2. Backend token verification
+3. User + Role system
+4. JWT auth middleware
+5. Slot booking flow
+6. Attendance by intern
+7. Test attempt flow
+8. Leave approval flow
+9. Admin role management
+🎯 What NOT To Do Now
+

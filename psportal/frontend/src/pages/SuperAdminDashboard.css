@@ -1,0 +1,1089 @@
+/* Super Admin Dashboard - same UI as PS Portal Student Dashboard */
+.dashboard-layout.sa-dashboard-layout {
+  min-height: 100vh;
+  background-color: #f4f7fe;
+  font-family: "Inter", sans-serif;
+}
+
+/* Reuse PS Portal top navbar (same as StudentDashboard) */
+.sa-dashboard-layout .top-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 60px;
+  background-color: #ffffff;
+  padding: 0 40px 0 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 110;
+  box-sizing: border-box;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.sa-dashboard-layout .top-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-weight: 700;
+  color: #1a202c;
+  font-size: 18px;
+}
+
+.sa-dashboard-layout .top-nav-profile {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: #f7fafc;
+  padding: 6px 16px 6px 6px;
+  border-radius: 50px;
+  border: 1px solid #edf2f7;
+}
+
+.sa-dashboard-layout .profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.sa-dashboard-layout .profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-dashboard-layout .profile-id {
+  font-size: 11px;
+  color: #718096;
+  font-weight: 500;
+}
+
+.sa-dashboard-layout .profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.sa-logout-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 8px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.sa-logout-btn:hover {
+  background: #f1f5f9;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.sa-body {
+  display: flex;
+  flex: 1;
+  min-height: calc(100vh - 60px);
+  margin-top: 60px;
+}
+
+/* Sidebar - same style as StudentSidebar (white, purple active) */
+.sa-sidebar {
+  width: 260px;
+  background-color: #ffffff;
+  border-right: 1px solid #edf2f7;
+  overflow-y: auto;
+  padding: 16px 0;
+  position: fixed;
+  left: 0;
+  top: 60px;
+  height: calc(100vh - 60px);
+  z-index: 100;
+}
+
+.sa-nav-section {
+  margin-bottom: 4px;
+}
+
+.sa-nav-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #718096;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.sa-nav-main:hover {
+  background-color: #f7fafc;
+  color: #2d3748;
+}
+
+.sa-nav-main.active {
+  background-color: #8b5cf6;
+  color: white;
+  border-left-color: #7c3aed;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.25);
+}
+
+.sa-nav-main span {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.sa-nav-sub {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: #f7fafc;
+}
+
+.sa-nav-sub li {
+  border: none;
+}
+
+.sa-nav-sub a {
+  display: block;
+  padding: 8px 20px 8px 44px;
+  font-size: 13px;
+  color: #718096;
+  text-decoration: none;
+  transition: background 0.2s, color 0.2s;
+}
+
+.sa-nav-sub a:hover {
+  background: #edf2f7;
+  color: #2d3748;
+}
+
+.sa-nav-sub a.active {
+  background: #ede9fe;
+  color: #6d28d9;
+  font-weight: 600;
+}
+
+/* Main area - same as StudentDashboard (dashboard-main-area) */
+.sa-main {
+  flex: 1;
+  margin-left: 260px;
+  padding: 24px 40px;
+  min-height: calc(100vh - 60px);
+  overflow-y: auto;
+}
+
+.sa-main .dashboard-container-inner {
+  max-width: 1300px;
+  margin: 0 auto;
+}
+
+.sa-welcome-banner {
+  background-color: #ffffff;
+  padding: 24px 30px;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+  font-size: 20px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.sa-welcome-banner .highlight {
+  color: #8b5cf6;
+}
+
+/* Cards - same as StudentDashboard (dashboard-card) */
+.sa-main .dashboard-card {
+  background: #ffffff;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+}
+
+.sa-main .card-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: #2d3748;
+  margin: 0 0 6px 0;
+}
+
+.sa-main .card-subtitle {
+  font-size: 13px;
+  color: #718096;
+  margin: 0 0 20px 0;
+}
+
+/* Tables - same as StudentDashboard breakdown-table */
+.sa-main .breakdown-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.sa-main .breakdown-table th {
+  text-align: left;
+  font-size: 11px;
+  color: #718096;
+  text-transform: uppercase;
+  padding: 12px 0;
+  border-bottom: 1px solid #edf2f7;
+  font-weight: 700;
+}
+
+.sa-main .breakdown-table td {
+  padding: 12px 0;
+  font-size: 13px;
+  color: #4a5568;
+  border-bottom: 1px solid #f7fafc;
+}
+
+.sa-main .breakdown-table tr:hover td {
+  background: #f7fafc;
+}
+
+.sa-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.sa-table th {
+  text-align: left;
+  padding: 10px 12px;
+  font-weight: 600;
+  color: #718096;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.sa-table td {
+  padding: 12px;
+  border-bottom: 1px solid #f7fafc;
+  color: #4a5568;
+}
+
+.sa-table tr:hover td {
+  background: #f7fafc;
+}
+
+/* Buttons - match PS Portal (purple primary) */
+.sa-btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: 1px solid #edf2f7;
+  background: #fff;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sa-btn:hover {
+  background: #f7fafc;
+  border-color: #e2e8f0;
+}
+
+.sa-btn-primary {
+  background: #8b5cf6;
+  color: #fff;
+  border-color: #8b5cf6;
+}
+
+.sa-btn-primary:hover {
+  background: #7c3aed;
+  border-color: #7c3aed;
+  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+}
+
+.sa-btn-sm {
+  padding: 4px 10px;
+  font-size: 12px;
+}
+
+.sa-form-group {
+  margin-bottom: 16px;
+}
+
+.sa-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.sa-form-group input,
+.sa-form-group select,
+.sa-form-group textarea {
+  width: 100%;
+  max-width: 400px;
+  padding: 8px 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #2d3748;
+  background: #fff;
+}
+
+.sa-form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.sa-input {
+  width: 100%;
+  max-width: 400px;
+  padding: 8px 12px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #2d3748;
+  background: #fff;
+}
+
+/* Leave Flow: steps with role tags */
+.sa-leave-flow-steps {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.sa-flow-step-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.sa-flow-step-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+  min-width: 60px;
+}
+
+.sa-flow-role-select {
+  padding: 6px 10px;
+  border: 1px solid #edf2f7;
+  border-radius: 8px;
+  font-size: 13px;
+  min-width: 140px;
+  background: #fff;
+}
+
+.sa-btn-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 8px;
+  background: #8b5cf6;
+  color: #fff;
+  border: none;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.sa-btn-icon:hover {
+  background: #7c3aed;
+}
+
+.sa-btn-ghost {
+  background: transparent;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+}
+
+.sa-btn-ghost:hover {
+  background: #fef2f2;
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.sa-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  margin: 2px 4px 2px 0;
+}
+
+.sa-tag-student { background: #e0f2fe; color: #0369a1; }
+.sa-tag-mentor { background: #d1fae5; color: #047857; }
+.sa-tag-warden { background: #fef3c7; color: #b45309; }
+.sa-tag-hostel { background: #e0e7ff; color: #3730a3; }
+.sa-tag-admin { background: #cffafe; color: #0e7490; }
+.sa-tag-super { background: #e2e8f0; color: #334155; }
+.sa-tag-neutral { background: #f1f5f9; color: #475569; }
+.sa-tag-parents { background: #fce7f3; color: #9d174d; }
+
+.sa-access-list { margin-top: 8px; max-height: 320px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; background: #f8fafc; }
+.sa-access-group { margin-bottom: 12px; }
+.sa-access-group:last-child { margin-bottom: 0; }
+.sa-access-group-title { display: block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; margin-bottom: 6px; }
+.sa-access-option { display: flex; align-items: center; gap: 8px; padding: 4px 0; font-size: 13px; cursor: pointer; }
+.sa-access-option input { margin: 0; }
+.sa-access-option span { flex: 1; }
+
+.sa-muted { color: #94a3b8; }
+.sa-hide { display: none !important; }
+.sa-course-logo-cell { vertical-align: middle; }
+.sa-course-logo-thumb { width: 32px; height: 32px; object-fit: cover; border-radius: 6px; vertical-align: middle; }
+.sa-course-logo-preview { margin-top: 8px; }
+.sa-course-logo-preview img { max-width: 120px; max-height: 80px; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; }
+
+.sa-form-hint {
+  font-size: 12px;
+  color: #64748b;
+  margin: 0 0 8px 0;
+}
+
+.sa-workflow-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  min-height: 32px;
+}
+
+.sa-tag-removable {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding-right: 4px;
+}
+
+.sa-tag-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  background: rgba(0,0,0,0.15);
+  color: inherit;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.sa-tag-remove:hover {
+  background: rgba(0,0,0,0.25);
+}
+
+.sa-workflow-add {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.sa-workflow-add-label {
+  font-size: 12px;
+  color: #64748b;
+  margin-right: 4px;
+}
+
+.sa-tag-clickable {
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: opacity 0.2s, border-color 0.2s;
+  font: inherit;
+  font-size: inherit;
+}
+
+.sa-tag-clickable:hover:not(:disabled) {
+  border-color: rgba(0,0,0,0.2);
+}
+
+.sa-tag-clickable:disabled,
+.sa-tag-added {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.sa-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.sa-stat-card {
+  background: #fff;
+  border: 1px solid #edf2f7;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.sa-stat-card h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.sa-stat-card .value {
+  font-size: 24px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.sa-chart-wrap {
+  height: 280px;
+  position: relative;
+  margin-bottom: 8px;
+}
+.sa-chart-wrap.sa-chart-bar { height: 260px; }
+.sa-chart-wrap.sa-chart-doughnut { height: 260px; max-width: 320px; margin: 0 auto 16px; }
+
+.sa-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.sa-badge-success { background: #d1fae5; color: #047857; }
+.sa-badge-warning { background: #fef3c7; color: #b45309; }
+.sa-badge-danger { background: #fee2e2; color: #b91c1c; }
+.sa-badge-neutral { background: #f1f5f9; color: #475569; }
+
+.sa-slot-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.sa-slot-active { background: #dcfce7; color: #166534; }
+.sa-slot-inactive { background: #fee2e2; color: #991b1b; }
+
+.sa-loading {
+  text-align: center;
+  padding: 24px;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.sa-error {
+  padding: 16px 20px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #b91c1c;
+  font-size: 14px;
+  margin-bottom: 16px;
+}
+
+.sa-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: #718096;
+  font-size: 14px;
+}
+
+.sa-chevon {
+  transition: transform 0.2s;
+}
+
+.sa-nav-section.open .sa-chevon {
+  transform: rotate(90deg);
+}
+
+/* Edit / Add modal */
+.sa-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 200;
+  padding: 20px;
+}
+
+.sa-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sa-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.sa-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a202c;
+}
+
+.sa-modal-close {
+  background: none;
+  border: none;
+  padding: 4px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.sa-modal-close:hover {
+  background: #f1f5f9;
+  color: #1a202c;
+}
+
+.sa-modal-body {
+  padding: 20px;
+  overflow-y: auto;
+}
+
+.sa-modal-body .sa-form-group {
+  margin-bottom: 16px;
+}
+
+.sa-modal-body .sa-form-group:last-child {
+  margin-bottom: 0;
+}
+
+.sa-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid #edf2f7;
+  background: #f8fafc;
+}
+
+/* Larger course edit/create modal */
+.sa-modal-courses {
+  max-width: 720px;
+  width: 96%;
+}
+
+.sa-modal-courses .sa-modal-body {
+  padding: 24px 28px;
+  max-height: 78vh;
+}
+
+.sa-course-section {
+  margin-bottom: 28px;
+}
+
+.sa-course-section:last-child {
+  margin-bottom: 0;
+}
+
+.sa-course-section-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 14px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.sa-course-section .sa-form-group {
+  margin-bottom: 16px;
+}
+
+.sa-course-section .sa-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #475569;
+  margin-bottom: 6px;
+}
+
+.sa-course-section .sa-form-group input[type="text"],
+.sa-course-section .sa-form-group input[type="number"],
+.sa-course-section .sa-form-group input[type="url"],
+.sa-course-section .sa-form-group select,
+.sa-course-section .sa-form-group textarea {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.sa-level-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+
+.sa-level-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.sa-level-card-title {
+  font-weight: 600;
+  font-size: 14px;
+  color: #1e293b;
+}
+
+.sa-prereq-levels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.sa-prereq-levels label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+}
+
+.sa-autocomplete-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.sa-autocomplete-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.sa-autocomplete-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 4px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+  z-index: 10;
+}
+
+.sa-autocomplete-item {
+  display: block;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 14px;
+  color: #334155;
+  cursor: pointer;
+}
+
+.sa-autocomplete-item:hover {
+  background: #f1f5f9;
+}
+
+.sa-prereq-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.sa-prereq-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  background: #e0e7ff;
+  color: #3730a3;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.sa-prereq-tag-remove {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: #6366f1;
+  padding: 0 2px;
+  font-size: 16px;
+  line-height: 1;
+}
+
+.sa-prereq-tag-remove:hover {
+  color: #4338ca;
+}
+
+/* Course details tab: neater levels expand */
+.sa-details-levels-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #475569;
+  cursor: pointer;
+}
+
+.sa-details-levels-toggle:hover {
+  background: #e2e8f0;
+}
+
+.sa-details-levels-body {
+  padding: 16px 0 8px 0;
+  border-top: 1px solid #f1f5f9;
+}
+
+.sa-details-level-card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 10px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 16px;
+  align-items: start;
+}
+
+.sa-details-level-card:last-child {
+  margin-bottom: 0;
+}
+
+.sa-details-level-info h4 {
+  margin: 0 0 6px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.sa-details-level-meta {
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+/* Chat modal (admin–faculty) */
+.chat-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+.chat-modal {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+  width: 100%;
+  max-width: 480px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+}
+.chat-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 12px 12px 0 0;
+}
+.chat-modal-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+.chat-modal-close {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 4px;
+  color: #64748b;
+}
+.chat-modal-close:hover {
+  color: #0f172a;
+}
+.chat-modal-body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  min-height: 200px;
+  max-height: 360px;
+}
+.chat-loading,
+.chat-empty {
+  color: #64748b;
+  font-size: 13px;
+  margin: 0;
+}
+.chat-bubble {
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  max-width: 88%;
+}
+.chat-bubble-mine {
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  margin-left: auto;
+}
+.chat-bubble-theirs {
+  background: #f1f5f9;
+  color: #1e293b;
+}
+.chat-sender {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6366f1;
+  margin-bottom: 4px;
+}
+.chat-text {
+  margin: 0 0 4px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+.chat-file-link {
+  display: inline-block;
+  font-size: 13px;
+  color: inherit;
+  text-decoration: underline;
+  margin-bottom: 4px;
+}
+.chat-suggested {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(0,0,0,0.08);
+  font-size: 12px;
+}
+.chat-suggested strong {
+  display: block;
+  margin-bottom: 4px;
+}
+.chat-time {
+  font-size: 10px;
+  opacity: 0.85;
+}
+.chat-input-area {
+  padding: 12px 16px;
+  border-top: 1px solid #e2e8f0;
+  background: #fafafa;
+  border-radius: 0 0 12px 12px;
+}
+.chat-input-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.chat-input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 14px;
+}
+.chat-attach {
+  padding: 8px 12px;
+  font-size: 12px;
+  color: #64748b;
+  cursor: pointer;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  background: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.chat-send {
+  padding: 10px 14px;
+  background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.chat-send:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.chat-suggest-row .chat-suggest-input {
+  font-size: 12px;
+  padding: 8px 12px;
+}
+
+.sa-chat-name-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: #6366f1;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.sa-chat-name-btn:hover {
+  color: #4f46e5;
+}
