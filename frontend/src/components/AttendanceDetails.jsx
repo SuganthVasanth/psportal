@@ -22,16 +22,8 @@ const AttendanceDetails = ({ attendance }) => {
     const dd = String(today.getDate()).padStart(2, '0');
     const todayString = `${yyyy}-${mm}-${dd}`;
 
-    // On mount, check if there are records. If so, default to the most recent one instead of strict "today"
-    // Assuming backend returns records sorted newest first, or we pick the first one's date.
+    // On mount, default to today
     let initialDate = todayString;
-    if (attendance && attendance.records && attendance.records.length > 0) {
-        // Optional: Check if today exists, otherwise fallback to the first record
-        const hasToday = attendance.records.some(r => convertRecordDateToISO(r.date) === todayString);
-        if (!hasToday) {
-            initialDate = convertRecordDateToISO(attendance.records[0].date);
-        }
-    }
 
     const [selectedDate, setSelectedDate] = useState(initialDate);
 
@@ -45,9 +37,29 @@ const AttendanceDetails = ({ attendance }) => {
         return `${d} ${months[parseInt(m, 10) - 1]} ${y}`;
     };
 
-    const filteredRecords = attendance.records.filter(
+    let filteredRecords = attendance.records.filter(
         r => convertRecordDateToISO(r.date) === selectedDate
     );
+
+    // If selected date lacks records (e.g., future or unrecorded past holidays), show all as "Absent"
+    if (filteredRecords.length === 0) {
+        const standardSessions = [
+            { time: "Biometric - FN", shift: "Forenoon", status: "Absent" },
+            { time: "Biometric - AN", shift: "Afternoon", status: "Absent" },
+            { time: "08:45 Am to 09:35 Am", shift: "Forenoon", status: "Absent" },
+            { time: "09:35 Am to 10:25 Am", shift: "Forenoon", status: "Absent" },
+            { time: "10:40 Am to 11:30 Am", shift: "Forenoon", status: "Absent" },
+            { time: "11:30 Am to 12:20 Pm", shift: "Forenoon", status: "Absent" },
+            { time: "01:30 Pm to 02:20 Pm", shift: "Afternoon", status: "Absent" },
+            { time: "02:20 Pm to 03:10 Pm", shift: "Afternoon", status: "Absent" },
+            { time: "03:25 Pm to 04:25 Pm", shift: "Afternoon", status: "Absent" }
+        ];
+
+        filteredRecords = [{
+            date: selectedDate,
+            sessions: standardSessions
+        }];
+    }
 
     const targetDateFormatted = formatDateForRecord(selectedDate);
 

@@ -1,25 +1,3 @@
-// const express = require("express");
-// const router = express.Router();
-// const passport = require("passport");
-
-// // Google login
-// router.get(
-//   "/google",
-//   passport.authenticate("google", { scope: ["profile", "email"] })
-// );
-
-// // Google callback
-// router.get(
-//   "/google/callback",
-//   passport.authenticate("google", { session: false }),
-//   (req, res) => {
-//     const token = req.user.token;
-
-//     res.redirect(`http://localhost:5173/oauth-success?token=${token}`);
-//   }
-// );
-
-// module.exports = router;
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const { OAuth2Client } = require("google-auth-library");
@@ -42,7 +20,7 @@ async function ensureStudentRegisterNo(user) {
     user_id: user._id,
     name: user.name || user.email?.split("@")[0] || "Student",
     register_no,
-    profile_pic: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png" ,
+    profile_pic: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
     activity_points: 0,
     department: "Computer Science and Engineering",
     type: "dayscholar",
@@ -137,49 +115,15 @@ router.post("/google", async (req, res) => {
       }
     }
 
-    // 🚀 BOOTSTRAP SUPER ADMIN
-    if (email === "suganth.cs23@bitsathy.ac.in") {
-      let saRole = await Role.findOne({ role_name: "super_admin" });
-      if (!saRole) {
-        saRole = await Role.create({
-          role_name: "super_admin",
-          description: "System Super Admin",
-          is_system_role: true
-        });
-      }
 
-      // Check if they already have it
-      if (!user.roles.some(r => r._id && r._id.toString() === saRole._id.toString())) {
-        user.roles.push(saRole._id);
-        await user.save();
-
-        // Re-populate to get the new role objects
-        user = await user.populate("roles");
-      }
-    }
-
-    // 🚀 BOOTSTRAP ADMIN
-    if (email === "rsuganth98@gmail.com") {
-      let adminRole = await Role.findOne({ role_name: "admin" });
-      if (!adminRole) {
-        adminRole = await Role.create({
-          role_name: "admin",
-          description: "System Admin",
-          is_system_role: true
-        });
-      }
-
-      // Check if they already have it
-      if (!user.roles.some(r => r._id && r._id.toString() === adminRole._id.toString())) {
-        user.roles.push(adminRole._id);
-        await user.save();
-
-        // Re-populate to get the new role objects
-        user = await user.populate("roles");
-      }
-    }
 
     const roleNames = user.roles.map(r => r.role_name);
+
+    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    let register_no = null;
+    if (isStudent) {
+      register_no = await ensureStudentRegisterNo(user);
+    }
 
     const appToken = jwt.sign(
       {

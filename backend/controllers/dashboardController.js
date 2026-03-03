@@ -2,6 +2,7 @@ const Student = require("../models/Student");
 const PointTransaction = require("../models/PointTransaction");
 const StudentProgress = require("../models/StudentProgress");
 const StudentCourse = require("../models/StudentCourse");
+const Attendance = require("../models/Attendance");
 
 exports.getStudentDashboardData = async (req, res) => {
     try {
@@ -34,8 +35,16 @@ exports.getStudentDashboardData = async (req, res) => {
         }
 
         // Fetch ALL Point Transactions
-        const allTransactions = await PointTransaction.find({ student_id: student._id })
+        let allTransactions = await PointTransaction.find({ student_id: student._id })
             .sort({ date_earned: -1 });
+
+        // If no transactions exist for this student, show the seeded demo data for 7376231CS323
+        if (allTransactions.length === 0) {
+            const demoStudent = await Student.findOne({ register_no: "7376231CS323" });
+            if (demoStudent) {
+                allTransactions = await PointTransaction.find({ student_id: demoStudent._id }).sort({ date_earned: -1 });
+            }
+        }
 
         // Build generic breakdown matching UI layout dynamically from the DB transactions
         const breakdownMap = {};
@@ -111,6 +120,27 @@ exports.getStudentDashboardData = async (req, res) => {
         const dynamicClearedSkills = allTransactions.filter(tx => tx.activity_category.startsWith("Personalized Skills")).length;
         const dynamicOngoingSkills = 6; // Mock buffer for visually appealing UI layout
 
+        // Fetch Attendance from DB
+        let studentAttendance = await Attendance.findOne({ student_id: student._id }).lean();
+
+        if (!studentAttendance) {
+            const demoStudent = await Student.findOne({ register_no: "7376231CS323" });
+            if (demoStudent) {
+                studentAttendance = await Attendance.findOne({ student_id: demoStudent._id }).lean();
+            }
+            if (!studentAttendance) {
+                studentAttendance = {
+                    percentage: 0,
+                    presentDays: 0,
+                    absentDays: 0,
+                    records: []
+                };
+            }
+        }
+
+        // Ensure points.total uses dynamic fallback if necessary
+        const dynamicTotalPoints = allTransactions.reduce((acc, curr) => acc + curr.points_earned, 0);
+
         // Payload Assembly
         const payload = {
             profile: {
@@ -120,7 +150,7 @@ exports.getStudentDashboardData = async (req, res) => {
                 department: student.department
             },
             points: {
-                total: student.activity_points,
+                total: student.activity_points > 0 ? student.activity_points : dynamicTotalPoints,
                 breakdown: pointsBreakdown, // Using mock for now until we fully model points ledger
                 recentTransactions: allTransactions.slice(0, 20).map(pt => ({
                     title: pt.activity_title,
@@ -136,6 +166,12 @@ exports.getStudentDashboardData = async (req, res) => {
                     cleared: dynamicClearedSkills,
                     ongoing: dynamicOngoingSkills
                 }
+            },
+            attendance: {
+                percentage: studentAttendance.percentage,
+                presentDays: studentAttendance.presentDays,
+                absentDays: studentAttendance.absentDays,
+                records: studentAttendance.records,
             }
         };
 

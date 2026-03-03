@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   ChevronDown,
   Shield,
@@ -121,38 +121,74 @@ const emptyLists = {
 export default function SuperAdminDashboard() {
   const [openNav, setOpenNav] = useState("rbac");
   const [activeSub, setActiveSub] = useState("roles");
+  const [rolesList, setRolesList] = useState([]);
+  const [usersList, setUsersList] = useState([]);
+  const [coursesList, setCoursesList] = useState([]);
+  const [venuesList, setVenuesList] = useState([]);
+  const [timeSlotsList, setTimeSlotsList] = useState([]);
+  const [slotsList, setSlotsList] = useState([]);
+  const [leaveTypesList, setLeaveTypesList] = useState([]);
+  const [leaveWorkflowList, setLeaveWorkflowList] = useState([]);
+  const [coursePointsForm, setCoursePointsForm] = useState({
+    activityPoints: "10",
+    rewardPoints: "5",
+    description: "",
+    numLevels: "3",
+    prerequisites: "",
+  });
+  const [leaveApprovalSteps, setLeaveApprovalSteps] = useState("mentor, warden, hostel_manager");
+  const [createUserForm, setCreateUserForm] = useState({ email: "", name: "", roles: [] });
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
+
+  const [editModal, setEditModal] = useState({
+    open: false,
+    section: "",
+    itemId: null,
+    item: {},
+  });
+
+  useEffect(() => {
+    const fetchAll = async () => {
+      setLoading(true);
+      setLoadError(null);
+      try {
+        const [roles, users, courses, venues, timeSlots, slotTemplates, leaveTypes, leaveWorkflows, settings] = await Promise.all([
+          fetch(`${API_BASE}/api/superadmin/roles`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/users`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/courses`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/venues`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/time-slots`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/slot-templates`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/leave-types`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/leave-workflows`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/settings`).then((r) => r.json()),
+        ]);
+        setRolesList(Array.isArray(roles) ? roles : []);
+        setUsersList(Array.isArray(users) ? users : []);
+        setCoursesList(Array.isArray(courses) ? courses : []);
+        setVenuesList(Array.isArray(venues) ? venues : []);
+        setTimeSlotsList(Array.isArray(timeSlots) ? timeSlots : []);
+        setSlotsList(Array.isArray(slotTemplates) ? slotTemplates : []);
+        setLeaveTypesList(Array.isArray(leaveTypes) ? leaveTypes : []);
+        setLeaveWorkflowList(Array.isArray(leaveWorkflows) ? leaveWorkflows : []);
+        if (settings && typeof settings === "object") {
+          if (settings.leaveApprovalSteps != null) setLeaveApprovalSteps(settings.leaveApprovalSteps);
+          if (settings.coursePoints && typeof settings.coursePoints === "object") {
+            setCoursePointsForm((p) => ({ ...p, ...settings.coursePoints }));
+          }
+        }
+      } catch (err) {
+        setLoadError(err.message || "Failed to load dashboard data. Run backend and seed: node scripts/seedSuperAdminData.js");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchAll();
+  }, []);
 
   const userRole = localStorage.getItem("role") || "super_admin";
   const userName = localStorage.getItem("userName") || "Super Admin";
-
-  useEffect(() => {
-    if (activeSub === "users-list") {
-      fetchUsers();
-    }
-  }, [activeSub]);
-
-  const fetchUsers = async () => {
-    
-    setLoadingUsers(true);
-    try {
-      const resp = await fetch("http://localhost:5000/api/users", {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        }
-      });
-      if (resp.ok) {
-        const data = await resp.json();
-        setUsersList(data);
-      } else {
-        console.error("Failed to fetch users");
-      }
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoadingUsers(false);
-    }
-    console.log(userRole);
-  };
 
   const handleLogout = () => {
     localStorage.removeItem("token");
@@ -205,7 +241,7 @@ export default function SuperAdminDashboard() {
         const res = await fetch(url, {
           method: itemId ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ name: item.name, description: item.description, status: item.status }),
+          body: JSON.stringify({ name: item.name, description: item.description || "", status: item.status, type: item.type || "", course_logo: item.course_logo || "" }),
         });
         const data = await res.json();
         if (!res.ok) throw new Error(data.message || "Failed to save course");
@@ -351,6 +387,9 @@ export default function SuperAdminDashboard() {
             <span className="profile-id">Super Admin</span>
             <span className="profile-name">{userName}</span>
           </div>
+          <button type="button" className="sa-logout-btn" onClick={handleLogout} title="Logout">
+            <LogOut size={18} /> Logout
+          </button>
         </div>
       </header>
 
@@ -402,25 +441,17 @@ export default function SuperAdminDashboard() {
               {NAV.flatMap((s) => s.sub).find((s) => s.id === activeSub)?.label || "Overview"}
             </div>
 
+          {loading && <div className="sa-loading">Loading dashboard data…</div>}
+          {loadError && <div className="sa-error">{loadError}</div>}
+
+          {!loading && !loadError && <>
           {/* Nav 1: Role based access */}
           {activeSub === "roles" && (
             <>
               <div className="dashboard-card">
                 <h3 className="card-title">Roles – create new and assign accesses</h3>
                 <p className="card-subtitle">Manage system roles and their permissions.</p>
-                <div className="sa-form-group">
-                  <label>Role name</label>
-                  <input type="text" placeholder="e.g. student, mentor, warden, hostel manager" />
-                </div>
-                <div className="sa-form-group">
-                  <label>Description</label>
-                  <input type="text" placeholder="Short description" />
-                </div>
-                <div className="sa-form-group">
-                  <label>Accesses (permissions)</label>
-                  <input type="text" placeholder="Comma-separated or select from list" />
-                </div>
-                <button type="button" className="sa-btn sa-btn-primary"><Plus size={16} /> Create new role</button>
+                <button type="button" className="sa-btn sa-btn-primary" onClick={() => openAdd("roles", { role: "", description: "", accesses: "" })}><Plus size={16} /> Create new role</button>
                 <hr style={{ margin: "20px 0", border: "none", borderTop: "1px solid #e2e8f0" }} />
                 <table className="sa-table">
                   <thead>
@@ -432,30 +463,14 @@ export default function SuperAdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    <tr>
-                      <td>Student</td>
-                      <td>Can view courses, apply leave</td>
-                      <td>courses.view, leave.apply</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td>
-                    </tr>
-                    <tr>
-                      <td>Mentor</td>
-                      <td>Can approve leave, view students</td>
-                      <td>leave.approve, students.view</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td>
-                    </tr>
-                    <tr>
-                      <td>Warden</td>
-                      <td>Hostel warden approvals</td>
-                      <td>leave.approve, hostel.view</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td>
-                    </tr>
-                    <tr>
-                      <td>Hostel Manager</td>
-                      <td>Manage hostel and leave flow</td>
-                      <td>hostel.manage, leave.approve</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td>
-                    </tr>
+                    {rolesList.map((row) => (
+                      <tr key={row.id}>
+                        <td>{row.role}</td>
+                        <td>{row.description}</td>
+                        <td>{row.accesses}</td>
+                        <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("roles", row)} title="Edit"><Pencil size={14} /></button></td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -476,24 +491,14 @@ export default function SuperAdminDashboard() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>vidula@example.com</td>
-                    <td>Vidula S</td>
-                    <td><span className={`sa-tag ${getRoleTagClass("student")}`}>Student</span></td>
-                    <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /> Edit</button></td>
-                  </tr>
-                  <tr>
-                    <td>mentor@example.com</td>
-                    <td>Mentor User</td>
-                    <td><span className={`sa-tag ${getRoleTagClass("mentor")}`}>Mentor</span></td>
-                    <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /> Edit</button></td>
-                  </tr>
-                  <tr>
-                    <td>admin@example.com</td>
-                    <td>Admin User</td>
-                    <td><span className={`sa-tag ${getRoleTagClass("admin")}`}>Admin</span> <span className={`sa-tag ${getRoleTagClass("mentor")}`}>Mentor</span></td>
-                    <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /> Edit</button></td>
-                  </tr>
+                  {usersList.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.email}</td>
+                      <td>{row.name}</td>
+                      <td><span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{row.roles?.map((r) => <span key={r} className={`sa-tag ${getRoleTagClass(r)}`}>{r}</span>)}</span></td>
+                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("users", row)}><Pencil size={14} /> Edit</button></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -505,24 +510,56 @@ export default function SuperAdminDashboard() {
               <p className="card-subtitle">Add user with email and assign one or more roles (colour tagged).</p>
               <div className="sa-form-group">
                 <label>Email</label>
-                <input type="email" placeholder="user@example.com" />
+                <input type="email" placeholder="user@example.com" value={createUserForm.email} onChange={(e) => setCreateUserForm((p) => ({ ...p, email: e.target.value }))} />
               </div>
               <div className="sa-form-group">
                 <label>Name</label>
-                <input type="text" placeholder="Full name" />
+                <input type="text" placeholder="Full name" value={createUserForm.name} onChange={(e) => setCreateUserForm((p) => ({ ...p, name: e.target.value }))} />
               </div>
               <div className="sa-form-group">
                 <label>Assign roles (pastel colour tagged)</label>
                 <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                  {["Student", "Mentor", "Warden", "Hostel Manager", "Admin"].map((r) => (
-                    <label key={r} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                      <input type="checkbox" />
-                      <span className={`sa-tag ${getRoleTagClass(r)}`}>{r}</span>
-                    </label>
-                  ))}
+                  {["Student", "Mentor", "Warden", "Hostel Manager", "Admin"].map((r) => {
+                    const checked = createUserForm.roles.includes(r);
+                    return (
+                      <label key={r} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(e) => setCreateUserForm((p) => ({ ...p, roles: e.target.checked ? [...p.roles, r] : p.roles.filter((x) => x !== r) }))}
+                        />
+                        <span className={`sa-tag ${getRoleTagClass(r)}`}>{r}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
-              <button type="button" className="sa-btn sa-btn-primary"><Plus size={16} /> Create user</button>
+              <button
+                type="button"
+                className="sa-btn sa-btn-primary"
+                onClick={async () => {
+                  if (!createUserForm.email?.trim()) return;
+                  try {
+                    const res = await fetch(`${API_BASE}/api/superadmin/users`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        email: createUserForm.email.trim(),
+                        name: createUserForm.name.trim() || "",
+                        roles: createUserForm.roles,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) throw new Error(data.message || "Failed to create user");
+                    setUsersList((prev) => [...prev, data]);
+                    setCreateUserForm({ email: "", name: "", roles: [] });
+                  } catch (e) {
+                    alert(e.message || "Create failed");
+                  }
+                }}
+              >
+                <Plus size={16} /> Create user
+              </button>
             </div>
           )}
 
@@ -531,24 +568,30 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Uploading / creating course</h3>
               <p className="card-subtitle">Add new courses and edit existing ones.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }}><Plus size={16} /> Add new course</button>
+              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("courses", { name: "", type: "", course_logo: "", status: "Active" })}><Plus size={16} /> Add new course</button>
               <table className="sa-table">
                 <thead>
-                  <tr><th>Course name</th><th>Description</th><th>Status</th><th>Actions</th></tr>
+                  <tr><th>Course name</th><th>Type</th><th>Course logo</th><th>Status</th><th>Actions</th></tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>PS Activity 101</td>
-                    <td>Introduction to PS</td>
-                    <td><span className="sa-badge sa-badge-success">Active</span></td>
-                    <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td>
-                  </tr>
-                  <tr>
-                    <td>Advanced PS</td>
-                    <td>Level 2 course</td>
-                    <td><span className="sa-badge sa-badge-success">Active</span></td>
-                    <td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td>
-                  </tr>
+                  {coursesList.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.name}</td>
+                      <td>{row.type || "—"}</td>
+                      <td className="sa-course-logo-cell">
+                        {row.course_logo ? (
+                          <>
+                            <img src={row.course_logo} alt="" className="sa-course-logo-thumb" onError={(e) => { e.target.style.display = "none"; e.target.nextSibling?.classList.remove("sa-hide"); }} />
+                            <span className="sa-muted sa-hide">—</span>
+                          </>
+                        ) : (
+                          <span className="sa-muted">—</span>
+                        )}
+                      </td>
+                      <td><span className={`sa-badge ${row.status === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>{row.status}</span></td>
+                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}><Pencil size={14} /></button></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -558,12 +601,30 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Activity Points, Reward Points &amp; levels</h3>
               <p className="card-subtitle">Description, number of levels and prerequisites.</p>
-              <div className="sa-form-group"><label>Activity Points</label><input type="number" placeholder="e.g. 10" /></div>
-              <div className="sa-form-group"><label>Reward Points</label><input type="number" placeholder="e.g. 5" /></div>
-              <div className="sa-form-group"><label>Description</label><textarea placeholder="Course description" /></div>
-              <div className="sa-form-group"><label>Number of levels</label><input type="number" placeholder="e.g. 3" /></div>
-              <div className="sa-form-group"><label>Prerequisites</label><input type="text" placeholder="Comma-separated course IDs or names" /></div>
-              <button type="button" className="sa-btn sa-btn-primary">Save</button>
+              <div className="sa-form-group"><label>Activity Points</label><input type="number" placeholder="e.g. 10" value={coursePointsForm.activityPoints} onChange={(e) => setCoursePointsForm((p) => ({ ...p, activityPoints: e.target.value }))} /></div>
+              <div className="sa-form-group"><label>Reward Points</label><input type="number" placeholder="e.g. 5" value={coursePointsForm.rewardPoints} onChange={(e) => setCoursePointsForm((p) => ({ ...p, rewardPoints: e.target.value }))} /></div>
+              <div className="sa-form-group"><label>Description</label><textarea placeholder="Course description" value={coursePointsForm.description} onChange={(e) => setCoursePointsForm((p) => ({ ...p, description: e.target.value }))} /></div>
+              <div className="sa-form-group"><label>Number of levels</label><input type="number" placeholder="e.g. 3" value={coursePointsForm.numLevels} onChange={(e) => setCoursePointsForm((p) => ({ ...p, numLevels: e.target.value }))} /></div>
+              <div className="sa-form-group"><label>Prerequisites</label><input type="text" placeholder="Comma-separated course IDs or names" value={coursePointsForm.prerequisites} onChange={(e) => setCoursePointsForm((p) => ({ ...p, prerequisites: e.target.value }))} /></div>
+              <button
+                type="button"
+                className="sa-btn sa-btn-primary"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_BASE}/api/superadmin/settings`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ coursePoints: coursePointsForm }),
+                    });
+                    if (!res.ok) throw new Error((await res.json()).message || "Failed to save");
+                    alert("Course points settings saved.");
+                  } catch (e) {
+                    alert(e.message || "Save failed");
+                  }
+                }}
+              >
+                Save
+              </button>
             </div>
           )}
 
@@ -572,12 +633,13 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Venue</h3>
               <p className="card-subtitle">Manage venues for slots.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }}><Plus size={16} /> Add venue</button>
+              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("venues", { name: "", location: "" })}><Plus size={16} /> Add venue</button>
               <table className="sa-table">
                 <thead><tr><th>Venue name</th><th>Location</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <tr><td>Hall A</td><td>Block 1</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>Lab 2</td><td>Block 2</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
+                  {venuesList.map((row) => (
+                    <tr key={row.id}><td>{row.name}</td><td>{row.location}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("venues", row)}><Pencil size={14} /></button></td></tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -587,12 +649,17 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Time</h3>
               <p className="card-subtitle">Manage time slots.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }}><Plus size={16} /> Add time slot</button>
+              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("time", { startTime: "09:00", endTime: "10:30" })}><Plus size={16} /> Add time slot</button>
               <table className="sa-table">
                 <thead><tr><th>Start time</th><th>End time</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <tr><td>09:00 AM</td><td>10:30 AM</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>02:00 PM</td><td>03:30 PM</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
+                  {timeSlotsList.map((row) => (
+                    <tr key={row.id}>
+                      <td>{formatTime(row.startTime)}</td>
+                      <td>{formatTime(row.endTime)}</td>
+                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("time", row)}><Pencil size={14} /></button></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -602,12 +669,29 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Slots (venue, time)</h3>
               <p className="card-subtitle">Edit and add new slots.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }}><Plus size={16} /> New slot</button>
+              <button
+                type="button"
+                className="sa-btn sa-btn-primary"
+                style={{ marginBottom: 16 }}
+                onClick={() => {
+                  const v = venuesList[0];
+                  const t = timeSlotsList[0];
+                  openAdd("slots", { venueId: v?.id || "", timeId: t?.id || "", venueLabel: v?.name || "", timeLabel: t ? `${formatTime(t.startTime)} – ${formatTime(t.endTime)}` : "", status: "Active" });
+                }}
+              >
+                <Plus size={16} /> New slot
+              </button>
               <table className="sa-table">
-                <thead><tr><th>Venue</th><th>Time</th><th>Actions</th></tr></thead>
+                <thead><tr><th>Venue</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <tr><td>Hall A</td><td>09:00 AM – 10:30 AM</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>Lab 2</td><td>02:00 PM – 03:30 PM</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
+                  {slotsList.map((row) => (
+                    <tr key={row.id}>
+                      <td>{row.venueLabel}</td>
+                      <td>{row.timeLabel}</td>
+                      <td><span className={`sa-slot-status ${(row.status || "Active").toLowerCase() === "active" ? "sa-slot-active" : "sa-slot-inactive"}`}>{row.status || "Active"}</span></td>
+                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("slots", { ...row, venueId: row.venueId, timeId: row.timeId, status: row.status || "Active" })}><Pencil size={14} /></button></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -618,13 +702,13 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Leave types</h3>
               <p className="card-subtitle">Add and manage leave type codes.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }}><Plus size={16} /> Add leave type</button>
+              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("leave-types", { type: "", code: "" })}><Plus size={16} /> Add leave type</button>
               <table className="sa-table">
                 <thead><tr><th>Type</th><th>Code</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <tr><td>Sick Leave</td><td>SL</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>SP</td><td>SP</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>OnDuty - Events</td><td>OD-E</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
+                  {leaveTypesList.map((row) => (
+                    <tr key={row.id}><td>{row.type}</td><td>{row.code}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("leave-types", row)}><Pencil size={14} /></button></td></tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -636,9 +720,27 @@ export default function SuperAdminDashboard() {
               <p className="card-subtitle">Define order of approvers (e.g. Mentor, Warden, Hostel Manager).</p>
               <div className="sa-form-group">
                 <label>Approval steps</label>
-                <input type="text" placeholder="e.g. mentor, warden, hostel_manager" />
+                <input type="text" placeholder="e.g. mentor, warden, hostel_manager" value={leaveApprovalSteps} onChange={(e) => setLeaveApprovalSteps(e.target.value)} />
               </div>
-              <button type="button" className="sa-btn sa-btn-primary">Save flow</button>
+              <button
+                type="button"
+                className="sa-btn sa-btn-primary"
+                onClick={async () => {
+                  try {
+                    const res = await fetch(`${API_BASE}/api/superadmin/settings`, {
+                      method: "PUT",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ leaveApprovalSteps }),
+                    });
+                    if (!res.ok) throw new Error((await res.json()).message || "Failed to save");
+                    alert("Leave approval flow saved.");
+                  } catch (e) {
+                    alert(e.message || "Save failed");
+                  }
+                }}
+              >
+                Save flow
+              </button>
             </div>
           )}
 
@@ -649,76 +751,76 @@ export default function SuperAdminDashboard() {
               <table className="sa-table">
                 <thead><tr><th>Leave type</th><th>Workflow</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <tr><td>Sick Leave</td><td>Mentor → Warden</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>SP</td><td>Mentor → Warden</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
-                  <tr><td>OnDuty</td><td>Mentor only</td><td><button type="button" className="sa-btn sa-btn-sm"><Pencil size={14} /></button></td></tr>
+                  {leaveWorkflowList.map((row) => (
+                    <tr key={row.id}><td>{row.leaveType}</td><td>{row.workflow}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("leave-workflow", row)}><Pencil size={14} /></button></td></tr>
+                  ))}
                 </tbody>
               </table>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginTop: 16 }}><Plus size={16} /> Add new</button>
+              <button type="button" className="sa-btn sa-btn-primary" style={{ marginTop: 16 }} onClick={() => openAdd("leave-workflow", { leaveType: "", workflow: "" })}><Plus size={16} /> Add new</button>
             </div>
           )}
 
-            {activeSub === "code-access" && (
-              <div className="dashboard-card">
-                <h3 className="card-title">Give access to faculty</h3>
-                <p className="card-subtitle">Student answers and answer key for verification.</p>
-                <div className="sa-form-group">
-                  <label>Select faculty</label>
-                  <select><option>Select faculty</option><option>Faculty 1</option><option>Faculty 2</option></select>
-                </div>
-                <div className="sa-form-group">
-                  <label>Assessment / Exam</label>
-                  <select><option>Select assessment</option></select>
-                </div>
-                <div className="sa-form-group">
-                  <label>Access type</label>
-                  <div style={{ display: "flex", gap: 12 }}>
-                    <label><input type="checkbox" /> Student answers</label>
-                    <label><input type="checkbox" /> Answer key</label>
-                  </div>
-                </div>
-                <button type="button" className="sa-btn sa-btn-primary">Grant access</button>
+          {activeSub === "code-access" && (
+            <div className="dashboard-card">
+              <h3 className="card-title">Give access to faculty</h3>
+              <p className="card-subtitle">Student answers and answer key for verification.</p>
+              <div className="sa-form-group">
+                <label>Select faculty</label>
+                <select><option>Select faculty</option><option>Faculty 1</option><option>Faculty 2</option></select>
               </div>
-            )}
-
-            {activeSub === "code-students" && (
-              <div className="dashboard-card">
-                <h3 className="card-title">Students applied for code review</h3>
-                <p className="card-subtitle">Courses, marks, time slot and answers.</p>
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Student</th>
-                      <th>Course</th>
-                      <th>Marks</th>
-                      <th>Time slot</th>
-                      <th>Answers</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr>
-                      <td>Vidula S (7376231EC317)</td>
-                      <td>PS Activity 101</td>
-                      <td>72</td>
-                      <td>Hall A, 09:00 AM</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
-                      <td><span className="sa-badge sa-badge-warning">Pending</span></td>
-                    </tr>
-                    <tr>
-                      <td>Student 2 (7376231CS323)</td>
-                      <td>Advanced PS</td>
-                      <td>85</td>
-                      <td>Lab 2, 02:00 PM</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
-                      <td><span className="sa-badge sa-badge-success">Verified</span></td>
-                    </tr>
-                  </tbody>
-                </table>
+              <div className="sa-form-group">
+                <label>Assessment / Exam</label>
+                <select><option>Select assessment</option></select>
               </div>
-            )}
+              <div className="sa-form-group">
+                <label>Access type</label>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <label><input type="checkbox" /> Student answers</label>
+                  <label><input type="checkbox" /> Answer key</label>
+                </div>
+              </div>
+              <button type="button" className="sa-btn sa-btn-primary">Grant access</button>
+            </div>
+          )}
 
-          {/* Nav 6: Statistics */}
+          {activeSub === "code-students" && (
+            <div className="dashboard-card">
+              <h3 className="card-title">Students applied for code review</h3>
+              <p className="card-subtitle">Courses, marks, time slot and answers.</p>
+              <table className="sa-table">
+                <thead>
+                  <tr>
+                    <th>Student</th>
+                    <th>Course</th>
+                    <th>Marks</th>
+                    <th>Time slot</th>
+                    <th>Answers</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>Vidula S (7376231EC317)</td>
+                    <td>PS Activity 101</td>
+                    <td>72</td>
+                    <td>Hall A, 09:00 AM</td>
+                    <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
+                    <td><span className="sa-badge sa-badge-warning">Pending</span></td>
+                  </tr>
+                  <tr>
+                    <td>Student 2 (7376231CS323)</td>
+                    <td>Advanced PS</td>
+                    <td>85</td>
+                    <td>Lab 2, 02:00 PM</td>
+                    <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
+                    <td><span className="sa-badge sa-badge-success">Verified</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* Nav 6: Statistics - Chart.js graphs */}
           {activeSub === "stats-course" && (
             <>
               <div className="sa-stats-row">
@@ -729,12 +831,15 @@ export default function SuperAdminDashboard() {
               <div className="dashboard-card">
                 <h3 className="card-title">Students applied per course (year &amp; dept)</h3>
                 <p className="card-subtitle">Breakdown by year and department.</p>
-                <table className="sa-table">
+                <div className="sa-chart-wrap">
+                  <Bar data={statsCourseChart} options={chartOptions()} />
+                </div>
+                <table className="sa-table" style={{ marginTop: 16 }}>
                   <thead><tr><th>Course</th><th>Year</th><th>Dept</th><th>Count</th></tr></thead>
                   <tbody>
-                    <tr><td>PS Activity 101</td><td>2025-26</td><td>CSE</td><td>320</td></tr>
-                    <tr><td>PS Activity 101</td><td>2025-26</td><td>ECE</td><td>280</td></tr>
-                    <tr><td>Advanced PS</td><td>2025-26</td><td>CSE</td><td>150</td></tr>
+                    {statsCourseChart.labels.slice(0, 3).map((name, i) => (
+                      <tr key={i}><td>{name}</td><td>2025-26</td><td>{["CSE", "ECE", "CSE"][i]}</td><td>{statsCourseChart.datasets[0].data[i]}</td></tr>
+                    ))}
                   </tbody>
                 </table>
               </div>
@@ -745,12 +850,18 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Which slot is used most often</h3>
               <p className="card-subtitle">Booking distribution by slot.</p>
-              <table className="sa-table">
+              <div className="sa-chart-wrap sa-chart-bar">
+                <Bar data={statsSlotChart} options={chartOptions()} />
+              </div>
+              <div className="sa-chart-wrap sa-chart-doughnut">
+                <Doughnut data={statsSlotChart} options={{ ...chartOptions(), plugins: { ...chartOptions().plugins, legend: { position: "right" } } }} />
+              </div>
+              <table className="sa-table" style={{ marginTop: 16 }}>
                 <thead><tr><th>Slot (Venue, Time)</th><th>Bookings</th><th>%</th></tr></thead>
                 <tbody>
-                  <tr><td>Hall A, 09:00 AM - 10:30 AM</td><td>450</td><td>38%</td></tr>
-                  <tr><td>Lab 2, 02:00 PM - 03:30 PM</td><td>320</td><td>27%</td></tr>
-                  <tr><td>Hall B, 11:00 AM - 12:30 PM</td><td>280</td><td>24%</td></tr>
+                  {statsSlotChart.labels.map((label, i) => (
+                    <tr key={i}><td>{label}</td><td>{statsSlotChart.datasets[0].data[i]}</td><td>{Math.round((statsSlotChart.datasets[0].data[i] / statsSlotChart.datasets[0].data.reduce((a, b) => a + b, 0)) * 100)}%</td></tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -760,12 +871,15 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Weekly clearing analysis</h3>
               <p className="card-subtitle">Students clearing / not clearing percentage.</p>
-              <table className="sa-table">
+              <div className="sa-chart-wrap">
+                <Line data={statsWeeklyChart} options={chartOptions()} />
+              </div>
+              <table className="sa-table" style={{ marginTop: 16 }}>
                 <thead><tr><th>Week</th><th>Cleared</th><th>Not cleared</th><th>Clear %</th></tr></thead>
                 <tbody>
-                  <tr><td>Week 1 (Feb 17-23)</td><td>85</td><td>15</td><td>85%</td></tr>
-                  <tr><td>Week 2 (Feb 24-Mar 2)</td><td>92</td><td>8</td><td>92%</td></tr>
-                  <tr><td>Week 3 (Mar 3-9)</td><td>78</td><td>22</td><td>78%</td></tr>
+                  {statsWeeklyChart.labels.map((week, i) => (
+                    <tr key={i}><td>{week}</td><td>{[85, 92, 78][i]}</td><td>{[15, 8, 22][i]}</td><td>{statsWeeklyChart.datasets[0].data[i]}%</td></tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -775,12 +889,21 @@ export default function SuperAdminDashboard() {
             <div className="dashboard-card">
               <h3 className="card-title">Course registered and attended</h3>
               <p className="card-subtitle">Most, least and average.</p>
-              <table className="sa-table">
+              <div className="sa-chart-wrap sa-chart-bar">
+                <Bar data={statsRegisteredChart} options={{ ...chartOptions(), scales: { x: { stacked: true }, y: { stacked: true } } }} />
+              </div>
+              <table className="sa-table" style={{ marginTop: 16 }}>
                 <thead><tr><th>Course</th><th>Registered</th><th>Attended</th><th>Attendance %</th><th>Rank</th></tr></thead>
                 <tbody>
-                  <tr><td>PS Activity 101</td><td>600</td><td>580</td><td>96.7%</td><td><span className="sa-badge sa-badge-success">Most</span></td></tr>
-                  <tr><td>Advanced PS</td><td>200</td><td>195</td><td>97.5%</td><td>Avg</td></tr>
-                  <tr><td>Elective X</td><td>50</td><td>42</td><td>84%</td><td><span className="sa-badge sa-badge-warning">Least</span></td></tr>
+                  {statsRegisteredChart.labels.map((name, i) => (
+                    <tr key={i}>
+                      <td>{name}</td>
+                      <td>{statsRegisteredChart.datasets[0].data[i]}</td>
+                      <td>{statsRegisteredChart.datasets[1].data[i]}</td>
+                      <td>{((statsRegisteredChart.datasets[1].data[i] / statsRegisteredChart.datasets[0].data[i]) * 100).toFixed(1)}%</td>
+                      <td><span className={`sa-badge ${i === 0 ? "sa-badge-success" : i === 2 ? "sa-badge-warning" : ""}`}>{i === 0 ? "Most" : i === 2 ? "Least" : "Avg"}</span></td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
@@ -791,6 +914,7 @@ export default function SuperAdminDashboard() {
               <p className="sa-empty">Select a section from the sidebar to view and manage content.</p>
             </div>
           )}
+          </>}
           </div>
         </main>
       </div>
@@ -807,8 +931,6 @@ export default function SuperAdminDashboard() {
               {editModal.section === "roles" && (
                 <>
                   <div className="sa-form-group"><label>Role name</label><input type="text" value={editModal.item.role || ""} onChange={(e) => setEditField("role", e.target.value)} placeholder="e.g. student, mentor" /></div>
-                  <div className="sa-form-group"><label>Description</label><input type="text" value={editModal.item.description || ""} onChange={(e) => setEditField("description", e.target.value)} placeholder="Short description" /></div>
-                  <div className="sa-form-group"><label>Accesses</label><input type="text" value={editModal.item.accesses || ""} onChange={(e) => setEditField("accesses", e.target.value)} placeholder="Comma-separated" /></div>
                 </>
               )}
               {editModal.section === "users" && (
@@ -835,7 +957,26 @@ export default function SuperAdminDashboard() {
               {editModal.section === "courses" && (
                 <>
                   <div className="sa-form-group"><label>Course name</label><input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="Course name" /></div>
-                  <div className="sa-form-group"><label>Description</label><input type="text" value={editModal.item.description || ""} onChange={(e) => setEditField("description", e.target.value)} placeholder="Description" /></div>
+                  <div className="sa-form-group">
+                    <label>Course type</label>
+                    <select value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)}>
+                      <option value="">Select type...</option>
+                      <option value="Assessment">Assessment</option>
+                      <option value="Practice">Practice</option>
+                      <option value="Technical">Technical</option>
+                      <option value="Non-Technical">Non-Technical</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Course logo</label>
+                    <input type="url" value={editModal.item.course_logo || ""} onChange={(e) => setEditField("course_logo", e.target.value)} placeholder="https://example.com/image.png" />
+                    {editModal.item.course_logo && (
+                      <div className="sa-course-logo-preview">
+                        <img src={editModal.item.course_logo} alt="Course logo" onError={(e) => { e.target.style.display = "none"; }} />
+                      </div>
+                    )}
+                  </div>
                   <div className="sa-form-group">
                     <label>Status</label>
                     <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
