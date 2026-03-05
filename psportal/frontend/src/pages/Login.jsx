@@ -9,12 +9,14 @@ function storeAuthAndRedirect(data) {
   if (data.user) {
     if (data.user.roles && data.user.roles.length > 0) {
       const roles = data.user.roles.map((r) => (typeof r === "string" ? r : r.role_name || r).toLowerCase());
+      localStorage.setItem("roles", JSON.stringify(roles));
       let primaryRole = "student";
       if (roles.includes("super_admin")) primaryRole = "super_admin";
       else if (roles.includes("admin")) primaryRole = "admin";
       else primaryRole = roles[0];
       localStorage.setItem("role", primaryRole);
     } else {
+      localStorage.setItem("roles", JSON.stringify(["student"]));
       localStorage.setItem("role", "student");
     }
     if (data.user.name) localStorage.setItem("userName", data.user.name);

@@ -12,6 +12,8 @@ const leaveSchema = new mongoose.Schema({
   status: { type: String, default: "Pending" },
   gateOut: { type: String, default: "-" },
   gateIn: { type: String, default: "-" },
+  mentor_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // assigned mentor at time of apply
+  warden_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null }, // assigned warden at time of apply
   wardenApproval: { status: String, by: String },
   mentorApproval: { status: String, by: String },
 }, { timestamps: true });

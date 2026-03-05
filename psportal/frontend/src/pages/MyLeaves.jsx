@@ -11,20 +11,6 @@ const FALLBACK_PROFILE = {
     avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png"
 };
 
-// Leave types as per reference (Apply for Leave dropdown)
-export const LEAVE_TYPES = [
-    "Sick Leave",
-    "Emergency Leave",
-    "SP",
-    "GP",
-    "OnDuty - Events",
-    "OnDuty - Project Competition",
-    "OnDuty - Internship",
-    "OnDuty - Paper Presentation",
-    "OnDuty - Technical Competition",
-    "Leave"
-];
-
 // TYPE column: Leave = blue, OD (OnDuty) = purple
 function getTypeBadgeClass(typeOrLeaveType) {
     const t = typeOrLeaveType || "";
@@ -86,6 +72,8 @@ export default function MyLeaves() {
     const [profile, setProfile] = useState(FALLBACK_PROFILE);
     const [leaves, setLeaves] = useState([]);
     const [leavesLoading, setLeavesLoading] = useState(true);
+    const [leaveTypes, setLeaveTypes] = useState([]);
+    const [leaveTypesLoading, setLeaveTypesLoading] = useState(true);
 
     // If logged in but register_no missing (e.g. old session), fetch it from /api/auth/me
     useEffect(() => {
@@ -141,6 +129,14 @@ export default function MyLeaves() {
             .finally(() => setLeavesLoading(false));
     }, [registerNo]);
 
+    useEffect(() => {
+        fetch(`${API_BASE}/api/leaves/leave-types`)
+            .then((r) => r.ok ? r.json() : [])
+            .then((data) => setLeaveTypes(Array.isArray(data) ? data : []))
+            .catch(() => setLeaveTypes([]))
+            .finally(() => setLeaveTypesLoading(false));
+    }, []);
+
     const filteredLeaves = searchTerm.trim()
         ? leaves.filter(
             (leave) =>
@@ -151,7 +147,8 @@ export default function MyLeaves() {
     const displayLeaves = filteredLeaves.slice(0, Number(entriesCount));
 
     const openApplyModal = () => {
-        setForm({ leaveType: "Sick Leave", fromDateTime: "", toDateTime: "", remarks: "" });
+        const firstType = leaveTypes.length ? leaveTypes[0].type : "";
+        setForm({ leaveType: firstType, fromDateTime: "", toDateTime: "", remarks: "" });
         setApplyError("");
         setShowApplyModal(true);
     };
@@ -202,7 +199,7 @@ export default function MyLeaves() {
                 body: JSON.stringify({
                     register_no: registerNo,
                     student_name: studentName,
-                    leaveType: form.leaveType,
+                    leaveType: form.leaveType || leaveTypes[0]?.type,
                     fromDateTime: form.fromDateTime,
                     toDateTime: form.toDateTime,
                     remarks: form.remarks || "",
@@ -418,7 +415,10 @@ export default function MyLeaves() {
                                         <>
                                             <span className={`leave-status-badge ${getParentStatusBadgeClass(selectedLeave.wardenApproval.status)}`}>{selectedLeave.wardenApproval.status}</span>
                                             <span className="leave-details-approval-by">{selectedLeave.wardenApproval.by}</span>
-                                            <span className="leave-details-approval-label">Approved by: {selectedLeave.wardenApproval.by}</span>
+                                            <span className="leave-details-approval-label">
+                                                {selectedLeave.wardenApproval.status === "Rejected" ? "Rejected by: " : "Approved by: "}
+                                                {selectedLeave.wardenApproval.by}
+                                            </span>
                                         </>
                                     ) : (
                                         <span className="leave-status-badge badge-yellow">Pending</span>
@@ -430,7 +430,10 @@ export default function MyLeaves() {
                                         <>
                                             <span className={`leave-status-badge ${getParentStatusBadgeClass(selectedLeave.mentorApproval.status)}`}>{selectedLeave.mentorApproval.status}</span>
                                             <span className="leave-details-approval-by">{selectedLeave.mentorApproval.by}</span>
-                                            <span className="leave-details-approval-label">Approved by: {selectedLeave.mentorApproval.by}</span>
+                                            <span className="leave-details-approval-label">
+                                                {selectedLeave.mentorApproval.status === "Rejected" ? "Rejected by: " : "Approved by: "}
+                                                {selectedLeave.mentorApproval.by}
+                                            </span>
                                         </>
                                     ) : (
                                         <span className="leave-status-badge badge-yellow">Pending</span>
@@ -454,13 +457,16 @@ export default function MyLeaves() {
                             <div className="form-group">
                                 <label>Leave Type</label>
                                 <select
-                                    value={form.leaveType}
+                                    value={form.leaveType || (leaveTypes[0]?.type ?? "")}
                                     onChange={(e) => setForm((f) => ({ ...f, leaveType: e.target.value }))}
                                     required
                                     className="leave-type-select"
+                                    disabled={leaveTypesLoading}
                                 >
-                                    {LEAVE_TYPES.map((t) => (
-                                        <option key={t} value={t}>{t}</option>
+                                    {leaveTypesLoading && <option value="">Loading…</option>}
+                                    {!leaveTypesLoading && leaveTypes.length === 0 && <option value="">No leave types configured</option>}
+                                    {leaveTypes.map((lt) => (
+                                        <option key={lt.id} value={lt.type}>{lt.type}</option>
                                     ))}
                                 </select>
                             </div>
@@ -497,7 +503,7 @@ export default function MyLeaves() {
                             </div>
                             <div className="leave-modal-actions leave-apply-actions">
                                 <button type="button" className="btn-cancel" onClick={closeApplyModal} disabled={applySubmitting}>Cancel</button>
-                                <button type="submit" className="btn-submit-leave" disabled={applySubmitting}>{applySubmitting ? "Submitting…" : "Submit Leave Request"}</button>
+                                <button type="submit" className="btn-submit-leave" disabled={applySubmitting || leaveTypes.length === 0}>{applySubmitting ? "Submitting…" : "Submit Leave Request"}</button>
                             </div>
                         </form>
                     </div>

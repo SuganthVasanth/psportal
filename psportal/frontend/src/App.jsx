@@ -9,6 +9,7 @@ import MyCourses from "./pages/MyCourses";
 import PSActivity from "./pages/PSActivity";
 import MovementPass from "./pages/MovementPass";
 import MyLeaves from "./pages/MyLeaves";
+import MyAttendance from "./pages/MyAttendance";
 import './App.css'
 
 export default function App() {
@@ -17,9 +18,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
 
-        {/* Unified Role Dashboard */}
+        {/* Unified Role Dashboard + staff sub-views (e.g. /dashboard/mentor, /dashboard/warden, /dashboard/faculty) */}
         <Route
-          path="/dashboard"
+          path="/dashboard/*"
           element={
             <ProtectedRoute>
               <Dashboard />
@@ -73,6 +74,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <MyLeaves />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* My Attendance Route (student) */}
+        <Route
+          path="/attendance"
+          element={
+            <ProtectedRoute>
+              <MyAttendance />
             </ProtectedRoute>
           }
         />

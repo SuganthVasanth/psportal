@@ -6,6 +6,7 @@ import {
     Youtube,
     Layers,
     CodeXml,
+    ClipboardCheck,
     LogOut
 } from "lucide-react";
 import "./StudentSidebar.css";
@@ -24,6 +25,7 @@ export default function StudentSidebar() {
         { name: "Courses Available", path: "/courses-available", icon: <SquareLibrary size={22} /> },
         { name: "My Courses", path: "/my-courses", icon: <Youtube size={22} /> },
         { name: "PS Activity", path: "/ps-activity", icon: <Layers size={22} /> },
+        { name: "Attendance", path: "/attendance", icon: <ClipboardCheck size={22} /> },
         { name: "Code Review", path: "/code-review", icon: <CodeXml size={22} /> }
     ];
 

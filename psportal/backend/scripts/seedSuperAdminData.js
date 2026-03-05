@@ -57,7 +57,7 @@ const SAMPLE_LEAVE_TYPES = [
 const SAMPLE_LEAVE_WORKFLOWS = [
   { leaveType: "Sick Leave", workflow: "Mentor → Warden" },
   { leaveType: "SP", workflow: "Mentor → Warden" },
-  { leaveType: "OnDuty", workflow: "Mentor only" },
+  { leaveType: "OnDuty - Events", workflow: "Mentor only" },
 ];
 
 const SETTINGS = [

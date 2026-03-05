@@ -121,13 +121,63 @@
 }
 
 /* --- POINTS WALLET --- */
+.points-wallets-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+}
+
 .points-wallet-box {
+    flex: 1 1 260px;
+    min-width: 0;
+    min-height: 160px;
     background: linear-gradient(135deg, #f3e8ff 0%, #ede9fe 100%);
     border: 1px solid #ddd6fe;
     border-radius: 16px;
     padding: 24px;
     position: relative;
-    max-width: 320px;
+    box-sizing: border-box;
+}
+
+.points-wallet-box-btn {
+    display: flex;
+    flex-direction: column;
+    text-decoration: none;
+    color: inherit;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    font: inherit;
+    text-align: left;
+    border: 1px solid #ddd6fe;
+    margin: 0;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.points-wallet-box-attendance {
+    /* extends .points-wallet-box-btn for attendance card */
+}
+
+.points-wallet-box-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+.attendance-back-btn {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b46c1;
+    background: #f3e8ff;
+    border: 1px solid #ddd6fe;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.2s, color 0.2s;
+}
+
+.attendance-back-btn:hover {
+    background: #ede9fe;
+    color: #5b21b6;
 }
 
 .points-wallet-box .mode-label {
@@ -156,6 +206,14 @@
     font-weight: 800;
     color: #1a202c;
     margin: 0;
+}
+
+.points-wallet-box-attendance .mode-label,
+.points-wallet-box-attendance .points-label,
+.points-wallet-box-attendance .points-value,
+.points-wallet-box-attendance h3 {
+    margin-left: 0;
+    margin-right: 0;
 }
 
 .status-badge {

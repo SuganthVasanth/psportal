@@ -8,6 +8,7 @@ const StudentLevelProgress = require("../models/StudentLevelProgress");
 const StudentSlotRegistration = require("../models/StudentSlotRegistration");
 const AdminCourse = require("../models/AdminCourse");
 const Leave = require("../models/Leave");
+const LeaveWorkflow = require("../models/LeaveWorkflow");
 const FacultyCourseAssignment = require("../models/FacultyCourseAssignment");
 
 exports.getStudentDashboardData = async (req, res) => {
@@ -231,10 +232,23 @@ exports.getDashboardMe = async (req, res) => {
       mentees: [],
       ward_students: [],
       leave_requests_to_approve: [],
+      leave_history_mentor: [],
+      leave_history_warden: [],
       assigned_courses: [],
     };
 
     const has = (key) => accesses.includes(key);
+
+    // Leave types that require mentor/warden (from admin-created workflows)
+    const allWorkflows = await LeaveWorkflow.find().lean();
+    const leaveTypesWithMentor = allWorkflows
+      .filter((w) => (w.workflow || "").toLowerCase().includes("mentor"))
+      .map((w) => w.leaveType)
+      .filter(Boolean);
+    const leaveTypesWithWarden = allWorkflows
+      .filter((w) => (w.workflow || "").toLowerCase().includes("warden"))
+      .map((w) => w.leaveType)
+      .filter(Boolean);
 
     // Mentees (students where I am mentor)
     if (has("mentees.view") || has("mentees.courses") || has("mentees.reward_points") || has("mentees.activity_points") || has("mentees.leave_approve") || has("mentees.attendance")) {
@@ -259,25 +273,55 @@ exports.getDashboardMe = async (req, res) => {
           row.courses_progress = progress;
         }
         if (has("mentees.attendance")) {
-          const regs = await StudentSlotRegistration.find({ student_id: m._id }).lean();
-          const attended = regs.filter((r) => r.status === "attended").length;
-          const total = regs.length || 1;
-          row.attendance_percent = Math.round((attended / total) * 100);
+          // Student._id can be string (e.g. "S_7376231CS320"); StudentSlotRegistration.student_id expects ObjectId
+          const idIsObjectId = typeof m._id === "string" && /^[a-fA-F0-9]{24}$/.test(m._id);
+          if (idIsObjectId) {
+            const regs = await StudentSlotRegistration.find({ student_id: m._id }).lean();
+            const attended = regs.filter((r) => r.status === "attended").length;
+            const total = regs.length || 1;
+            row.attendance_percent = Math.round((attended / total) * 100);
+          } else {
+            row.attendance_percent = 0;
+          }
         }
         payload.mentees.push(row);
       }
 
-      // Leave requests needing my (mentor) approval
-      if (has("mentees.leave_approve") && registerNos.length) {
-        const leaves = await Leave.find({
-          register_no: { $in: registerNos },
-          $or: [
-            { "mentorApproval.status": { $ne: "Approved" } },
-            { mentorApproval: { $exists: false } },
-            { "mentorApproval.status": null },
+      // Leave requests sent to me (assigned mentor): leave types whose workflow includes "mentor"
+      if (has("mentees.leave_approve")) {
+        const mentorLeavesQuery = {
+          $and: [
+            {
+              $or: [
+                { mentor_id: userId },
+                ...(registerNos.length
+                  ? [{ $or: [{ mentor_id: null }, { mentor_id: { $exists: false } }], register_no: { $in: registerNos } }]
+                  : []),
+              ],
+            },
+            { leaveType: { $in: leaveTypesWithMentor } },
+            {
+              $or: [
+                { "mentorApproval.status": { $ne: "Approved" } },
+                { mentorApproval: { $exists: false } },
+                { "mentorApproval.status": null },
+              ],
+            },
           ],
-        }).sort({ createdAt: -1 }).lean();
+        };
+        const leaves = await Leave.find(mentorLeavesQuery).sort({ createdAt: -1 }).lean();
         payload.leave_requests_to_approve.push(...leaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "mentor" })));
+
+        // Leaves history: same mentor's leaves (workflow includes mentor) already approved/rejected by mentor
+        const historyQuery = {
+          $and: [
+            { $or: [{ mentor_id: userId }, ...(registerNos.length ? [{ mentor_id: { $in: [null, undefined] }, register_no: { $in: registerNos } }] : [])] },
+            { leaveType: { $in: leaveTypesWithMentor } },
+            { "mentorApproval.status": { $in: ["Approved", "Rejected"] } },
+          ],
+        };
+        const historyLeaves = await Leave.find(historyQuery).sort({ createdAt: -1 }).limit(200).lean();
+        payload.leave_history_mentor = historyLeaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "mentor" }));
       }
     }
 
@@ -297,16 +341,34 @@ exports.getDashboardMe = async (req, res) => {
         payload.ward_students.push(row);
       }
 
+      // Warden leave requests: leave types whose workflow includes "warden"
       if (has("ward_students.leave_approve") && wardRegisterNos.length) {
-        const leaves = await Leave.find({
-          register_no: { $in: wardRegisterNos },
-          $or: [
-            { "wardenApproval.status": { $ne: "Approved" } },
-            { wardenApproval: { $exists: false } },
-            { "wardenApproval.status": null },
+        const wardenLeavesQuery = {
+          $and: [
+            { register_no: { $in: wardRegisterNos } },
+            { leaveType: { $in: leaveTypesWithWarden } },
+            {
+              $or: [
+                { "wardenApproval.status": { $ne: "Approved" } },
+                { wardenApproval: { $exists: false } },
+                { "wardenApproval.status": null },
+              ],
+            },
           ],
-        }).sort({ createdAt: -1 }).lean();
+        };
+        const leaves = await Leave.find(wardenLeavesQuery).sort({ createdAt: -1 }).lean();
         payload.leave_requests_to_approve.push(...leaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "warden" })));
+
+        // Warden leave history: workflow includes warden, already approved/rejected by warden
+        const wardenHistoryQuery = {
+          $and: [
+            { register_no: { $in: wardRegisterNos } },
+            { leaveType: { $in: leaveTypesWithWarden } },
+            { "wardenApproval.status": { $in: ["Approved", "Rejected"] } },
+          ],
+        };
+        const wardenHistoryLeaves = await Leave.find(wardenHistoryQuery).sort({ createdAt: -1 }).limit(200).lean();
+        payload.leave_history_warden = wardenHistoryLeaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "warden" }));
       }
     }
 

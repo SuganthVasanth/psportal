@@ -65,6 +65,10 @@ app.use("/api/messages", messageRoutes);
 const leaveRoutes = require("./routes/leaveRoutes");
 app.use("/api/leaves", leaveRoutes);
 
+// Attendance: student attendance by register_no
+const attendanceRoutes = require("./routes/attendanceRoutes");
+app.use("/api/attendance", attendanceRoutes);
+
 // Seed: push fake students (and their courses, points) into MongoDB
 const seedRoutes = require("./routes/seedRoutes");
 app.use("/api/seed", seedRoutes);

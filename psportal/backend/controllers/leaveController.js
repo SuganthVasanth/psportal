@@ -1,4 +1,7 @@
 const Leave = require("../models/Leave");
+const LeaveType = require("../models/LeaveType");
+const Student = require("../models/Student");
+const LeaveWorkflow = require("../models/LeaveWorkflow");
 
 function datesOverlap(from1, to1, from2, to2) {
   const a = new Date(from1).getTime();
@@ -7,6 +10,90 @@ function datesOverlap(from1, to1, from2, to2) {
   const d = new Date(to2).getTime();
   return a <= d && c <= b;
 }
+
+function normalizeRoleToken(token) {
+  const t = String(token || "").trim().toLowerCase();
+  if (!t) return null;
+  if (t.startsWith("mentor")) return "mentor";
+  if (t.startsWith("warden")) return "warden";
+  if (t.startsWith("hostel")) return "hostel_manager";
+  if (t.startsWith("parent")) return "parent";
+  return null;
+}
+
+async function ensureWorkflowOrder(leaveDoc, targetRoleKey) {
+  const leaveType = leaveDoc?.leaveType;
+  if (!leaveType) return { ok: true };
+
+  const wf = await LeaveWorkflow.findOne({ leaveType }).lean();
+  if (!wf || !wf.workflow) {
+    // No explicit workflow configured for this leave type – allow as before.
+    return { ok: true };
+  }
+
+  const tokens = wf.workflow
+    .split(/[,→>-]+/g)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  const roles = tokens.map(normalizeRoleToken).filter(Boolean);
+  if (!roles.length) return { ok: true };
+
+  const idx = roles.indexOf(targetRoleKey);
+  if (idx === -1) {
+    // This role is not in the flow – block to avoid wrong approver.
+    const roleLabel = targetRoleKey === "mentor" ? "Mentor" : targetRoleKey === "warden" ? "Warden" : targetRoleKey;
+    return {
+      ok: false,
+      message: `${roleLabel} is not part of the approval flow for this leave type. Please contact admin to update the workflow.`,
+    };
+  }
+
+  const unmet = [];
+  for (let i = 0; i < idx; i += 1) {
+    const r = roles[i];
+    if (r === "parent") {
+      if (leaveDoc.parentStatus !== "Approved") unmet.push("Parent");
+    } else if (r === "mentor") {
+      if (!leaveDoc.mentorApproval || leaveDoc.mentorApproval.status !== "Approved") unmet.push("Mentor");
+    } else if (r === "warden") {
+      if (!leaveDoc.wardenApproval || leaveDoc.wardenApproval.status !== "Approved") unmet.push("Warden");
+    } else if (r === "hostel_manager") {
+      if (!leaveDoc.hostelManagerApproval || leaveDoc.hostelManagerApproval.status !== "Approved") {
+        unmet.push("Hostel Manager");
+      }
+    }
+  }
+
+  if (unmet.length) {
+    return {
+      ok: false,
+      message: `Previous role(s) in the approval flow must approve first: ${unmet.join(
+        ", "
+      )}. You cannot approve this leave yet.`,
+    };
+  }
+
+  return { ok: true };
+}
+
+/** True if this leave type's workflow includes the role (mentor, warden, etc.). */
+async function workflowIncludesRole(leaveType, roleKey) {
+  if (!leaveType || !roleKey) return false;
+  const wf = await LeaveWorkflow.findOne({ leaveType }).lean();
+  if (!wf || !wf.workflow) return false;
+  return (wf.workflow || "").toLowerCase().includes(roleKey.toLowerCase());
+}
+
+/** List only leave types created by admin with status Active. For student Apply Leave dropdown. GET /api/leaves/leave-types */
+exports.getActiveLeaveTypes = async (req, res) => {
+  try {
+    const list = await LeaveType.find({ status: "Active" }).sort({ type: 1 }).lean();
+    res.json(list.map((l) => ({ id: l._id.toString(), type: l.type || l.code, code: l.code })));
+  } catch (err) {
+    console.error("getActiveLeaveTypes error:", err);
+    res.status(500).json({ message: "Failed to load leave types" });
+  }
+};
 
 exports.getMyLeaves = async (req, res) => {
   try {
@@ -51,6 +138,13 @@ exports.applyLeave = async (req, res) => {
     if (!register_no || !fromDateTime || !toDateTime) {
       return res.status(400).json({ message: "register_no, fromDateTime and toDateTime required" });
     }
+    const leaveTypeStr = (leaveType || "").trim();
+    if (leaveTypeStr) {
+      const allowed = await LeaveType.findOne({ status: "Active", $or: [{ type: leaveTypeStr }, { code: leaveTypeStr }] }).lean();
+      if (!allowed) {
+        return res.status(400).json({ message: "Invalid or inactive leave type. Only active leave types created by admin can be used." });
+      }
+    }
     const fromDate = new Date(fromDateTime);
     const toDate = new Date(toDateTime);
     if (toDate < fromDate) {
@@ -70,10 +164,14 @@ exports.applyLeave = async (req, res) => {
       }
     }
 
+    const student = await Student.findOne({ register_no }).lean();
+    const mentor_id = student?.mentor_id || null;
+    const warden_id = student?.warden_id || null;
+
     const isOnDuty = leaveType && String(leaveType).startsWith("OnDuty");
     const doc = await Leave.create({
       register_no,
-      student_name: student_name || "",
+      student_name: student_name || (student?.name || ""),
       leaveType: leaveType || "Leave",
       type: isOnDuty ? "OD" : "Leave",
       fromDate,
@@ -81,6 +179,8 @@ exports.applyLeave = async (req, res) => {
       remarks: remarks || "",
       parentStatus: "Pending",
       status: "Pending",
+      mentor_id,
+      warden_id,
     });
 
     const formatDate = (d) => (d ? new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "");
@@ -120,5 +220,71 @@ exports.deleteLeave = async (req, res) => {
     res.json({ message: "Leave deleted" });
   } catch (err) {
     res.status(500).json({ message: "Failed to delete leave" });
+  }
+};
+
+/** Mentor approval: only for Leave / OD types. PATCH /api/leaves/:id/mentor-approval body: { action: "Approved" | "Rejected" } */
+exports.mentorApproval = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+    const userId = req.user?.userId || req.user?.id;
+    const userName = req.user?.name || req.user?.email || "Mentor";
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!action || !["Approved", "Rejected"].includes(action)) {
+      return res.status(400).json({ message: "action must be Approved or Rejected" });
+    }
+    const doc = await Leave.findById(id);
+    if (!doc) return res.status(404).json({ message: "Leave not found" });
+    const mentorInWorkflow = await workflowIncludesRole(doc.leaveType, "mentor");
+    if (!mentorInWorkflow) {
+      return res.status(403).json({ message: "This leave type's workflow does not include mentor approval." });
+    }
+    const orderCheck = await ensureWorkflowOrder(doc, "mentor");
+    if (!orderCheck.ok) {
+      return res.status(400).json({ message: orderCheck.message });
+    }
+    if (doc.mentor_id && doc.mentor_id.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "You are not the assigned mentor for this leave" });
+    }
+    doc.mentorApproval = { status: action, by: userName };
+    await doc.save();
+    res.json({ message: "Leave " + action.toLowerCase(), leave: doc });
+  } catch (err) {
+    console.error("mentorApproval error:", err);
+    res.status(500).json({ message: err.message || "Failed to update leave" });
+  }
+};
+
+/** Warden approval: only for Sick Leave, Emergency Leave, GP. PATCH /api/leaves/:id/warden-approval body: { action: "Approved" | "Rejected" } */
+exports.wardenApproval = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { action } = req.body;
+    const userId = req.user?.userId || req.user?.id;
+    const userName = req.user?.name || req.user?.email || "Warden";
+    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    if (!action || !["Approved", "Rejected"].includes(action)) {
+      return res.status(400).json({ message: "action must be Approved or Rejected" });
+    }
+    const doc = await Leave.findById(id);
+    if (!doc) return res.status(404).json({ message: "Leave not found" });
+    const wardenInWorkflow = await workflowIncludesRole(doc.leaveType, "warden");
+    if (!wardenInWorkflow) {
+      return res.status(403).json({ message: "This leave type's workflow does not include warden approval." });
+    }
+    const orderCheck = await ensureWorkflowOrder(doc, "warden");
+    if (!orderCheck.ok) {
+      return res.status(400).json({ message: orderCheck.message });
+    }
+    if (doc.warden_id && doc.warden_id.toString() !== userId.toString()) {
+      return res.status(403).json({ message: "You are not the assigned warden for this leave" });
+    }
+    doc.wardenApproval = { status: action, by: userName };
+    await doc.save();
+    res.json({ message: "Leave " + action.toLowerCase(), leave: doc });
+  } catch (err) {
+    console.error("wardenApproval error:", err);
+    res.status(500).json({ message: err.message || "Failed to update leave" });
   }
 };

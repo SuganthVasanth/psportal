@@ -1,31 +1,41 @@
 import React, { useState, useEffect } from "react";
 import StudentSidebar from "../components/StudentSidebar";
-
+import AttendanceDetails from "../components/AttendanceDetails";
 import axios from "axios";
 import "./StudentDashboard.css";
 
+const API_BASE = "http://localhost:5000";
+
 export default function StudentDashboard() {
     const [dashboardData, setDashboardData] = useState(null);
+    const [attendance, setAttendance] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+    const [showAttendanceView, setShowAttendanceView] = useState(false);
 
     useEffect(() => {
+        const registerNo = localStorage.getItem("register_no") || "7376231CS323";
         const fetchDashboardData = async () => {
             try {
-                // In a real scenario, you'd pass the auth token in headers
-                // For this mock integration, we pass the register number as a query param
-                const registerNo = localStorage.getItem("register_no") || "7376231CS323";
-                const res = await axios.get(`http://localhost:5000/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
+                const res = await axios.get(`${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
                 setDashboardData(res.data);
-                setLoading(false);
             } catch (err) {
                 console.error("Error fetching dashboard data:", err);
                 setError("Failed to load dashboard data.");
+            } finally {
                 setLoading(false);
             }
         };
-
+        const fetchAttendance = async () => {
+            try {
+                const res = await axios.get(`${API_BASE}/api/attendance?register_no=${encodeURIComponent(registerNo)}`);
+                setAttendance(res.data);
+            } catch (_) {
+                setAttendance({ percentage: 0, presentDays: 0, absentDays: 0, records: [] });
+            }
+        };
         fetchDashboardData();
+        fetchAttendance();
     }, []);
 
     if (loading) {
@@ -83,7 +93,7 @@ export default function StudentDashboard() {
                         {/* --- LEFT COLUMN --- */}
                         <div className="left-column">
 
-                            {/* Points Wallets */}
+                            {/* Points Wallets - always visible */}
                             <div className="dashboard-card pt-wallets-card">
                                 <div className="card-header-flex">
                                     <div>
@@ -91,15 +101,37 @@ export default function StudentDashboard() {
                                         <p className="card-subtitle">Choose a mode to see category points, leaderboard and quest logs.</p>
                                     </div>
                                 </div>
-                                <div className="points-wallet-box">
-                                    <div className="status-badge">Active</div>
-                                    <div className="mode-label">MODE</div>
-                                    <h3>Activity Points</h3>
-                                    <div className="points-label">Points</div>
-                                    <div className="points-value">{points.total}</div>
+                                <div className="points-wallets-grid">
+                                    <button
+                                        type="button"
+                                        className={`points-wallet-box points-wallet-box-btn ${!showAttendanceView ? "points-wallet-box-active" : ""}`}
+                                        onClick={() => setShowAttendanceView(false)}
+                                    >
+                                        <div className="status-badge">{!showAttendanceView ? "Active" : "View"}</div>
+                                        <div className="mode-label">MODE</div>
+                                        <h3>Activity Points</h3>
+                                        <div className="points-label">Points</div>
+                                        <div className="points-value">{points.total}</div>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className={`points-wallet-box points-wallet-box-btn points-wallet-box-attendance ${showAttendanceView ? "points-wallet-box-active" : ""}`}
+                                        onClick={() => setShowAttendanceView(true)}
+                                    >
+                                        <div className="status-badge">{showAttendanceView ? "Active" : "View"}</div>
+                                        <div className="mode-label">MODE</div>
+                                        <h3>Attendance</h3>
+                                        <div className="points-label">Attendance %</div>
+                                        <div className="points-value">{attendance ? attendance.percentage : "—"}</div>
+                                    </button>
                                 </div>
                             </div>
 
+                            {/* Below wallets: either Points Breakdown + Activity Points, or Attendance details */}
+                            {showAttendanceView ? (
+                                <AttendanceDetails attendance={attendance} />
+                            ) : (
+                                <>
                             {/* Points Breakdown */}
                             <div className="dashboard-card">
                                 <h3 className="card-title">Points Breakdown</h3>
@@ -165,6 +197,9 @@ export default function StudentDashboard() {
                                     )}
                                 </div>
                             </div>
+
+                                </>
+                            )}
 
                         </div>
 

@@ -20,6 +20,12 @@
   z-index: 100;
 }
 
+.ud-header-left {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
 .ud-brand {
   font-weight: 700;
   font-size: 1.125rem;
@@ -332,4 +338,40 @@
   font-size: 14px;
   font-weight: 600;
   color: #1e293b;
+}
+
+/* Staff dashboard role navbar (Mentor | Warden | Faculty) - left side */
+.staff-dash-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.staff-dash-nav-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #64748b;
+  text-decoration: none;
+  border-radius: 8px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.staff-dash-nav-link:hover {
+  background: #f1f5f9;
+  color: #334155;
+}
+
+.staff-dash-nav-link.active {
+  background: linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%);
+  color: #4338ca;
+}
+
+/* Staff dashboard layout: sidebar sub-links with icon + text */
+.staff-dashboard-layout .sa-nav-sub a {
+  display: flex;
+  align-items: center;
 }
