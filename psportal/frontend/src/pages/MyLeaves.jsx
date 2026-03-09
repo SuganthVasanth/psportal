@@ -24,14 +24,7 @@ function getTypeDisplay(leave) {
     return leave.type || "Leave";
 }
 
-// PARENT STATUS: Approved=green, Rejected=red, Pending=yellow
-function getParentStatusBadgeClass(parentStatus) {
-    if (!parentStatus) return "badge-yellow";
-    const s = String(parentStatus).toLowerCase();
-    if (s === "approved") return "badge-green";
-    if (s === "rejected") return "badge-red";
-    return "badge-yellow";
-}
+
 
 // STATUS column: Approved/Completed=green, Rejected=red, Pending=yellow
 function getStatusBadgeClass(status) {
@@ -90,7 +83,7 @@ export default function MyLeaves() {
                     setRegisterNo(data.register_no);
                 }
             })
-            .catch(() => {});
+            .catch(() => { });
     }, [registerNo]);
     const [searchTerm, setSearchTerm] = useState("");
     const [entriesCount, setEntriesCount] = useState(10);
@@ -112,7 +105,7 @@ export default function MyLeaves() {
                 .then((data) => {
                     if (data?.profile) setProfile({ ...FALLBACK_PROFILE, ...data.profile, register_no: data.profile.register_no || registerNo });
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [registerNo]);
 
@@ -258,92 +251,86 @@ export default function MyLeaves() {
                     {leavesLoading ? (
                         <p className="leaves-loading">Loading leaves...</p>
                     ) : (
-                    <div className="leaves-table-wrapper">
-                        <table className="leaves-table">
-                            <thead>
-                                <tr>
-                                    <th>LEAVE TYPE <Filter size={14} className="filter-icon" /></th>
-                                    <th>TYPE <Filter size={14} className="filter-icon" /></th>
-                                    <th>FROM DATE <Filter size={14} className="filter-icon" /></th>
-                                    <th>TO DATE <Filter size={14} className="filter-icon" /></th>
-                                    <th>DURATION <Filter size={14} className="filter-icon" /></th>
-                                    <th>REMARKS <Filter size={14} className="filter-icon" /></th>
-                                    <th>PARENT STATUS</th>
-                                    <th>STATUS</th>
-                                    <th>ACTIONS</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {displayLeaves.map((leave) => (
-                                    <tr key={leave.id} onClick={() => openDetailsModal(leave)} className="leave-row-clickable">
-                                        <td className="leave-type-col">
-                                            <span className="chevron-right">&gt;</span> {leave.leaveType}
-                                        </td>
-                                        <td>
-                                            <span className={`leave-status-badge ${getTypeBadgeClass(leave.type || leave.leaveType)}`}>{getTypeDisplay(leave)}</span>
-                                        </td>
-                                        <td>{leave.fromDate}</td>
-                                        <td className="to-date-col">
-                                            <div className="date-main">{leave.toDate}</div>
-                                            <div className="date-sub">(Gate In: {leave.gateIn})</div>
-                                        </td>
-                                        <td>{leave.duration}</td>
-                                        <td className="remarks-col">{leave.remarks}</td>
-                                        <td className="leave-cell-badge">
-                                            <span className={`leave-status-badge leave-parent-status ${getParentStatusBadgeClass(leave.parentStatus)}`}>
-                                                {leave.parentStatus ?? "Pending"}
-                                            </span>
-                                        </td>
-                                        <td className="leave-cell-badge">
-                                            <span className={`leave-status-badge leave-approval-status ${getStatusBadgeClass(leave.status)}`}>
-                                                {leave.status ?? "Pending"}
-                                            </span>
-                                        </td>
-                                        <td className="leave-actions-cell" onClick={(e) => e.stopPropagation()}>
-                                            <button
-                                                type="button"
-                                                className="leave-delete-btn"
-                                                onClick={(e) => handleDeleteLeave(e, leave.id)}
-                                                title="Delete leave"
-                                                aria-label="Delete leave"
-                                            >
-                                                <Trash2 size={16} />
-                                                <span>Delete</span>
-                                            </button>
-                                        </td>
+                        <div className="leaves-table-wrapper">
+                            <table className="leaves-table">
+                                <thead>
+                                    <tr>
+                                        <th>LEAVE TYPE <Filter size={14} className="filter-icon" /></th>
+                                        <th>TYPE <Filter size={14} className="filter-icon" /></th>
+                                        <th>FROM DATE <Filter size={14} className="filter-icon" /></th>
+                                        <th>TO DATE <Filter size={14} className="filter-icon" /></th>
+                                        <th>DURATION <Filter size={14} className="filter-icon" /></th>
+                                        <th>REMARKS <Filter size={14} className="filter-icon" /></th>
+                                        <th>STATUS</th>
+                                        <th>ACTIONS</th>
                                     </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                                </thead>
+                                <tbody>
+                                    {displayLeaves.map((leave) => (
+                                        <tr key={leave.id} onClick={() => openDetailsModal(leave)} className="leave-row-clickable">
+                                            <td className="leave-type-col">
+                                                <span className="chevron-right">&gt;</span> {leave.leaveType}
+                                            </td>
+                                            <td>
+                                                <span className={`leave-status-badge ${getTypeBadgeClass(leave.type || leave.leaveType)}`}>{getTypeDisplay(leave)}</span>
+                                            </td>
+                                            <td>{leave.fromDate}</td>
+                                            <td className="to-date-col">
+                                                <div className="date-main">{leave.toDate}</div>
+                                                <div className="date-sub">(Gate In: {leave.gateIn})</div>
+                                            </td>
+                                            <td>{leave.duration}</td>
+                                            <td className="remarks-col">{leave.remarks}</td>
+                                            <td className="leave-cell-badge">
+                                                <span className={`leave-status-badge leave-approval-status ${getStatusBadgeClass(leave.status)}`}>
+                                                    {leave.status ?? "Pending"}
+                                                </span>
+                                            </td>
+                                            <td className="leave-actions-cell" onClick={(e) => e.stopPropagation()}>
+                                                <button
+                                                    type="button"
+                                                    className="leave-delete-btn"
+                                                    onClick={(e) => handleDeleteLeave(e, leave.id)}
+                                                    title="Delete leave"
+                                                    aria-label="Delete leave"
+                                                >
+                                                    <Trash2 size={16} />
+                                                    <span>Delete</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
 
-                        <div className="leaves-pagination-row">
-                            <div className="entries-select">
-                                <span>Show </span>
-                                <select
-                                    value={entriesCount}
-                                    onChange={(e) => setEntriesCount(e.target.value)}
-                                    className="entries-dropdown"
-                                >
-                                    <option value={10}>10</option>
-                                    <option value={25}>25</option>
-                                    <option value={50}>50</option>
-                                </select>
-                                <span> entries</span>
+                            <div className="leaves-pagination-row">
+                                <div className="entries-select">
+                                    <span>Show </span>
+                                    <select
+                                        value={entriesCount}
+                                        onChange={(e) => setEntriesCount(e.target.value)}
+                                        className="entries-dropdown"
+                                    >
+                                        <option value={10}>10</option>
+                                        <option value={25}>25</option>
+                                        <option value={50}>50</option>
+                                    </select>
+                                    <span> entries</span>
+                                </div>
+
+                                <div className="entries-info">
+                                    Showing 1 to {displayLeaves.length} of {filteredLeaves.length} entries
+                                </div>
+
+                                <div className="pagination-controls">
+                                    <button className="paginate-btn disabled">Previous</button>
+                                    <button className="paginate-btn active">1</button>
+                                    <button className="paginate-btn">2</button>
+                                    <button className="paginate-btn">Next</button>
+                                </div>
                             </div>
 
-                            <div className="entries-info">
-                                Showing 1 to {displayLeaves.length} of {filteredLeaves.length} entries
-                            </div>
-
-                            <div className="pagination-controls">
-                                <button className="paginate-btn disabled">Previous</button>
-                                <button className="paginate-btn active">1</button>
-                                <button className="paginate-btn">2</button>
-                                <button className="paginate-btn">Next</button>
-                            </div>
                         </div>
-
-                    </div>
                     )}
                 </div>
             </main>
@@ -392,14 +379,14 @@ export default function MyLeaves() {
                                 <span className="leave-details-label">Remarks</span>
                                 <span className="leave-details-value">{selectedLeave.remarks ?? "-"}</span>
                             </div>
-                            {(selectedLeave.status === "Pending" || selectedLeave.parentStatus === "Pending") && (
+                            {selectedLeave.status === "Pending" && (
                                 <div className="leave-details-cancel-row">
                                     <button
                                         type="button"
                                         className="leave-cancel-leave-btn"
                                         onClick={() => {
                                             if (window.confirm("Are you sure you want to cancel this leave?")) {
-                                                handleDeleteLeave({ stopPropagation: () => {} }, selectedLeave.id);
+                                                handleDeleteLeave({ stopPropagation: () => { } }, selectedLeave.id);
                                                 closeDetailsModal();
                                             }
                                         }}
@@ -413,7 +400,7 @@ export default function MyLeaves() {
                                     <span className="leave-details-approval-title">Hostel Warden</span>
                                     {selectedLeave.wardenApproval ? (
                                         <>
-                                            <span className={`leave-status-badge ${getParentStatusBadgeClass(selectedLeave.wardenApproval.status)}`}>{selectedLeave.wardenApproval.status}</span>
+                                            <span className={`leave-status-badge ${getStatusBadgeClass(selectedLeave.wardenApproval.status)}`}>{selectedLeave.wardenApproval.status}</span>
                                             <span className="leave-details-approval-by">{selectedLeave.wardenApproval.by}</span>
                                             <span className="leave-details-approval-label">
                                                 {selectedLeave.wardenApproval.status === "Rejected" ? "Rejected by: " : "Approved by: "}
@@ -421,14 +408,14 @@ export default function MyLeaves() {
                                             </span>
                                         </>
                                     ) : (
-                                        <span className="leave-status-badge badge-yellow">Pending</span>
+                                        <span className="leave-status-badge badge-yellow">{selectedLeave.status}</span>
                                     )}
                                 </div>
                                 <div className="leave-details-approval-block">
                                     <span className="leave-details-approval-title">Mentor</span>
                                     {selectedLeave.mentorApproval ? (
                                         <>
-                                            <span className={`leave-status-badge ${getParentStatusBadgeClass(selectedLeave.mentorApproval.status)}`}>{selectedLeave.mentorApproval.status}</span>
+                                            <span className={`leave-status-badge ${getStatusBadgeClass(selectedLeave.mentorApproval.status)}`}>{selectedLeave.mentorApproval.status}</span>
                                             <span className="leave-details-approval-by">{selectedLeave.mentorApproval.by}</span>
                                             <span className="leave-details-approval-label">
                                                 {selectedLeave.mentorApproval.status === "Rejected" ? "Rejected by: " : "Approved by: "}
@@ -436,7 +423,7 @@ export default function MyLeaves() {
                                             </span>
                                         </>
                                     ) : (
-                                        <span className="leave-status-badge badge-yellow">Pending</span>
+                                        <span className="leave-status-badge badge-yellow">{selectedLeave.status}</span>
                                     )}
                                 </div>
                             </div>

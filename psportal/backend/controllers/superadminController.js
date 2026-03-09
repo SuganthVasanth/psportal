@@ -9,6 +9,7 @@ const SlotTemplate = require("../models/SlotTemplate");
 const LeaveType = require("../models/LeaveType");
 const LeaveWorkflow = require("../models/LeaveWorkflow");
 const AdminSettings = require("../models/AdminSettings");
+const Student = require("../models/Student");
 const bcrypt = require("bcryptjs");
 
 const DEFAULT_PASSWORD = "Password@123";
@@ -541,6 +542,68 @@ exports.reviewQuestionBankSubmission = async (req, res) => {
       course_name: doc.course_id?.name,
       status: doc.status,
       reviewed_at: doc.reviewed_at,
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ——— Students (Admin assignment of Mentor/Warden) ———
+exports.getStudents = async (req, res) => {
+  try {
+    const list = await Student.find()
+      .populate("user_id", "email name")
+      .populate("mentor_id", "email name")
+      .populate("warden_id", "email name")
+      .lean();
+
+    res.json(list.map((s) => ({
+      id: s._id.toString(),
+      user_id: s.user_id?._id?.toString(),
+      email: s.user_id?.email,
+      name: s.name,
+      register_no: s.register_no,
+      department: s.department,
+      type: s.type,
+      mentor_id: s.mentor_id?._id?.toString(),
+      mentor_name: s.mentor_id?.name || s.mentor_id?.email || "",
+      warden_id: s.warden_id?._id?.toString(),
+      warden_name: s.warden_id?.name || s.warden_id?.email || "",
+    })));
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.assignStudentStaff = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { mentor_id, warden_id } = req.body;
+
+    const update = {};
+    if (mentor_id !== undefined) update.mentor_id = mentor_id || null;
+    if (warden_id !== undefined) update.warden_id = warden_id || null;
+
+    const doc = await Student.findByIdAndUpdate(id, update, { new: true })
+      .populate("user_id", "email name")
+      .populate("mentor_id", "email name")
+      .populate("warden_id", "email name")
+      .lean();
+
+    if (!doc) return res.status(404).json({ message: "Student not found" });
+
+    res.json({
+      id: doc._id.toString(),
+      user_id: doc.user_id?._id?.toString(),
+      email: doc.user_id?.email,
+      name: doc.name,
+      register_no: doc.register_no,
+      department: doc.department,
+      type: doc.type,
+      mentor_id: doc.mentor_id?._id?.toString(),
+      mentor_name: doc.mentor_id?.name || doc.mentor_id?.email || "",
+      warden_id: doc.warden_id?._id?.toString(),
+      warden_name: doc.warden_id?.name || doc.warden_id?.email || "",
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -8,22 +8,22 @@ const StudentProgress = require("./models/StudentProgress");
 
 const seedDashboard = async () => {
     try {
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true
-        });
+        await mongoose.connect(process.env.MONGO_URI);
         console.log("Connected to MongoDB for Seeding Dashboard");
 
         // Clear existing dashboard mock data
         await Student.deleteMany({ register_no: "7376231CS323" });
 
         // 1. Create a mock Student linked to a fake user_id just for testing schema integrity
-        // In a real app the User model handles Auth, but here we can just dummy a 24-char hex string
-        const mockUserId = new mongoose.Types.ObjectId();
+        // Use the real user_id if possible so the user doesn't get disconnected after seeding
+        const User = require("./models/User");
+        const allUsers = await User.find({});
+        const targetUser = allUsers.find(u => u._id.toString().endsWith('c397db25'));
+        const mockUserId = targetUser ? targetUser._id : new mongoose.Types.ObjectId();
 
         const newStudent = await Student.create({
+            _id: "S_7376231CS323",
             user_id: mockUserId,
-            student_id: "STU-001",
             name: "SUGANTH R",
             register_no: "7376231CS323",
             profile_pic: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",

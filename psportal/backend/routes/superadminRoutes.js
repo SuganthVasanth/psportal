@@ -59,4 +59,8 @@ router.delete("/faculty-assignments/:id", ctrl.unassignFacultyFromCourse);
 router.get("/question-bank-submissions", ctrl.getQuestionBankSubmissions);
 router.patch("/question-bank-submissions/:id/review", ctrl.reviewQuestionBankSubmission);
 
+// Students (assign mentor/warden)
+router.get("/students", ctrl.getStudents);
+router.put("/students/:id/assign-staff", ctrl.assignStudentStaff);
+
 module.exports = router;

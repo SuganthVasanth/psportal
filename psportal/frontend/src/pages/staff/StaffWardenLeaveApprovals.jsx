@@ -48,8 +48,8 @@ export default function StaffWardenLeaveApprovals({ data, has, onRefresh }) {
     }
   };
 
-  const show = has("ward_students.leave_approve");
-  if (!show) return <p className="ud-empty">You don&apos;t have leave approval access as warden.</p>;
+  const show = has("ward_students.leave_approve") || wardenLeaves.length > 0 || historyLeaves.length > 0;
+  if (!show) return <p className="ud-empty">You don't have leave approval access as warden.</p>;
 
   return (
     <section className="ud-card">
@@ -85,21 +85,20 @@ export default function StaffWardenLeaveApprovals({ data, has, onRefresh }) {
                   <th>Register no</th>
                   <th>Leave type</th>
                   <th>From - To</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {wardenLeaves.map((l) => (
-                  <tr key={l.id || l._id}>
+                  <tr
+                    key={l.id || l._id}
+                    onClick={() => { setSelectedLeave(l); setSelectedLeaveHistory(false); }}
+                    style={{ cursor: "pointer" }}
+                    className="sa-table-row-hover"
+                  >
                     <td>{l.student_name || "-"}</td>
                     <td>{l.register_no || "-"}</td>
                     <td>{l.leaveType}</td>
                     <td>{formatDate(l.fromDate)} – {formatDate(l.toDate)}</td>
-                    <td>
-                      <button type="button" className="sa-btn sa-btn-sm" onClick={() => { setSelectedLeave(l); setSelectedLeaveHistory(false); }}>
-                        Action
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -121,22 +120,21 @@ export default function StaffWardenLeaveApprovals({ data, has, onRefresh }) {
                   <th>Leave type</th>
                   <th>From - To</th>
                   <th>Warden decision</th>
-                  <th>Action</th>
                 </tr>
               </thead>
               <tbody>
                 {historyLeaves.map((l) => (
-                  <tr key={l.id || l._id}>
+                  <tr
+                    key={l.id || l._id}
+                    onClick={() => { setSelectedLeave(l); setSelectedLeaveHistory(true); }}
+                    style={{ cursor: "pointer" }}
+                    className="sa-table-row-hover"
+                  >
                     <td>{l.student_name || "-"}</td>
                     <td>{l.register_no || "-"}</td>
                     <td>{l.leaveType}</td>
                     <td>{formatDate(l.fromDate)} – {formatDate(l.toDate)}</td>
                     <td>{l.wardenApproval?.status || "-"}</td>
-                    <td>
-                      <button type="button" className="sa-btn sa-btn-sm" onClick={() => { setSelectedLeave(l); setSelectedLeaveHistory(true); }}>
-                        View
-                      </button>
-                    </td>
                   </tr>
                 ))}
               </tbody>

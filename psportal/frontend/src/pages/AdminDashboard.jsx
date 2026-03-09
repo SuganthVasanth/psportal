@@ -41,6 +41,7 @@ const NAV = [
       { id: "roles", label: "Roles" },
       { id: "users-list", label: " users" },
       { id: "create-user", label: "Create new users" },
+      { id: "assign-staff", label: "Assign Mentor & Warden" },
     ],
   },
   {
@@ -191,6 +192,7 @@ export default function AdminDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
+  const [studentsList, setStudentsList] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
@@ -211,7 +213,7 @@ export default function AdminDashboard() {
       setLoading(true);
       setLoadError(null);
       try {
-        const [roles, users, courses, venues, timeSlots, slotTemplates, leaveTypes, leaveWorkflows, settings, assignments, qbSubmissions] = await Promise.all([
+        const [roles, users, courses, venues, timeSlots, slotTemplates, leaveTypes, leaveWorkflows, settings, assignments, qbSubmissions, students] = await Promise.all([
           fetch(`${API_BASE}/api/superadmin/roles`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/users`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/courses`).then((r) => r.json()),
@@ -223,6 +225,7 @@ export default function AdminDashboard() {
           fetch(`${API_BASE}/api/superadmin/settings`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/faculty-assignments`).then((r) => r.json()).catch(() => []),
           fetch(`${API_BASE}/api/superadmin/question-bank-submissions`).then((r) => r.json()).catch(() => []),
+          fetch(`${API_BASE}/api/superadmin/students`).then((r) => r.json()).catch(() => []),
         ]);
         setRolesList(Array.isArray(roles) ? roles : []);
         setUsersList(Array.isArray(users) ? users : []);
@@ -234,6 +237,7 @@ export default function AdminDashboard() {
         setLeaveWorkflowList(Array.isArray(leaveWorkflows) ? leaveWorkflows : []);
         setFacultyAssignments(Array.isArray(assignments) ? assignments : []);
         setQuestionBankSubmissions(Array.isArray(qbSubmissions) ? qbSubmissions : []);
+        setStudentsList(Array.isArray(students) ? students : []);
         if (settings && typeof settings === "object") {
           if (settings.leaveApprovalSteps != null) setLeaveApprovalSteps(settings.leaveApprovalSteps);
         }
@@ -527,846 +531,936 @@ export default function AdminDashboard() {
               {NAV.flatMap((s) => s.sub).find((s) => s.id === activeSub)?.label || "Overview"}
             </div>
 
-          {loading && <div className="sa-loading">Loading dashboard data…</div>}
-          {loadError && <div className="sa-error">{loadError}</div>}
+            {loading && <div className="sa-loading">Loading dashboard data…</div>}
+            {loadError && <div className="sa-error">{loadError}</div>}
 
-          {!loading && !loadError && <>
-          {/* Nav 1: Role based access */}
-          {activeSub === "roles" && (
-            <>
-              <div className="dashboard-card">
-                <h3 className="card-title">Roles – create new and assign accesses</h3>
-                <p className="card-subtitle">Manage system roles and their permissions.</p>
-                <button type="button" className="sa-btn sa-btn-primary" onClick={() => openAdd("roles", { role: "", description: "", accesses: "" })}><Plus size={16} /> Create new role</button>
-                <hr style={{ margin: "20px 0", border: "none", borderTop: "1px solid #e2e8f0" }} />
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Role</th>
-                      <th>Description</th>
-                      <th>Accesses</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rolesList.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.role}</td>
-                        <td>{row.description}</td>
-                        <td>{row.accesses}</td>
-                        <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("roles", row)} title="Edit"><Pencil size={14} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {activeSub === "users-list" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">List of users and their roles</h3>
-              <p className="card-subtitle">View and edit user role assignments.</p>
-              <table className="sa-table">
-                <thead>
-                  <tr>
-                    <th>Email</th>
-                    <th>Name</th>
-                    <th>Roles</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {usersList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.email}</td>
-                      <td>{row.name}</td>
-                      <td><span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{row.roles?.map((r) => <span key={r} className="sa-tag" style={getRoleTagStyle(r)}>{r}</span>)}</span></td>
-                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("users", row)}><Pencil size={14} /> Edit</button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "create-user" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Create new users</h3>
-              <p className="card-subtitle">Add user with email and assign one or more roles (colour tagged).</p>
-              <div className="sa-form-group">
-                <label>Email</label>
-                <input type="email" placeholder="user@example.com" value={createUserForm.email} onChange={(e) => setCreateUserForm((p) => ({ ...p, email: e.target.value }))} />
-              </div>
-              <div className="sa-form-group">
-                <label>Name</label>
-                <input type="text" placeholder="Full name" value={createUserForm.name} onChange={(e) => setCreateUserForm((p) => ({ ...p, name: e.target.value }))} />
-              </div>
-              <div className="sa-form-group">
-                <label>Assign roles (pastel colour tagged)</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                  {rolesList.map((r) => {
-                    const roleName = r.role;
-                    const checked = createUserForm.roles.includes(roleName);
-                    return (
-                      <label key={r.id || roleName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => setCreateUserForm((p) => ({ ...p, roles: e.target.checked ? [...p.roles, roleName] : p.roles.filter((x) => x !== roleName) }))}
-                        />
-                        <span className="sa-tag" style={getRoleTagStyle(roleName)}>{roleName}</span>
-                      </label>
-                    );
-                  })}
-                </div>
-              </div>
-              <button
-                type="button"
-                className="sa-btn sa-btn-primary"
-                onClick={async () => {
-                  if (!createUserForm.email?.trim()) return;
-                  try {
-                    const res = await fetch(`${API_BASE}/api/superadmin/users`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        email: createUserForm.email.trim(),
-                        name: createUserForm.name.trim() || "",
-                        roles: createUserForm.roles,
-                      }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || "Failed to create user");
-                    setUsersList((prev) => [...prev, data]);
-                    setCreateUserForm({ email: "", name: "", roles: [] });
-                  } catch (e) {
-                    alert(e.message || "Create failed");
-                  }
-                }}
-              >
-                <Plus size={16} /> Create user
-              </button>
-            </div>
-          )}
-
-          {/* Nav 2: Courses */}
-          {activeSub === "course-upload" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Uploading / creating course</h3>
-              <p className="card-subtitle">Add new courses and edit existing ones.</p>
-              <button
-                type="button"
-                className="sa-btn sa-btn-primary"
-                style={{ marginBottom: 16 }}
-                onClick={() =>
-                  openAdd("courses", {
-                    name: "",
-                    type: "",
-                    course_logo: "",
-                    level: "",
-                    status: "Active",
-                    activityPoints: 0,
-                    rewardPoints: 0,
-                    faculty: "",
-                    prerequisites: [],
-                    levels: [],
-                  })
-                }
-              >
-                <Plus size={16} /> Add new course
-              </button>
-              <table className="sa-table">
-                <thead>
-                  <tr><th>Course name</th><th>Type</th><th>Level</th><th>Course logo</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                  {coursesList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.name}</td>
-                      <td>{row.type || "—"}</td>
-                      <td>{row.level || "—"}</td>
-                      <td className="sa-course-logo-cell">
-                        {row.course_logo ? (
-                          <>
-                            <img src={row.course_logo} alt="" className="sa-course-logo-thumb" onError={(e) => { e.target.style.display = "none"; e.target.nextSibling?.classList.remove("sa-hide"); }} />
-                            <span className="sa-muted sa-hide">—</span>
-                          </>
-                        ) : (
-                          <span className="sa-muted">—</span>
-                        )}
-                      </td>
-                      <td><span className={`sa-badge ${row.status === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>{row.status}</span></td>
-                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}><Pencil size={14} /></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "course-points" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Course details</h3>
-              <p className="card-subtitle">Configure levels, activity points, reward points, faculty, and prerequisites per course. Click a row to edit.</p>
-              <table className="sa-table">
-                <thead>
-                  <tr>
-                    <th>Course name</th>
-                    <th>Level</th>
-                    <th>Activity points</th>
-                    <th>Reward points</th>
-                    <th>Faculty</th>
-                    <th>Prerequisites</th>
-                    <th>Levels</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {coursesList.map((row) => {
-                    const facultyUser = facultyList.find((u) => u.id === row.faculty);
-                    const levels = Array.isArray(row.levels) ? row.levels : [];
-                    const prereqNames = Array.isArray(row.prerequisites)
-                      ? row.prerequisites.map((id) => coursesList.find((c) => c.id === id)?.name).filter(Boolean)
-                      : [];
-                    const expanded = row._levelsExpanded;
-                    return (
-                      <React.Fragment key={row.id}>
+            {!loading && !loadError && <>
+              {/* Nav 1: Role based access */}
+              {activeSub === "roles" && (
+                <>
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Roles – create new and assign accesses</h3>
+                    <p className="card-subtitle">Manage system roles and their permissions.</p>
+                    <button type="button" className="sa-btn sa-btn-primary" onClick={() => openAdd("roles", { role: "", description: "", accesses: "" })}><Plus size={16} /> Create new role</button>
+                    <hr style={{ margin: "20px 0", border: "none", borderTop: "1px solid #e2e8f0" }} />
+                    <table className="sa-table">
+                      <thead>
                         <tr>
-                          <td><strong>{row.name}</strong></td>
-                          <td>{row.level || "—"}</td>
-                          <td>{row.activityPoints ?? 0}</td>
-                          <td>{row.rewardPoints ?? 0}</td>
-                          <td>{facultyUser ? facultyUser.name || facultyUser.email : "—"}</td>
-                          <td>{prereqNames.length ? prereqNames.join(", ") : "—"}</td>
+                          <th>Role</th>
+                          <th>Description</th>
+                          <th>Accesses</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rolesList.map((row) => (
+                          <tr key={row.id}>
+                            <td>{row.role}</td>
+                            <td>{row.description}</td>
+                            <td>{row.accesses}</td>
+                            <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("roles", row)} title="Edit"><Pencil size={14} /></button></td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {activeSub === "users-list" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">List of users and their roles</h3>
+                  <p className="card-subtitle">View and edit user role assignments.</p>
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Email</th>
+                        <th>Name</th>
+                        <th>Roles</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {usersList.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.email}</td>
+                          <td>{row.name}</td>
+                          <td><span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>{row.roles?.map((r) => <span key={r} className="sa-tag" style={getRoleTagStyle(r)}>{r}</span>)}</span></td>
+                          <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("users", row)}><Pencil size={14} /> Edit</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeSub === "create-user" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Create new users</h3>
+                  <p className="card-subtitle">Add user with email and assign one or more roles (colour tagged).</p>
+                  <div className="sa-form-group">
+                    <label>Email</label>
+                    <input type="email" placeholder="user@example.com" value={createUserForm.email} onChange={(e) => setCreateUserForm((p) => ({ ...p, email: e.target.value }))} />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Name</label>
+                    <input type="text" placeholder="Full name" value={createUserForm.name} onChange={(e) => setCreateUserForm((p) => ({ ...p, name: e.target.value }))} />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Assign roles (pastel colour tagged)</label>
+                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                      {rolesList.map((r) => {
+                        const roleName = r.role;
+                        const checked = createUserForm.roles.includes(roleName);
+                        return (
+                          <label key={r.id || roleName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={(e) => setCreateUserForm((p) => ({ ...p, roles: e.target.checked ? [...p.roles, roleName] : p.roles.filter((x) => x !== roleName) }))}
+                            />
+                            <span className="sa-tag" style={getRoleTagStyle(roleName)}>{roleName}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-primary"
+                    onClick={async () => {
+                      if (!createUserForm.email?.trim()) return;
+                      try {
+                        const res = await fetch(`${API_BASE}/api/superadmin/users`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            email: createUserForm.email.trim(),
+                            name: createUserForm.name.trim() || "",
+                            roles: createUserForm.roles,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || "Failed to create user");
+                        setUsersList((prev) => [...prev, data]);
+                        setCreateUserForm({ email: "", name: "", roles: [] });
+                      } catch (e) {
+                        alert(e.message || "Create failed");
+                      }
+                    }}
+                  >
+                    <Plus size={16} /> Create user
+                  </button>
+                </div>
+              )}
+
+              {activeSub === "assign-staff" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Assign Mentor & Warden to Students</h3>
+                  <p className="card-subtitle">Select mentors and wardens for students. Changes autosave on selection.</p>
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Register No</th>
+                        <th>Name</th>
+                        <th>Dept</th>
+                        <th>Type</th>
+                        <th>Mentor</th>
+                        <th>Warden</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {studentsList.map((student) => (
+                        <tr key={student.id}>
+                          <td>{student.register_no}</td>
+                          <td>{student.name}</td>
+                          <td>{student.department}</td>
+                          <td>{student.type}</td>
                           <td>
-                            {levels.length > 0 ? (
-                              <button
-                                type="button"
-                                className="sa-details-levels-toggle"
-                                onClick={() => {
-                                  setCoursesList((prev) => prev.map((c) => c.id === row.id ? { ...c, _levelsExpanded: !c._levelsExpanded } : { ...c, _levelsExpanded: false }));
-                                }}
-                              >
-                                {expanded ? "Hide" : "View"} {levels.length} level{levels.length !== 1 ? "s" : ""}
-                                <ChevronDown size={16} style={{ transform: expanded ? "rotate(180deg)" : "none" }} />
-                              </button>
-                            ) : (
-                              <span className="sa-muted">—</span>
-                            )}
+                            <select
+                              className="sa-input"
+                              value={student.mentor_id || ""}
+                              onChange={async (e) => {
+                                const newMentorId = e.target.value;
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/superadmin/students/${student.id}/assign-staff`, {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ mentor_id: newMentorId }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed to update mentor");
+                                  const updatedStudent = await res.json();
+                                  setStudentsList((prev) => prev.map((s) => (s.id === updatedStudent.id || s._id === updatedStudent.id ? updatedStudent : s)));
+                                } catch (err) {
+                                  alert(err.message);
+                                }
+                              }}
+                            >
+                              <option value="">-- No Mentor --</option>
+                              {usersList
+                                .filter((u) => (u.roles || []).some((r) => r.toLowerCase().includes("mentor")))
+                                .map((u) => (
+                                  <option key={u.id} value={u.id}>
+                                    {u.name || u.email}
+                                  </option>
+                                ))}
+                            </select>
                           </td>
                           <td>
-                            <button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}>
-                              <Pencil size={14} /> Edit
-                            </button>
+                            <select
+                              className="sa-input"
+                              value={student.warden_id || ""}
+                              onChange={async (e) => {
+                                const newWardenId = e.target.value;
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/superadmin/students/${student.id}/assign-staff`, {
+                                    method: "PUT",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({ warden_id: newWardenId }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed to update warden");
+                                  const updatedStudent = await res.json();
+                                  setStudentsList((prev) => prev.map((s) => (s.id === updatedStudent.id || s._id === updatedStudent.id ? updatedStudent : s)));
+                                } catch (err) {
+                                  alert(err.message);
+                                }
+                              }}
+                            >
+                              <option value="">-- No Warden --</option>
+                              {usersList
+                                .filter((u) => (u.roles || []).some((r) => r.toLowerCase().includes("warden")))
+                                .map((u) => (
+                                  <option key={u.id} value={u.id}>
+                                    {u.name || u.email}
+                                  </option>
+                                ))}
+                            </select>
                           </td>
                         </tr>
-                        {levels.length > 0 && expanded && (
-                          <tr>
-                            <td colSpan={8} style={{ padding: "0 12px 12px 12px", verticalAlign: "top" }}>
-                              <div className="sa-details-levels-body">
-                                {levels.map((lev, idx) => {
-                                  const prereqIndices = Array.isArray(lev.prerequisiteLevelIndices) ? lev.prerequisiteLevelIndices : (lev.prerequisiteLevelIndex != null && lev.prerequisiteLevelIndex >= 0 ? [lev.prerequisiteLevelIndex] : []);
-                                  const prereqText = prereqIndices.length === 0 ? "No" : prereqIndices.map((i) => `Level ${i + 1}`).join(", ");
-                                  return (
-                                    <div key={idx} className="sa-details-level-card">
-                                      <div className="sa-details-level-info">
-                                        <h4>{idx + 1}. {lev.name || `Level ${idx}`}</h4>
-                                        <div className="sa-details-level-meta">
-                                          {Array.isArray(lev.topics) && lev.topics.length ? lev.topics.join(" · ") : "No topics"}
-                                        </div>
-                                      </div>
-                                      <div className="sa-details-level-meta" style={{ textAlign: "right" }}>
-                                        <div><strong>{lev.rewardPoints ?? 0} pts</strong></div>
-                                        <div>Prereq: {prereqText}</div>
-                                        <div>{lev.assessmentType || "MCQ"}</div>
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            </td>
-                          </tr>
-                        )}
-                      </React.Fragment>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-          {activeSub === "question-banks" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Question bank submissions</h3>
-              <p className="card-subtitle">Review and approve or reject question banks submitted by faculty for each course.</p>
-              <div className="sa-form-group" style={{ marginBottom: 16, maxWidth: 280 }}>
-                <label>Filter by course</label>
-                <select value={questionBankFilterCourse} onChange={(e) => setQuestionBankFilterCourse(e.target.value)}>
-                  <option value="">All courses</option>
-                  {coursesList.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div className="sa-table-wrap">
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Course</th>
-                      <th>Faculty</th>
-                      <th>Title</th>
-                      <th>Status</th>
-                      <th>Submitted</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {questionBankSubmissions
-                      .filter((s) => !questionBankFilterCourse || s.course_id === questionBankFilterCourse)
-                      .map((s) => (
-                        <tr key={s.id}>
-                          <td>{s.course_name}</td>
-                          <td>{s.faculty_name || s.faculty_email}</td>
-                          <td>{s.title || "—"}</td>
-                          <td>
-                            <span className={`sa-badge ${s.status === "approved" ? "sa-badge-success" : s.status === "rejected" ? "sa-badge-danger" : "sa-badge-warning"}`}>
-                              {s.status === "approved" ? "Approved" : s.status === "rejected" ? "Rejected" : "Pending"}
-                            </span>
-                          </td>
-                          <td>{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "—"}</td>
-                          <td>
-                            {s.status === "submitted" || s.status === "draft" ? (
+              {/* Nav 2: Courses */}
+              {activeSub === "course-upload" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Uploading / creating course</h3>
+                  <p className="card-subtitle">Add new courses and edit existing ones.</p>
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-primary"
+                    style={{ marginBottom: 16 }}
+                    onClick={() =>
+                      openAdd("courses", {
+                        name: "",
+                        type: "",
+                        course_logo: "",
+                        level: "",
+                        status: "Active",
+                        activityPoints: 0,
+                        rewardPoints: 0,
+                        faculty: "",
+                        prerequisites: [],
+                        levels: [],
+                      })
+                    }
+                  >
+                    <Plus size={16} /> Add new course
+                  </button>
+                  <table className="sa-table">
+                    <thead>
+                      <tr><th>Course name</th><th>Type</th><th>Level</th><th>Course logo</th><th>Status</th><th>Actions</th></tr>
+                    </thead>
+                    <tbody>
+                      {coursesList.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.name}</td>
+                          <td>{row.type || "—"}</td>
+                          <td>{row.level || "—"}</td>
+                          <td className="sa-course-logo-cell">
+                            {row.course_logo ? (
                               <>
-                                <button
-                                  type="button"
-                                  className="sa-btn sa-btn-sm"
-                                  style={{ marginRight: 6 }}
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch(`${API_BASE}/api/superadmin/question-bank-submissions/${s.id}/review`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ status: "approved" }),
-                                      });
-                                      const data = await res.json();
-                                      if (!res.ok) throw new Error(data.message || "Failed");
-                                      setQuestionBankSubmissions((prev) => prev.map((x) => (x.id === s.id ? { ...x, status: "approved" } : x)));
-                                    } catch (e) {
-                                      alert(e.message || "Failed to approve");
-                                    }
-                                  }}
-                                >
-                                  Approve
-                                </button>
-                                <button
-                                  type="button"
-                                  className="sa-btn sa-btn-sm"
-                                  onClick={async () => {
-                                    try {
-                                      const res = await fetch(`${API_BASE}/api/superadmin/question-bank-submissions/${s.id}/review`, {
-                                        method: "PATCH",
-                                        headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ status: "rejected" }),
-                                      });
-                                      const data = await res.json();
-                                      if (!res.ok) throw new Error(data.message || "Failed");
-                                      setQuestionBankSubmissions((prev) => prev.map((x) => (x.id === s.id ? { ...x, status: "rejected" } : x)));
-                                    } catch (e) {
-                                      alert(e.message || "Failed to reject");
-                                    }
-                                  }}
-                                >
-                                  Reject
-                                </button>
+                                <img src={row.course_logo} alt="" className="sa-course-logo-thumb" onError={(e) => { e.target.style.display = "none"; e.target.nextSibling?.classList.remove("sa-hide"); }} />
+                                <span className="sa-muted sa-hide">—</span>
                               </>
                             ) : (
                               <span className="sa-muted">—</span>
                             )}
                           </td>
+                          <td><span className={`sa-badge ${row.status === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>{row.status}</span></td>
+                          <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}><Pencil size={14} /></button></td>
                         </tr>
                       ))}
-                  </tbody>
-                </table>
-              </div>
-              {questionBankSubmissions.filter((s) => !questionBankFilterCourse || s.course_id === questionBankFilterCourse).length === 0 && (
-                <p className="sa-muted">No question bank submissions yet. Faculty will see tasks on their dashboard and submit here for your approval.</p>
+                    </tbody>
+                  </table>
+                </div>
               )}
-            </div>
-          )}
 
-          {/* Nav 3: Slots */}
-          {activeSub === "venue" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Venue</h3>
-              <p className="card-subtitle">Manage venues for slots.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("venues", { name: "", location: "" })}><Plus size={16} /> Add venue</button>
-              <table className="sa-table">
-                <thead><tr><th>Venue name</th><th>Location</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {venuesList.map((row) => (
-                    <tr key={row.id}><td>{row.name}</td><td>{row.location}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("venues", row)}><Pencil size={14} /></button></td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "time" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Time</h3>
-              <p className="card-subtitle">Manage time slots.</p>
-              <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("time", { startTime: "09:00", endTime: "10:30" })}><Plus size={16} /> Add time slot</button>
-              <table className="sa-table">
-                <thead><tr><th>Start time</th><th>End time</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {timeSlotsList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{formatTime(row.startTime)}</td>
-                      <td>{formatTime(row.endTime)}</td>
-                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("time", row)}><Pencil size={14} /></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "slots-list" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Slots (venue, time)</h3>
-              <p className="card-subtitle">Edit and add new slots.</p>
-              <button
-                type="button"
-                className="sa-btn sa-btn-primary"
-                style={{ marginBottom: 16 }}
-                onClick={() => {
-                  const v = venuesList[0];
-                  const t = timeSlotsList[0];
-                  openAdd("slots", { venueId: v?.id || "", timeId: t?.id || "", venueLabel: v?.name || "", timeLabel: t ? `${formatTime(t.startTime)} – ${formatTime(t.endTime)}` : "", status: "Active" });
-                }}
-              >
-                <Plus size={16} /> New slot
-              </button>
-              <table className="sa-table">
-                <thead><tr><th>Venue</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {slotsList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.venueLabel}</td>
-                      <td>{row.timeLabel}</td>
-                      <td><span className={`sa-slot-status ${(row.status || "Active").toLowerCase() === "active" ? "sa-slot-active" : "sa-slot-inactive"}`}>{row.status || "Active"}</span></td>
-                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("slots", { ...row, venueId: row.venueId, timeId: row.timeId, status: row.status || "Active" })}><Pencil size={14} /></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Leaves: Leave Flow (create new leave types with flow) */}
-          {activeSub === "leave-flow" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Leave Flow</h3>
-              <p className="card-subtitle">Create a leave type and define its approval flow. First approver is always Parents, then choose up to 4 more roles.</p>
-              <div className="sa-form-group">
-                <label>Leave type</label>
-                <input
-                  type="text"
-                  className="sa-input"
-                  placeholder="e.g. Sick Leave"
-                  value={leaveFlowSelectedType}
-                  onChange={(e) => setLeaveFlowSelectedType(e.target.value)}
-                />
-              </div>
-              <div className="sa-leave-flow-steps">
-                <div className="sa-flow-step-row">
-                  <span className="sa-flow-step-label">Parents</span>
-                  <span className="sa-tag" style={getRoleTagStyle("parents")}>Parents</span>
+              {activeSub === "course-points" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Course details</h3>
+                  <p className="card-subtitle">Configure levels, activity points, reward points, faculty, and prerequisites per course. Click a row to edit.</p>
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Course name</th>
+                        <th>Level</th>
+                        <th>Activity points</th>
+                        <th>Reward points</th>
+                        <th>Faculty</th>
+                        <th>Prerequisites</th>
+                        <th>Levels</th>
+                        <th>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {coursesList.map((row) => {
+                        const facultyUser = facultyList.find((u) => u.id === row.faculty);
+                        const levels = Array.isArray(row.levels) ? row.levels : [];
+                        const prereqNames = Array.isArray(row.prerequisites)
+                          ? row.prerequisites.map((id) => coursesList.find((c) => c.id === id)?.name).filter(Boolean)
+                          : [];
+                        const expanded = row._levelsExpanded;
+                        return (
+                          <React.Fragment key={row.id}>
+                            <tr>
+                              <td><strong>{row.name}</strong></td>
+                              <td>{row.level || "—"}</td>
+                              <td>{row.activityPoints ?? 0}</td>
+                              <td>{row.rewardPoints ?? 0}</td>
+                              <td>{facultyUser ? facultyUser.name || facultyUser.email : "—"}</td>
+                              <td>{prereqNames.length ? prereqNames.join(", ") : "—"}</td>
+                              <td>
+                                {levels.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="sa-details-levels-toggle"
+                                    onClick={() => {
+                                      setCoursesList((prev) => prev.map((c) => c.id === row.id ? { ...c, _levelsExpanded: !c._levelsExpanded } : { ...c, _levelsExpanded: false }));
+                                    }}
+                                  >
+                                    {expanded ? "Hide" : "View"} {levels.length} level{levels.length !== 1 ? "s" : ""}
+                                    <ChevronDown size={16} style={{ transform: expanded ? "rotate(180deg)" : "none" }} />
+                                  </button>
+                                ) : (
+                                  <span className="sa-muted">—</span>
+                                )}
+                              </td>
+                              <td>
+                                <button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}>
+                                  <Pencil size={14} /> Edit
+                                </button>
+                              </td>
+                            </tr>
+                            {levels.length > 0 && expanded && (
+                              <tr>
+                                <td colSpan={8} style={{ padding: "0 12px 12px 12px", verticalAlign: "top" }}>
+                                  <div className="sa-details-levels-body">
+                                    {levels.map((lev, idx) => {
+                                      const prereqIndices = Array.isArray(lev.prerequisiteLevelIndices) ? lev.prerequisiteLevelIndices : (lev.prerequisiteLevelIndex != null && lev.prerequisiteLevelIndex >= 0 ? [lev.prerequisiteLevelIndex] : []);
+                                      const prereqText = prereqIndices.length === 0 ? "No" : prereqIndices.map((i) => `Level ${i + 1}`).join(", ");
+                                      return (
+                                        <div key={idx} className="sa-details-level-card">
+                                          <div className="sa-details-level-info">
+                                            <h4>{idx + 1}. {lev.name || `Level ${idx}`}</h4>
+                                            <div className="sa-details-level-meta">
+                                              {Array.isArray(lev.topics) && lev.topics.length ? lev.topics.join(" · ") : "No topics"}
+                                            </div>
+                                          </div>
+                                          <div className="sa-details-level-meta" style={{ textAlign: "right" }}>
+                                            <div><strong>{lev.rewardPoints ?? 0} pts</strong></div>
+                                            <div>Prereq: {prereqText}</div>
+                                            <div>{lev.assessmentType || "MCQ"}</div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
-                {leaveFlowSteps.map((role, idx) => (
-                  <div key={idx} className="sa-flow-step-row">
-                    <span className="sa-flow-step-label">{`Step ${idx + 2}`}</span>
-                    <select
-                      value={role}
-                      onChange={(e) => {
-                        const v = e.target.value;
-                        setLeaveFlowSteps((prev) => {
-                          const next = [...prev];
-                          next[idx] = v;
-                          return next;
-                        });
-                      }}
-                      className="sa-flow-role-select"
-                    >
-                      <option value="">Select role...</option>
-                      {rolesList
-                        .filter((r) => (r.role || "").toLowerCase() !== "student")
-                        .map((r) => (
-                          <option key={r.id} value={r.role}>{r.role}</option>
-                        ))}
+              )}
+
+              {activeSub === "question-banks" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Question bank submissions</h3>
+                  <p className="card-subtitle">Review and approve or reject question banks submitted by faculty for each course.</p>
+                  <div className="sa-form-group" style={{ marginBottom: 16, maxWidth: 280 }}>
+                    <label>Filter by course</label>
+                    <select value={questionBankFilterCourse} onChange={(e) => setQuestionBankFilterCourse(e.target.value)}>
+                      <option value="">All courses</option>
+                      {coursesList.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
                     </select>
-                    {role && (
-                      <span className="sa-tag" style={getRoleTagStyle(role)}>{role}</span>
-                    )}
-                    {idx === leaveFlowSteps.length - 1 && idx < 4 && (
-                      <button
-                        type="button"
-                        className="sa-btn sa-btn-icon"
-                        title="Add next step"
-                        onClick={() => setLeaveFlowSteps((prev) => (prev.length < 5 ? [...prev, ""] : prev))}
-                      >
-                        <Plus size={18} />
-                      </button>
-                    )}
-                    {leaveFlowSteps.length > 1 && (
-                      <button
-                        type="button"
-                        className="sa-btn sa-btn-icon sa-btn-ghost"
-                        title="Remove step"
-                        onClick={() => setLeaveFlowSteps((prev) => prev.filter((_, i) => i !== idx))}
-                      >
-                        ×
-                      </button>
-                    )}
                   </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                className="sa-btn sa-btn-primary"
-                style={{ marginTop: 16 }}
-                disabled={!leaveFlowSelectedType.trim()}
-                onClick={async () => {
-                  const typeName = leaveFlowSelectedType.trim();
-                  if (!typeName) return;
-                  const extraSteps = leaveFlowSteps.filter(Boolean);
-                  const steps = ["Parents", ...extraSteps];
-                  const workflow = steps.join(", ");
-                  try {
-                    const base = `${API_BASE}/api/superadmin`;
-                    // Ensure LeaveType exists (create if needed)
-                    const existingType = leaveTypesList.find((lt) => lt.type === typeName);
-                    let typeData = existingType || null;
-                    if (existingType) {
-                      const status = existingType.status === "Inactive" ? "Inactive" : "Active";
-                      const resType = await fetch(`${base}/leave-types/${existingType.id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ type: typeName, code: existingType.code, status }),
-                      });
-                      const dataType = await resType.json();
-                      if (!resType.ok) throw new Error(dataType.message || "Failed to save leave type");
-                      typeData = dataType;
-                      setLeaveTypesList((prev) => prev.map((l) => (l.id === dataType.id ? dataType : l)));
-                    } else {
-                      const defaultCode = typeName.split(" ").map((w) => w[0] || "").join("").toUpperCase() || "LV";
-                      const resType = await fetch(`${base}/leave-types`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ type: typeName, code: defaultCode, status: "Active" }),
-                      });
-                      const dataType = await resType.json();
-                      if (!resType.ok) throw new Error(dataType.message || "Failed to create leave type");
-                      typeData = dataType;
-                      setLeaveTypesList((prev) => [...prev, dataType]);
-                    }
-
-                    // Create or update workflow for this leave type
-                    const existingWf = leaveWorkflowList.find((w) => w.leaveType === typeName);
-                    const url = existingWf ? `${base}/leave-workflows/${existingWf.id}` : `${base}/leave-workflows`;
-                    const res = await fetch(url, {
-                      method: existingWf ? "PUT" : "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({ leaveType: typeName, workflow }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || "Failed to save leave flow");
-                    if (existingWf) setLeaveWorkflowList((prev) => prev.map((w) => (w.id === existingWf.id ? data : w)));
-                    else setLeaveWorkflowList((prev) => [...prev, data]);
-                    alert("Leave flow saved.");
-                  } catch (e) {
-                    alert(e.message || "Save failed");
-                  }
-                }}
-              >
-                Save flow
-              </button>
-            </div>
-          )}
-
-          {/* Leaves: All Leave Types */}
-          {activeSub === "all-leave-types" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">All Leave Types</h3>
-              <p className="card-subtitle">Edit leave types and their status. Use Active/Inactive to enable or disable.</p>
-              <table className="sa-table">
-                <thead><tr><th>Type</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {leaveTypesList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.type}</td>
-                      <td>{row.code}</td>
-                      <td>
-                        <span className={`sa-badge ${(row.status || "Active") === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>
-                          {row.status || "Active"}
-                        </span>
-                      </td>
-                      <td>
-                        <button
-                          type="button"
-                          className="sa-btn sa-btn-sm"
-                          onClick={() => {
-                            const wf = leaveWorkflowList.find((w) => w.leaveType === row.type);
-                            openEdit("leave-types", { ...row, status: row.status || "Active", workflow: wf?.workflow || "" });
-                          }}
-                        >
-                          <Pencil size={14} />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "code-access" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Assign courses to faculty</h3>
-              <p className="card-subtitle">Assign courses to technical faculty so they appear in their user dashboard and can submit question banks.</p>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
-                <div className="sa-form-group" style={{ minWidth: 200 }}>
-                  <label>User (faculty)</label>
-                  <select value={facultyAssignUserId} onChange={(e) => setFacultyAssignUserId(e.target.value)}>
-                    <option value="">Select user</option>
-                    {usersList.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name || u.email} {u.roles?.length ? `(${u.roles.join(", ")})` : ""}</option>
-                    ))}
-                  </select>
+                  <div className="sa-table-wrap">
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Course</th>
+                          <th>Faculty</th>
+                          <th>Title</th>
+                          <th>Status</th>
+                          <th>Submitted</th>
+                          <th>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {questionBankSubmissions
+                          .filter((s) => !questionBankFilterCourse || s.course_id === questionBankFilterCourse)
+                          .map((s) => (
+                            <tr key={s.id}>
+                              <td>{s.course_name}</td>
+                              <td>{s.faculty_name || s.faculty_email}</td>
+                              <td>{s.title || "—"}</td>
+                              <td>
+                                <span className={`sa-badge ${s.status === "approved" ? "sa-badge-success" : s.status === "rejected" ? "sa-badge-danger" : "sa-badge-warning"}`}>
+                                  {s.status === "approved" ? "Approved" : s.status === "rejected" ? "Rejected" : "Pending"}
+                                </span>
+                              </td>
+                              <td>{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "—"}</td>
+                              <td>
+                                {s.status === "submitted" || s.status === "draft" ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      className="sa-btn sa-btn-sm"
+                                      style={{ marginRight: 6 }}
+                                      onClick={async () => {
+                                        try {
+                                          const res = await fetch(`${API_BASE}/api/superadmin/question-bank-submissions/${s.id}/review`, {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ status: "approved" }),
+                                          });
+                                          const data = await res.json();
+                                          if (!res.ok) throw new Error(data.message || "Failed");
+                                          setQuestionBankSubmissions((prev) => prev.map((x) => (x.id === s.id ? { ...x, status: "approved" } : x)));
+                                        } catch (e) {
+                                          alert(e.message || "Failed to approve");
+                                        }
+                                      }}
+                                    >
+                                      Approve
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="sa-btn sa-btn-sm"
+                                      onClick={async () => {
+                                        try {
+                                          const res = await fetch(`${API_BASE}/api/superadmin/question-bank-submissions/${s.id}/review`, {
+                                            method: "PATCH",
+                                            headers: { "Content-Type": "application/json" },
+                                            body: JSON.stringify({ status: "rejected" }),
+                                          });
+                                          const data = await res.json();
+                                          if (!res.ok) throw new Error(data.message || "Failed");
+                                          setQuestionBankSubmissions((prev) => prev.map((x) => (x.id === s.id ? { ...x, status: "rejected" } : x)));
+                                        } catch (e) {
+                                          alert(e.message || "Failed to reject");
+                                        }
+                                      }}
+                                    >
+                                      Reject
+                                    </button>
+                                  </>
+                                ) : (
+                                  <span className="sa-muted">—</span>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {questionBankSubmissions.filter((s) => !questionBankFilterCourse || s.course_id === questionBankFilterCourse).length === 0 && (
+                    <p className="sa-muted">No question bank submissions yet. Faculty will see tasks on their dashboard and submit here for your approval.</p>
+                  )}
                 </div>
-                <div className="sa-form-group" style={{ minWidth: 200 }}>
-                  <label>Course</label>
-                  <select value={facultyAssignCourseId} onChange={(e) => setFacultyAssignCourseId(e.target.value)}>
-                    <option value="">Select course</option>
-                    {coursesList.filter((c) => c.status === "Active").map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+              )}
+
+              {/* Nav 3: Slots */}
+              {activeSub === "venue" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Venue</h3>
+                  <p className="card-subtitle">Manage venues for slots.</p>
+                  <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("venues", { name: "", location: "" })}><Plus size={16} /> Add venue</button>
+                  <table className="sa-table">
+                    <thead><tr><th>Venue name</th><th>Location</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {venuesList.map((row) => (
+                        <tr key={row.id}><td>{row.name}</td><td>{row.location}</td><td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("venues", row)}><Pencil size={14} /></button></td></tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <div className="sa-form-group" style={{ alignSelf: "flex-end" }}>
+              )}
+
+              {activeSub === "time" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Time</h3>
+                  <p className="card-subtitle">Manage time slots.</p>
+                  <button type="button" className="sa-btn sa-btn-primary" style={{ marginBottom: 16 }} onClick={() => openAdd("time", { startTime: "09:00", endTime: "10:30" })}><Plus size={16} /> Add time slot</button>
+                  <table className="sa-table">
+                    <thead><tr><th>Start time</th><th>End time</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {timeSlotsList.map((row) => (
+                        <tr key={row.id}>
+                          <td>{formatTime(row.startTime)}</td>
+                          <td>{formatTime(row.endTime)}</td>
+                          <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("time", row)}><Pencil size={14} /></button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeSub === "slots-list" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Slots (venue, time)</h3>
+                  <p className="card-subtitle">Edit and add new slots.</p>
                   <button
                     type="button"
                     className="sa-btn sa-btn-primary"
-                    disabled={!facultyAssignUserId || !facultyAssignCourseId}
+                    style={{ marginBottom: 16 }}
+                    onClick={() => {
+                      const v = venuesList[0];
+                      const t = timeSlotsList[0];
+                      openAdd("slots", { venueId: v?.id || "", timeId: t?.id || "", venueLabel: v?.name || "", timeLabel: t ? `${formatTime(t.startTime)} – ${formatTime(t.endTime)}` : "", status: "Active" });
+                    }}
+                  >
+                    <Plus size={16} /> New slot
+                  </button>
+                  <table className="sa-table">
+                    <thead><tr><th>Venue</th><th>Time</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {slotsList.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.venueLabel}</td>
+                          <td>{row.timeLabel}</td>
+                          <td><span className={`sa-slot-status ${(row.status || "Active").toLowerCase() === "active" ? "sa-slot-active" : "sa-slot-inactive"}`}>{row.status || "Active"}</span></td>
+                          <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("slots", { ...row, venueId: row.venueId, timeId: row.timeId, status: row.status || "Active" })}><Pencil size={14} /></button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {/* Leaves: Leave Flow (create new leave types with flow) */}
+              {activeSub === "leave-flow" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Leave Flow</h3>
+                  <p className="card-subtitle">Create a leave type and define its approval flow. First approver is always Parents, then choose up to 4 more roles.</p>
+                  <div className="sa-form-group">
+                    <label>Leave type</label>
+                    <input
+                      type="text"
+                      className="sa-input"
+                      placeholder="e.g. Sick Leave"
+                      value={leaveFlowSelectedType}
+                      onChange={(e) => setLeaveFlowSelectedType(e.target.value)}
+                    />
+                  </div>
+                  <div className="sa-leave-flow-steps">
+                    <div className="sa-flow-step-row">
+                      <span className="sa-flow-step-label">Parents</span>
+                      <span className="sa-tag" style={getRoleTagStyle("parents")}>Parents</span>
+                    </div>
+                    {leaveFlowSteps.map((role, idx) => (
+                      <div key={idx} className="sa-flow-step-row">
+                        <span className="sa-flow-step-label">{`Step ${idx + 2}`}</span>
+                        <select
+                          value={role}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setLeaveFlowSteps((prev) => {
+                              const next = [...prev];
+                              next[idx] = v;
+                              return next;
+                            });
+                          }}
+                          className="sa-flow-role-select"
+                        >
+                          <option value="">Select role...</option>
+                          {rolesList
+                            .filter((r) => (r.role || "").toLowerCase() !== "student")
+                            .map((r) => (
+                              <option key={r.id} value={r.role}>{r.role}</option>
+                            ))}
+                        </select>
+                        {role && (
+                          <span className="sa-tag" style={getRoleTagStyle(role)}>{role}</span>
+                        )}
+                        {idx === leaveFlowSteps.length - 1 && idx < 4 && (
+                          <button
+                            type="button"
+                            className="sa-btn sa-btn-icon"
+                            title="Add next step"
+                            onClick={() => setLeaveFlowSteps((prev) => (prev.length < 5 ? [...prev, ""] : prev))}
+                          >
+                            <Plus size={18} />
+                          </button>
+                        )}
+                        {leaveFlowSteps.length > 1 && (
+                          <button
+                            type="button"
+                            className="sa-btn sa-btn-icon sa-btn-ghost"
+                            title="Remove step"
+                            onClick={() => setLeaveFlowSteps((prev) => prev.filter((_, i) => i !== idx))}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-primary"
+                    style={{ marginTop: 16 }}
+                    disabled={!leaveFlowSelectedType.trim()}
                     onClick={async () => {
+                      const typeName = leaveFlowSelectedType.trim();
+                      if (!typeName) return;
+                      const extraSteps = leaveFlowSteps.filter(Boolean);
+                      const steps = ["Parents", ...extraSteps];
+                      const workflow = steps.join(", ");
                       try {
-                        const res = await fetch(`${API_BASE}/api/superadmin/faculty-assignments`, {
-                          method: "POST",
+                        const base = `${API_BASE}/api/superadmin`;
+                        // Ensure LeaveType exists (create if needed)
+                        const existingType = leaveTypesList.find((lt) => lt.type === typeName);
+                        let typeData = existingType || null;
+                        if (existingType) {
+                          const status = existingType.status === "Inactive" ? "Inactive" : "Active";
+                          const resType = await fetch(`${base}/leave-types/${existingType.id}`, {
+                            method: "PUT",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ type: typeName, code: existingType.code, status }),
+                          });
+                          const dataType = await resType.json();
+                          if (!resType.ok) throw new Error(dataType.message || "Failed to save leave type");
+                          typeData = dataType;
+                          setLeaveTypesList((prev) => prev.map((l) => (l.id === dataType.id ? dataType : l)));
+                        } else {
+                          const defaultCode = typeName.split(" ").map((w) => w[0] || "").join("").toUpperCase() || "LV";
+                          const resType = await fetch(`${base}/leave-types`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ type: typeName, code: defaultCode, status: "Active" }),
+                          });
+                          const dataType = await resType.json();
+                          if (!resType.ok) throw new Error(dataType.message || "Failed to create leave type");
+                          typeData = dataType;
+                          setLeaveTypesList((prev) => [...prev, dataType]);
+                        }
+
+                        // Create or update workflow for this leave type
+                        const existingWf = leaveWorkflowList.find((w) => w.leaveType === typeName);
+                        const url = existingWf ? `${base}/leave-workflows/${existingWf.id}` : `${base}/leave-workflows`;
+                        const res = await fetch(url, {
+                          method: existingWf ? "PUT" : "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ user_id: facultyAssignUserId, course_id: facultyAssignCourseId }),
+                          body: JSON.stringify({ leaveType: typeName, workflow }),
                         });
                         const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || "Failed");
-                        const u = usersList.find((x) => x.id === facultyAssignUserId);
-                        setFacultyAssignments((prev) => [...prev, { id: data.id, user_id: data.user_id, course_id: data.course_id, course_name: data.course_name, user_name: u?.name, user_email: u?.email }]);
-                        setFacultyAssignUserId("");
-                        setFacultyAssignCourseId("");
+                        if (!res.ok) throw new Error(data.message || "Failed to save leave flow");
+                        if (existingWf) setLeaveWorkflowList((prev) => prev.map((w) => (w.id === existingWf.id ? data : w)));
+                        else setLeaveWorkflowList((prev) => [...prev, data]);
+                        alert("Leave flow saved.");
                       } catch (e) {
-                        alert(e.message || "Assign failed");
+                        alert(e.message || "Save failed");
                       }
                     }}
                   >
-                    + Assign
+                    Save flow
                   </button>
                 </div>
-              </div>
-              <table className="sa-table">
-                <thead><tr><th>User</th><th>Course</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {facultyAssignments.map((a) => {
-                    const displayName = a.user_name || a.user_email || (usersList.find((u) => u.id === a.user_id)?.name) || (usersList.find((u) => u.id === a.user_id)?.email) || a.user_id;
-                    return (
-                    <tr key={a.id}>
-                      <td>
-                        <button
-                          type="button"
-                          className="sa-chat-name-btn"
-                          onClick={() => {
-                            setChatWithUserId(a.user_id);
-                            setChatWithUserName(displayName);
-                            setChatOpen(true);
-                          }}
-                        >
-                          {displayName}
-                        </button>
-                      </td>
-                      <td>{a.course_name || a.course_id}</td>
-                      <td>
-                        <button
-                          type="button"
-                          className="sa-btn sa-btn-sm"
-                          onClick={async () => {
-                            try {
-                              const res = await fetch(`${API_BASE}/api/superadmin/faculty-assignments/${a.id}`, { method: "DELETE" });
-                              if (!res.ok) throw new Error("Failed to remove");
-                              setFacultyAssignments((prev) => prev.filter((x) => x.id !== a.id));
-                            } catch (e) {
-                              alert(e.message);
-                            }
-                          }}
-                        >
-                          Remove
-                        </button>
-                      </td>
-                    </tr>
-                  ); })}
-                </tbody>
-              </table>
-              {facultyAssignments.length === 0 && <p className="sa-muted">No assignments yet. Select a user and course above to assign.</p>}
-            </div>
-          )}
+              )}
 
-          <ChatModal
-            open={chatOpen}
-            onClose={() => { setChatOpen(false); setChatWithUserId(null); setChatWithUserName(""); }}
-            otherUserId={chatWithUserId}
-            otherUserName={chatWithUserName}
-            title={chatWithUserName ? `Chat with ${chatWithUserName}` : ""}
-          />
-
-          {activeSub === "code-students" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Students applied for code review</h3>
-              <p className="card-subtitle">Courses, marks, time slot and answers.</p>
-              <table className="sa-table">
-                <thead>
-                  <tr>
-                    <th>Student</th>
-                    <th>Course</th>
-                    <th>Marks</th>
-                    <th>Time slot</th>
-                    <th>Answers</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>Vidula S (7376231EC317)</td>
-                    <td>PS Activity 101</td>
-                    <td>72</td>
-                    <td>Hall A, 09:00 AM</td>
-                    <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
-                    <td><span className="sa-badge sa-badge-warning">Pending</span></td>
-                  </tr>
-                  <tr>
-                    <td>Student 2 (7376231CS323)</td>
-                    <td>Advanced PS</td>
-                    <td>85</td>
-                    <td>Lab 2, 02:00 PM</td>
-                    <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
-                    <td><span className="sa-badge sa-badge-success">Verified</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Nav 6: Statistics - Chart.js graphs */}
-          {activeSub === "stats-course" && (
-            <>
-              <div className="sa-stats-row">
-                <div className="sa-stat-card"><h4>Total applications</h4><div className="value">1,240</div></div>
-                <div className="sa-stat-card"><h4>By year</h4><div className="value">2025-26</div></div>
-                <div className="sa-stat-card"><h4>By dept</h4><div className="value">8 depts</div></div>
-              </div>
-              <div className="dashboard-card">
-                <h3 className="card-title">Students applied per course (year &amp; dept)</h3>
-                <p className="card-subtitle">Breakdown by year and department.</p>
-                <div className="sa-chart-wrap">
-                  <Bar data={statsCourseChart} options={chartOptions()} />
+              {/* Leaves: All Leave Types */}
+              {activeSub === "all-leave-types" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">All Leave Types</h3>
+                  <p className="card-subtitle">Edit leave types and their status. Use Active/Inactive to enable or disable.</p>
+                  <table className="sa-table">
+                    <thead><tr><th>Type</th><th>Code</th><th>Status</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {leaveTypesList.map((row) => (
+                        <tr key={row.id}>
+                          <td>{row.type}</td>
+                          <td>{row.code}</td>
+                          <td>
+                            <span className={`sa-badge ${(row.status || "Active") === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>
+                              {row.status || "Active"}
+                            </span>
+                          </td>
+                          <td>
+                            <button
+                              type="button"
+                              className="sa-btn sa-btn-sm"
+                              onClick={() => {
+                                const wf = leaveWorkflowList.find((w) => w.leaveType === row.type);
+                                openEdit("leave-types", { ...row, status: row.status || "Active", workflow: wf?.workflow || "" });
+                              }}
+                            >
+                              <Pencil size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-                <table className="sa-table" style={{ marginTop: 16 }}>
-                  <thead><tr><th>Course</th><th>Year</th><th>Dept</th><th>Count</th></tr></thead>
-                  <tbody>
-                    {statsCourseChart.labels.slice(0, 3).map((name, i) => (
-                      <tr key={i}><td>{name}</td><td>2025-26</td><td>{["CSE", "ECE", "CSE"][i]}</td><td>{statsCourseChart.datasets[0].data[i]}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+              )}
 
-          {activeSub === "stats-slot" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Which slot is used most often</h3>
-              <p className="card-subtitle">Booking distribution by slot.</p>
-              <div className="sa-chart-wrap sa-chart-bar">
-                <Bar data={statsSlotChart} options={chartOptions()} />
-              </div>
-              <div className="sa-chart-wrap sa-chart-doughnut">
-                <Doughnut data={statsSlotChart} options={{ ...chartOptions(), plugins: { ...chartOptions().plugins, legend: { position: "right" } } }} />
-              </div>
-              <table className="sa-table" style={{ marginTop: 16 }}>
-                <thead><tr><th>Slot (Venue, Time)</th><th>Bookings</th><th>%</th></tr></thead>
-                <tbody>
-                  {statsSlotChart.labels.map((label, i) => (
-                    <tr key={i}><td>{label}</td><td>{statsSlotChart.datasets[0].data[i]}</td><td>{Math.round((statsSlotChart.datasets[0].data[i] / statsSlotChart.datasets[0].data.reduce((a, b) => a + b, 0)) * 100)}%</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+              {activeSub === "code-access" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Assign courses to faculty</h3>
+                  <p className="card-subtitle">Assign courses to technical faculty so they appear in their user dashboard and can submit question banks.</p>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 16, marginBottom: 20 }}>
+                    <div className="sa-form-group" style={{ minWidth: 200 }}>
+                      <label>User (faculty)</label>
+                      <select value={facultyAssignUserId} onChange={(e) => setFacultyAssignUserId(e.target.value)}>
+                        <option value="">Select user</option>
+                        {usersList.map((u) => (
+                          <option key={u.id} value={u.id}>{u.name || u.email} {u.roles?.length ? `(${u.roles.join(", ")})` : ""}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sa-form-group" style={{ minWidth: 200 }}>
+                      <label>Course</label>
+                      <select value={facultyAssignCourseId} onChange={(e) => setFacultyAssignCourseId(e.target.value)}>
+                        <option value="">Select course</option>
+                        {coursesList.filter((c) => c.status === "Active").map((c) => (
+                          <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className="sa-form-group" style={{ alignSelf: "flex-end" }}>
+                      <button
+                        type="button"
+                        className="sa-btn sa-btn-primary"
+                        disabled={!facultyAssignUserId || !facultyAssignCourseId}
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`${API_BASE}/api/superadmin/faculty-assignments`, {
+                              method: "POST",
+                              headers: { "Content-Type": "application/json" },
+                              body: JSON.stringify({ user_id: facultyAssignUserId, course_id: facultyAssignCourseId }),
+                            });
+                            const data = await res.json();
+                            if (!res.ok) throw new Error(data.message || "Failed");
+                            const u = usersList.find((x) => x.id === facultyAssignUserId);
+                            setFacultyAssignments((prev) => [...prev, { id: data.id, user_id: data.user_id, course_id: data.course_id, course_name: data.course_name, user_name: u?.name, user_email: u?.email }]);
+                            setFacultyAssignUserId("");
+                            setFacultyAssignCourseId("");
+                          } catch (e) {
+                            alert(e.message || "Assign failed");
+                          }
+                        }}
+                      >
+                        + Assign
+                      </button>
+                    </div>
+                  </div>
+                  <table className="sa-table">
+                    <thead><tr><th>User</th><th>Course</th><th>Actions</th></tr></thead>
+                    <tbody>
+                      {facultyAssignments.map((a) => {
+                        const displayName = a.user_name || a.user_email || (usersList.find((u) => u.id === a.user_id)?.name) || (usersList.find((u) => u.id === a.user_id)?.email) || a.user_id;
+                        return (
+                          <tr key={a.id}>
+                            <td>
+                              <button
+                                type="button"
+                                className="sa-chat-name-btn"
+                                onClick={() => {
+                                  setChatWithUserId(a.user_id);
+                                  setChatWithUserName(displayName);
+                                  setChatOpen(true);
+                                }}
+                              >
+                                {displayName}
+                              </button>
+                            </td>
+                            <td>{a.course_name || a.course_id}</td>
+                            <td>
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-sm"
+                                onClick={async () => {
+                                  try {
+                                    const res = await fetch(`${API_BASE}/api/superadmin/faculty-assignments/${a.id}`, { method: "DELETE" });
+                                    if (!res.ok) throw new Error("Failed to remove");
+                                    setFacultyAssignments((prev) => prev.filter((x) => x.id !== a.id));
+                                  } catch (e) {
+                                    alert(e.message);
+                                  }
+                                }}
+                              >
+                                Remove
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                  {facultyAssignments.length === 0 && <p className="sa-muted">No assignments yet. Select a user and course above to assign.</p>}
+                </div>
+              )}
 
-          {activeSub === "stats-weekly" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Weekly clearing analysis</h3>
-              <p className="card-subtitle">Students clearing / not clearing percentage.</p>
-              <div className="sa-chart-wrap">
-                <Line data={statsWeeklyChart} options={chartOptions()} />
-              </div>
-              <table className="sa-table" style={{ marginTop: 16 }}>
-                <thead><tr><th>Week</th><th>Cleared</th><th>Not cleared</th><th>Clear %</th></tr></thead>
-                <tbody>
-                  {statsWeeklyChart.labels.map((week, i) => (
-                    <tr key={i}><td>{week}</td><td>{[85, 92, 78][i]}</td><td>{[15, 8, 22][i]}</td><td>{statsWeeklyChart.datasets[0].data[i]}%</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+              <ChatModal
+                open={chatOpen}
+                onClose={() => { setChatOpen(false); setChatWithUserId(null); setChatWithUserName(""); }}
+                otherUserId={chatWithUserId}
+                otherUserName={chatWithUserName}
+                title={chatWithUserName ? `Chat with ${chatWithUserName}` : ""}
+              />
 
-          {activeSub === "stats-registered" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Course registered and attended</h3>
-              <p className="card-subtitle">Most, least and average.</p>
-              <div className="sa-chart-wrap sa-chart-bar">
-                <Bar data={statsRegisteredChart} options={{ ...chartOptions(), scales: { x: { stacked: true }, y: { stacked: true } } }} />
-              </div>
-              <table className="sa-table" style={{ marginTop: 16 }}>
-                <thead><tr><th>Course</th><th>Registered</th><th>Attended</th><th>Attendance %</th><th>Rank</th></tr></thead>
-                <tbody>
-                  {statsRegisteredChart.labels.map((name, i) => (
-                    <tr key={i}>
-                      <td>{name}</td>
-                      <td>{statsRegisteredChart.datasets[0].data[i]}</td>
-                      <td>{statsRegisteredChart.datasets[1].data[i]}</td>
-                      <td>{((statsRegisteredChart.datasets[1].data[i] / statsRegisteredChart.datasets[0].data[i]) * 100).toFixed(1)}%</td>
-                      <td><span className={`sa-badge ${i === 0 ? "sa-badge-success" : i === 2 ? "sa-badge-warning" : ""}`}>{i === 0 ? "Most" : i === 2 ? "Least" : "Avg"}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+              {activeSub === "code-students" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Students applied for code review</h3>
+                  <p className="card-subtitle">Courses, marks, time slot and answers.</p>
+                  <table className="sa-table">
+                    <thead>
+                      <tr>
+                        <th>Student</th>
+                        <th>Course</th>
+                        <th>Marks</th>
+                        <th>Time slot</th>
+                        <th>Answers</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr>
+                        <td>Vidula S (7376231EC317)</td>
+                        <td>PS Activity 101</td>
+                        <td>72</td>
+                        <td>Hall A, 09:00 AM</td>
+                        <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
+                        <td><span className="sa-badge sa-badge-warning">Pending</span></td>
+                      </tr>
+                      <tr>
+                        <td>Student 2 (7376231CS323)</td>
+                        <td>Advanced PS</td>
+                        <td>85</td>
+                        <td>Lab 2, 02:00 PM</td>
+                        <td><button type="button" className="sa-btn sa-btn-sm">View</button></td>
+                        <td><span className="sa-badge sa-badge-success">Verified</span></td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              )}
 
-          {!NAV.flatMap((s) => s.sub).some((s) => s.id === activeSub) && (
-            <div className="dashboard-card">
-              <p className="sa-empty">Select a section from the sidebar to view and manage content.</p>
-            </div>
-          )}
-          </>}
+              {/* Nav 6: Statistics - Chart.js graphs */}
+              {activeSub === "stats-course" && (
+                <>
+                  <div className="sa-stats-row">
+                    <div className="sa-stat-card"><h4>Total applications</h4><div className="value">1,240</div></div>
+                    <div className="sa-stat-card"><h4>By year</h4><div className="value">2025-26</div></div>
+                    <div className="sa-stat-card"><h4>By dept</h4><div className="value">8 depts</div></div>
+                  </div>
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Students applied per course (year &amp; dept)</h3>
+                    <p className="card-subtitle">Breakdown by year and department.</p>
+                    <div className="sa-chart-wrap">
+                      <Bar data={statsCourseChart} options={chartOptions()} />
+                    </div>
+                    <table className="sa-table" style={{ marginTop: 16 }}>
+                      <thead><tr><th>Course</th><th>Year</th><th>Dept</th><th>Count</th></tr></thead>
+                      <tbody>
+                        {statsCourseChart.labels.slice(0, 3).map((name, i) => (
+                          <tr key={i}><td>{name}</td><td>2025-26</td><td>{["CSE", "ECE", "CSE"][i]}</td><td>{statsCourseChart.datasets[0].data[i]}</td></tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+
+              {activeSub === "stats-slot" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Which slot is used most often</h3>
+                  <p className="card-subtitle">Booking distribution by slot.</p>
+                  <div className="sa-chart-wrap sa-chart-bar">
+                    <Bar data={statsSlotChart} options={chartOptions()} />
+                  </div>
+                  <div className="sa-chart-wrap sa-chart-doughnut">
+                    <Doughnut data={statsSlotChart} options={{ ...chartOptions(), plugins: { ...chartOptions().plugins, legend: { position: "right" } } }} />
+                  </div>
+                  <table className="sa-table" style={{ marginTop: 16 }}>
+                    <thead><tr><th>Slot (Venue, Time)</th><th>Bookings</th><th>%</th></tr></thead>
+                    <tbody>
+                      {statsSlotChart.labels.map((label, i) => (
+                        <tr key={i}><td>{label}</td><td>{statsSlotChart.datasets[0].data[i]}</td><td>{Math.round((statsSlotChart.datasets[0].data[i] / statsSlotChart.datasets[0].data.reduce((a, b) => a + b, 0)) * 100)}%</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeSub === "stats-weekly" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Weekly clearing analysis</h3>
+                  <p className="card-subtitle">Students clearing / not clearing percentage.</p>
+                  <div className="sa-chart-wrap">
+                    <Line data={statsWeeklyChart} options={chartOptions()} />
+                  </div>
+                  <table className="sa-table" style={{ marginTop: 16 }}>
+                    <thead><tr><th>Week</th><th>Cleared</th><th>Not cleared</th><th>Clear %</th></tr></thead>
+                    <tbody>
+                      {statsWeeklyChart.labels.map((week, i) => (
+                        <tr key={i}><td>{week}</td><td>{[85, 92, 78][i]}</td><td>{[15, 8, 22][i]}</td><td>{statsWeeklyChart.datasets[0].data[i]}%</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {activeSub === "stats-registered" && (
+                <div className="dashboard-card">
+                  <h3 className="card-title">Course registered and attended</h3>
+                  <p className="card-subtitle">Most, least and average.</p>
+                  <div className="sa-chart-wrap sa-chart-bar">
+                    <Bar data={statsRegisteredChart} options={{ ...chartOptions(), scales: { x: { stacked: true }, y: { stacked: true } } }} />
+                  </div>
+                  <table className="sa-table" style={{ marginTop: 16 }}>
+                    <thead><tr><th>Course</th><th>Registered</th><th>Attended</th><th>Attendance %</th><th>Rank</th></tr></thead>
+                    <tbody>
+                      {statsRegisteredChart.labels.map((name, i) => (
+                        <tr key={i}>
+                          <td>{name}</td>
+                          <td>{statsRegisteredChart.datasets[0].data[i]}</td>
+                          <td>{statsRegisteredChart.datasets[1].data[i]}</td>
+                          <td>{((statsRegisteredChart.datasets[1].data[i] / statsRegisteredChart.datasets[0].data[i]) * 100).toFixed(1)}%</td>
+                          <td><span className={`sa-badge ${i === 0 ? "sa-badge-success" : i === 2 ? "sa-badge-warning" : ""}`}>{i === 0 ? "Most" : i === 2 ? "Least" : "Avg"}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {!NAV.flatMap((s) => s.sub).some((s) => s.id === activeSub) && (
+                <div className="dashboard-card">
+                  <p className="sa-empty">Select a section from the sidebar to view and manage content.</p>
+                </div>
+              )}
+            </>}
           </div>
         </main>
       </div>

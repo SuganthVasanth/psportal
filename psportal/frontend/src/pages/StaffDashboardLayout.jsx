@@ -49,8 +49,11 @@ const STAFF_NAV = [
   },
 ];
 
-function getStaffNavSections(roles) {
+function getStaffNavSections(roles, data) {
   const r = (roles || []).map((x) => String(x).toLowerCase().replace(/\s+/g, "_"));
+  if (data?.mentees?.length > 0 && !r.includes("mentor")) r.push("mentor");
+  if (data?.ward_students?.length > 0 && !r.includes("warden")) r.push("warden");
+
   return STAFF_NAV.filter((s) => r.includes(s.roleKey));
 }
 
@@ -66,12 +69,12 @@ export default function StaffDashboardLayout() {
     try {
       const raw = localStorage.getItem("roles");
       if (raw) return JSON.parse(raw);
-    } catch (_) {}
+    } catch (_) { }
     const r = localStorage.getItem("role");
     return r ? [r] : [];
   })();
   const roles = data?.user?.roles ? data.user.roles.map((r) => String(r).toLowerCase().replace(/\s+/g, "_")) : rolesFromStorage.map((r) => String(r).toLowerCase().replace(/\s+/g, "_"));
-  const staffNavSections = getStaffNavSections(roles);
+  const staffNavSections = getStaffNavSections(roles, data);
   useEffect(() => {
     if (data?.user?.roles?.length) {
       const roleNames = data.user.roles.map((r) => String(r).toLowerCase().replace(/\s+/g, "_"));

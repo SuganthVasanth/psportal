@@ -51,16 +51,26 @@ async function ensureWorkflowOrder(leaveDoc, targetRoleKey) {
   const unmet = [];
   for (let i = 0; i < idx; i += 1) {
     const r = roles[i];
+    let st = "Pending";
+    let roleName = r;
     if (r === "parent") {
-      if (leaveDoc.parentStatus !== "Approved") unmet.push("Parent");
+      st = leaveDoc.parentStatus || "Pending";
+      roleName = "Parent";
     } else if (r === "mentor") {
-      if (!leaveDoc.mentorApproval || leaveDoc.mentorApproval.status !== "Approved") unmet.push("Mentor");
+      st = leaveDoc.mentorApproval ? leaveDoc.mentorApproval.status : "Pending";
+      roleName = "Mentor";
     } else if (r === "warden") {
-      if (!leaveDoc.wardenApproval || leaveDoc.wardenApproval.status !== "Approved") unmet.push("Warden");
+      st = leaveDoc.wardenApproval ? leaveDoc.wardenApproval.status : "Pending";
+      roleName = "Warden";
     } else if (r === "hostel_manager") {
-      if (!leaveDoc.hostelManagerApproval || leaveDoc.hostelManagerApproval.status !== "Approved") {
-        unmet.push("Hostel Manager");
-      }
+      st = leaveDoc.hostelManagerApproval ? leaveDoc.hostelManagerApproval.status : "Pending";
+      roleName = "Hostel Manager";
+    }
+
+    if (st === "Rejected") {
+      return { ok: false, message: `Leave was already rejected by ${roleName}. No further action can be taken.` };
+    } else if (st !== "Approved") {
+      unmet.push(roleName);
     }
   }
 
@@ -248,6 +258,22 @@ exports.mentorApproval = async (req, res) => {
       return res.status(403).json({ message: "You are not the assigned mentor for this leave" });
     }
     doc.mentorApproval = { status: action, by: userName };
+    if (action === "Rejected") {
+      doc.status = "Rejected";
+    } else {
+      // For now we'll inline a simple check
+      const wf = await LeaveWorkflow.findOne({ leaveType: doc.leaveType }).lean();
+      if (wf && wf.workflow) {
+        const roles = wf.workflow.split(/[,>→-]+/).map(t => normalizeRoleToken(t.trim())).filter(Boolean);
+        let allApproved = true;
+        for (const r of roles) {
+          if (r === "mentor" && (!doc.mentorApproval || doc.mentorApproval.status !== "Approved")) allApproved = false;
+          if (r === "warden" && (!doc.wardenApproval || doc.wardenApproval.status !== "Approved")) allApproved = false;
+          if (r === "hostel_manager" && (!doc.hostelManagerApproval || doc.hostelManagerApproval.status !== "Approved")) allApproved = false;
+        }
+        if (allApproved) doc.status = "Approved";
+      }
+    }
     await doc.save();
     res.json({ message: "Leave " + action.toLowerCase(), leave: doc });
   } catch (err) {
@@ -281,6 +307,21 @@ exports.wardenApproval = async (req, res) => {
       return res.status(403).json({ message: "You are not the assigned warden for this leave" });
     }
     doc.wardenApproval = { status: action, by: userName };
+    if (action === "Rejected") {
+      doc.status = "Rejected";
+    } else {
+      const wf = await LeaveWorkflow.findOne({ leaveType: doc.leaveType }).lean();
+      if (wf && wf.workflow) {
+        const roles = wf.workflow.split(/[,>→-]+/).map(t => normalizeRoleToken(t.trim())).filter(Boolean);
+        let allApproved = true;
+        for (const r of roles) {
+          if (r === "mentor" && (!doc.mentorApproval || doc.mentorApproval.status !== "Approved")) allApproved = false;
+          if (r === "warden" && (!doc.wardenApproval || doc.wardenApproval.status !== "Approved")) allApproved = false;
+          if (r === "hostel_manager" && (!doc.hostelManagerApproval || doc.hostelManagerApproval.status !== "Approved")) allApproved = false;
+        }
+        if (allApproved) doc.status = "Approved";
+      }
+    }
     await doc.save();
     res.json({ message: "Leave " + action.toLowerCase(), leave: doc });
   } catch (err) {

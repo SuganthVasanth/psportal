@@ -3,7 +3,7 @@ import React from "react";
 export default function StaffMentorMentees({ data, has }) {
   const { mentees } = data || {};
   const show = has("mentees.view") || (mentees?.length > 0);
-  if (!show) return <p className="ud-empty">No mentees assigned. Ask admin to assign mentees and grant mentor accesses.</p>;
+  if (!show) return <p className="ud-empty">No mentees assigned.</p>;
   return (
     <section className="ud-card">
       <h3 className="card-title">My Mentees</h3>
@@ -19,8 +19,8 @@ export default function StaffMentorMentees({ data, has }) {
                   <th>Register No</th>
                   <th>Name</th>
                   <th>Department</th>
-                  {has("mentees.activity_points") && <th>Activity points</th>}
-                  {has("mentees.attendance") && <th>Attendance %</th>}
+                  <th>Activity points</th>
+                  <th>Attendance %</th>
                 </tr>
               </thead>
               <tbody>
@@ -29,14 +29,14 @@ export default function StaffMentorMentees({ data, has }) {
                     <td>{m.register_no}</td>
                     <td>{m.name}</td>
                     <td>{m.department || "-"}</td>
-                    {has("mentees.activity_points") && <td>{m.total_activity ?? m.activity_points ?? 0}</td>}
-                    {has("mentees.attendance") && <td>{m.attendance_percent ?? "-"}%</td>}
+                    <td>{m.total_activity ?? m.activity_points ?? 0}</td>
+                    <td>{m.attendance_percent ?? "-"}%</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {has("mentees.courses") && mentees.length > 0 && (
+          {mentees.length > 0 && (
             <details style={{ marginTop: 16 }}>
               <summary>Course progress by mentee</summary>
               {mentees.map((m) => (
