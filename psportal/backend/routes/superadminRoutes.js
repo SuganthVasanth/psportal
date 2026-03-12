@@ -57,6 +57,7 @@ router.delete("/faculty-assignments/:id", ctrl.unassignFacultyFromCourse);
 
 // Question bank submissions (admin list & review)
 router.get("/question-bank-submissions", ctrl.getQuestionBankSubmissions);
+router.get("/question-bank-submissions/:id", ctrl.getQuestionBankSubmissionById);
 router.patch("/question-bank-submissions/:id/review", ctrl.reviewQuestionBankSubmission);
 
 module.exports = router;

@@ -16,6 +16,13 @@ const questionBankSubmissionSchema = new mongoose.Schema({
   reviewed_at: { type: Date },
   reviewed_by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
   review_remarks: { type: String, default: "" },
+  // Template-based questions: each item has question content (value) and correct answer key
+  questions: [{
+    questionNumber: { type: Number, required: true },
+    template_id: { type: mongoose.Schema.Types.ObjectId, ref: "QuestionTemplate" },
+    value: { type: mongoose.Schema.Types.Mixed, default: {} },
+    correctAnswerKey: { type: String, default: "" },
+  }],
 }, { timestamps: true });
 
 questionBankSubmissionSchema.index({ course_id: 1, user_id: 1 }, { unique: true });

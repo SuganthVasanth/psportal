@@ -142,11 +142,8 @@ exports.registerLevel = async (req, res) => {
       return res.status(400).json({ message: "Level index out of range" });
     }
 
-    const prereqIndices = levels[mergedIdx].prerequisiteLevelIndices ?? (
-      (levels[mergedIdx].prerequisiteLevelIndex != null && levels[mergedIdx].prerequisiteLevelIndex >= 0)
-        ? [levels[mergedIdx].prerequisiteLevelIndex] : []);
-    for (const prereqIndex of prereqIndices) {
-      if (prereqIndex < 0 || prereqIndex >= mergedToSource.length) continue;
+    const prereqIndex = levels[mergedIdx].prerequisiteLevelIndex ?? -1;
+    if (prereqIndex >= 0) {
       const prereqSrc = mergedToSource[prereqIndex];
       const prereqCompleted = await StudentLevelProgress.findOne({
         register_no,
@@ -194,10 +191,15 @@ exports.completeLevel = async (req, res) => {
       return res.status(400).json({ message: "register_no and level_index required" });
     }
     const mergedIdx = Number(level_index);
+    if (Number.isNaN(mergedIdx) || mergedIdx < 0) {
+      return res.status(400).json({ message: "Invalid level_index" });
+    }
     const data = await getSameNameCourseData(course_id);
     if (!data) return res.status(404).json({ message: "Course not found" });
     const { mergedToSource } = data;
-    if (mergedIdx >= mergedToSource.length) return res.status(400).json({ message: "Level index out of range" });
+    if (mergedIdx >= mergedToSource.length) {
+      return res.status(400).json({ message: "Level index out of range" });
+    }
     const src = mergedToSource[mergedIdx];
     const doc = await StudentLevelProgress.findOneAndUpdate(
       { register_no, course_id: src.course_id, level_index: src.level_index },

@@ -436,7 +436,11 @@ exports.getFacultyAssignments = async (req, res) => {
   try {
     const { user_id } = req.query;
     const filter = user_id ? { user_id } : {};
-    const list = await FacultyCourseAssignment.find(filter).populate("course_id", "name status").populate("user_id", "email name").lean();
+    const list = await FacultyCourseAssignment.find(filter)
+      .populate("course_id", "name status")
+      .populate("user_id", "email name")
+      .populate("template_id", "name key")
+      .lean();
     res.json(list.map((a) => ({
       id: a._id.toString(),
       user_id: a.user_id?._id?.toString(),
@@ -445,6 +449,9 @@ exports.getFacultyAssignments = async (req, res) => {
       course_id: a.course_id?._id?.toString(),
       course_name: a.course_id?.name,
       course_status: a.course_id?.status,
+      template_id: a.template_id?._id?.toString() || null,
+      template_name: a.template_id?.name || "",
+      question_count: a.question_count || 0,
     })));
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -453,19 +460,31 @@ exports.getFacultyAssignments = async (req, res) => {
 
 exports.assignFacultyToCourse = async (req, res) => {
   try {
-    const { user_id, course_id } = req.body;
+    const { user_id, course_id, template_id, question_count } = req.body;
     if (!user_id || !course_id) return res.status(400).json({ message: "user_id and course_id required" });
     const doc = await FacultyCourseAssignment.findOneAndUpdate(
       { user_id, course_id },
-      { user_id, course_id },
+      {
+        user_id,
+        course_id,
+        ...(template_id ? { template_id } : {}),
+        ...(question_count != null ? { question_count } : {}),
+      },
       { new: true, upsert: true }
     );
-    const populated = await FacultyCourseAssignment.findById(doc._id).populate("course_id", "name").populate("user_id", "email name").lean();
+    const populated = await FacultyCourseAssignment.findById(doc._id)
+      .populate("course_id", "name")
+      .populate("user_id", "email name")
+      .populate("template_id", "name key")
+      .lean();
     res.status(201).json({
       id: populated._id.toString(),
       user_id: populated.user_id?._id?.toString(),
       course_id: populated.course_id?._id?.toString(),
       course_name: populated.course_id?.name,
+      template_id: populated.template_id?._id?.toString() || null,
+      template_name: populated.template_id?.name || "",
+      question_count: populated.question_count || 0,
     });
   } catch (err) {
     if (err.code === 11000) return res.status(400).json({ message: "Assignment already exists" });
@@ -485,6 +504,42 @@ exports.unassignFacultyFromCourse = async (req, res) => {
 };
 
 // ——— Question bank submissions (admin view & review) ———
+exports.getQuestionBankSubmissionById = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const doc = await QuestionBankSubmission.findById(id)
+      .populate("course_id", "name status")
+      .populate("user_id", "name email")
+      .populate("questions.template_id", "name key")
+      .lean();
+    if (!doc) return res.status(404).json({ message: "Submission not found" });
+    res.json({
+      id: doc._id.toString(),
+      course_id: doc.course_id?._id?.toString(),
+      course_name: doc.course_id?.name,
+      faculty_name: doc.user_id?.name,
+      faculty_email: doc.user_id?.email,
+      user_id: doc.user_id?._id?.toString(),
+      status: doc.status,
+      title: doc.title,
+      content: doc.content,
+      file_url: doc.file_url,
+      submitted_at: doc.submitted_at,
+      reviewed_at: doc.reviewed_at,
+      review_remarks: doc.review_remarks || "",
+      questions: (doc.questions || []).map((q) => ({
+        questionNumber: q.questionNumber,
+        template_id: q.template_id?._id?.toString(),
+        template_name: q.template_id?.name,
+        value: q.value || {},
+        correctAnswerKey: q.correctAnswerKey,
+      })),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
 exports.getQuestionBankSubmissions = async (req, res) => {
   try {
     const { course_id } = req.query;

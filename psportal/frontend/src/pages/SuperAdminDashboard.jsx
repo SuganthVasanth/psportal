@@ -11,6 +11,20 @@ import {
   Pencil,
   X,
   LogOut,
+  Users,
+  UserPlus,
+  Upload,
+  List,
+  ClipboardList,
+  MapPin,
+  Clock,
+  CalendarDays,
+  GitBranch,
+  UserCheck,
+  TrendingUp,
+  PieChart,
+  BarChart2,
+  CalendarCheck,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -38,9 +52,9 @@ const NAV = [
     label: "RBAC",
     icon: Shield,
     sub: [
-      { id: "roles", label: "Roles" },
-      { id: "users-list", label: " users" },
-      { id: "create-user", label: "Create new users" },
+      { id: "roles", label: "Roles", icon: Shield },
+      { id: "users-list", label: "Users", icon: Users },
+      { id: "create-user", label: "Create new users", icon: UserPlus },
     ],
   },
   {
@@ -48,9 +62,9 @@ const NAV = [
     label: "Courses",
     icon: BookOpen,
     sub: [
-      { id: "course-upload", label: "Create" },
-      { id: "course-points", label: "Details" },
-      { id: "question-banks", label: "Question banks" },
+      { id: "course-upload", label: "Create", icon: Upload },
+      { id: "course-points", label: "Details", icon: List },
+      { id: "question-banks", label: "Question banks", icon: ClipboardList },
     ],
   },
   {
@@ -58,9 +72,9 @@ const NAV = [
     label: "Slots",
     icon: Calendar,
     sub: [
-      { id: "venue", label: "Venue" },
-      { id: "time", label: "Time" },
-      { id: "slots-list", label: "Slots (venue, time)" },
+      { id: "venue", label: "Venue", icon: MapPin },
+      { id: "time", label: "Time", icon: Clock },
+      { id: "slots-list", label: "Slots (venue, time)", icon: CalendarDays },
     ],
   },
   {
@@ -68,9 +82,9 @@ const NAV = [
     label: "Leaves",
     icon: FileText,
     sub: [
-      { id: "leave-types", label: "Leave types" },
-      { id: "leave-approval", label: "Leave approval flow" },
-      { id: "leave-workflow", label: "All leave types with workflow" },
+      { id: "leave-types", label: "Leave types", icon: FileText },
+      { id: "leave-approval", label: "Leave approval flow", icon: GitBranch },
+      { id: "leave-workflow", label: "All leave types with workflow", icon: CalendarCheck },
     ],
   },
   {
@@ -78,8 +92,8 @@ const NAV = [
     label: "Code review",
     icon: Code,
     sub: [
-      { id: "code-access", label: "Assign Faculty" },
-      { id: "code-students", label: "Students Applied" },
+      { id: "code-access", label: "Assign Faculty", icon: UserCheck },
+      { id: "code-students", label: "Students Applied", icon: Users },
     ],
   },
   {
@@ -87,10 +101,10 @@ const NAV = [
     label: "Reports",
     icon: BarChart3,
     sub: [
-      { id: "stats-course", label: "Students applied per course (year, dept)" },
-      { id: "stats-slot", label: "Slot used most often" },
-      { id: "stats-weekly", label: "Weekly clearing %" },
-      { id: "stats-registered", label: "Course registered/attended most, least, avg" },
+      { id: "stats-course", label: "Students applied per course (year, dept)", icon: TrendingUp },
+      { id: "stats-slot", label: "Slot used most often", icon: PieChart },
+      { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2 },
+      { id: "stats-registered", label: "Course registered/attended most, least, avg", icon: CalendarCheck },
     ],
   },
 ];
@@ -470,25 +484,34 @@ export default function SuperAdminDashboard() {
                   className={`sa-nav-main ${isOpen ? "active" : ""}`}
                   onClick={() => setOpenNav(isOpen ? "" : section.id)}
                 >
-                  <span><Icon size={18} /> {section.label}</span>
-                  <ChevronDown size={16} className="sa-chevon" />
+                  <span className="sa-nav-label">
+                    <Icon size={24} />
+                    <span className="sa-nav-label-text">{section.label}</span>
+                  </span>
+                  <ChevronDown size={18} className="sa-chevon" />
                 </div>
                 {isOpen && (
                   <ul className="sa-nav-sub">
-                    {section.sub.map((sub) => (
-                      <li key={sub.id}>
-                        <a
-                          href="#"
-                          className={activeSub === sub.id ? "active" : ""}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setActiveSub(sub.id);
-                          }}
-                        >
-                          {sub.label}
-                        </a>
-                      </li>
-                    ))}
+                    {section.sub.map((sub) => {
+                      const SubIcon = sub.icon;
+                      return (
+                        <li key={sub.id}>
+                          <a
+                            href="#"
+                            className={activeSub === sub.id ? "active" : ""}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              setActiveSub(sub.id);
+                            }}
+                          >
+                            <span className="sa-nav-label">
+                              {SubIcon ? <SubIcon size={20} /> : null}
+                              <span className="sa-nav-label-text">{sub.label}</span>
+                            </span>
+                          </a>
+                        </li>
+                      );
+                    })}
                   </ul>
                 )}
               </div>

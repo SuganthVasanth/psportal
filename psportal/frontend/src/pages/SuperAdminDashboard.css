@@ -1,5 +1,7 @@
 /* Super Admin Dashboard - same UI as PS Portal Student Dashboard */
 .dashboard-layout.sa-dashboard-layout {
+  display: flex;
+  flex-direction: column;
   min-height: 100vh;
   background-color: #f4f7fe;
   font-family: "Inter", sans-serif;
@@ -94,34 +96,52 @@
   margin-top: 60px;
 }
 
-/* Sidebar - same style as StudentSidebar (white, purple active) */
+/* Sidebar - icons always visible, labels on hover; larger icon strip */
 .sa-sidebar {
-  width: 260px;
+  width: 88px;
+  min-width: 88px;
   background-color: #ffffff;
   border-right: 1px solid #edf2f7;
-  overflow-y: auto;
-  padding: 16px 0;
+  overflow: hidden;
+  padding: 0;
   position: fixed;
   left: 0;
   top: 60px;
   height: calc(100vh - 60px);
   z-index: 100;
+  transition: width 0.2s ease, min-width 0.2s ease;
+}
+
+.sa-sidebar:hover {
+  width: 280px;
+  min-width: 280px;
+  background-color: #ffffff;
+  overflow-y: auto;
+  box-shadow: 4px 0 12px rgba(0, 0, 0, 0.06);
+}
+
+.sa-sidebar-inner {
+  min-width: 280px;
+  padding: 20px 0;
+  padding-left: 12px;
 }
 
 .sa-nav-section {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
 }
 
 .sa-nav-main {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 10px 20px;
-  font-size: 14px;
+  padding: 16px 20px;
+  margin: 0 8px;
+  font-size: 15px;
   font-weight: 500;
   color: #718096;
   cursor: pointer;
-  border-left: 3px solid transparent;
+  border-radius: 12px;
+  border-left: none;
   transition: all 0.2s ease;
 }
 
@@ -133,14 +153,45 @@
 .sa-nav-main.active {
   background-color: #8b5cf6;
   color: white;
-  border-left-color: #7c3aed;
-  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.25);
+  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
 }
 
-.sa-nav-main span {
+.sa-nav-label {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+}
+
+.sa-nav-label svg {
+  flex-shrink: 0;
+}
+
+/* Only logo/icon visible until sidebar is hovered */
+.sa-sidebar:not(:hover) .sa-nav-label-text {
+  max-width: 0;
+  opacity: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  transition: max-width 0.15s ease, opacity 0.15s ease;
+}
+
+.sa-sidebar:not(:hover) .sa-chevon {
+  opacity: 0;
+  width: 0;
+  min-width: 0;
+  overflow: hidden;
+  margin: 0;
+  transition: opacity 0.15s ease, width 0.15s ease;
+}
+
+.sa-sidebar:hover .sa-nav-label-text {
+  max-width: 180px;
+  opacity: 1;
+}
+
+/* Sub-pages only visible when sidebar is hovered (expanded) */
+.sa-sidebar:not(:hover) .sa-nav-sub {
+  display: none;
 }
 
 .sa-nav-sub {
@@ -155,12 +206,24 @@
 }
 
 .sa-nav-sub a {
-  display: block;
-  padding: 8px 20px 8px 44px;
-  font-size: 13px;
+  display: flex;
+  align-items: center;
+  padding: 12px 20px 12px 48px;
+  font-size: 14px;
   color: #718096;
   text-decoration: none;
   transition: background 0.2s, color 0.2s;
+}
+
+.sa-nav-sub a .sa-nav-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.sa-sidebar:not(:hover) .sa-nav-sub a {
+  padding-left: 20px;
 }
 
 .sa-nav-sub a:hover {
@@ -174,18 +237,32 @@
   font-weight: 600;
 }
 
-/* Main area - same as StudentDashboard (dashboard-main-area) */
+/* Main area - offset for icon strip; shifts when sidebar is open */
 .sa-main {
   flex: 1;
-  margin-left: 260px;
+  min-height: 0;
+  margin-left: 88px;
   padding: 24px 40px;
-  min-height: calc(100vh - 60px);
   overflow-y: auto;
+  transition: margin-left 0.2s ease;
+}
+
+.sa-body:has(.sa-sidebar:hover) .sa-main {
+  margin-left: 280px;
 }
 
 .sa-main .dashboard-container-inner {
   max-width: 1300px;
   margin: 0 auto;
+  min-height: 0;
+}
+
+/* Question Template Builder card fills main area so drag-and-drop is visible */
+.sa-main .dashboard-container-inner .dashboard-card.qtb-wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 60vh;
 }
 
 .sa-welcome-banner {

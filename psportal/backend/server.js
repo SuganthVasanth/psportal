@@ -8,8 +8,14 @@ require("./config/passport");
 const app = express();
 
 const connectDB = require("./config/db");
+const { seedDefaultQuestionTemplates } = require("./templates/seedDefaultQuestionTemplates");
 
-connectDB();
+connectDB()
+  .then(seedDefaultQuestionTemplates)
+  .catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error("DB connection or seeding failed", err);
+  });
 
 app.use(cors());
 app.use(express.json());
@@ -45,6 +51,13 @@ app.use("/api/superadmin", superadminRoutes);
 const studentCourseRoutes = require("./routes/studentCourseRoutes");
 app.use("/api/courses", studentCourseRoutes);
 
+// PS Courses (from docx seed): GET list, POST/PUT admin CRUD, collection 'courses'
+const psCourseRoutes = require("./routes/psCourseRoutes");
+app.use("/api/ps-courses", psCourseRoutes);
+
+const enrollmentRoutes = require("./routes/enrollmentRoutes");
+app.use("/api/enrollments", enrollmentRoutes);
+
 // Student: active slots and book slot
 const bookingRoutes = require("./routes/bookingRoutes");
 app.use("/api", bookingRoutes);
@@ -52,6 +65,14 @@ app.use("/api", bookingRoutes);
 // Question banks: faculty submit, auth required
 const questionBankRoutes = require("./routes/questionBankRoutes");
 app.use("/api/question-banks", questionBankRoutes);
+
+// Question type layouts: admin CRUD, faculty read by type
+const questionTypeLayoutRoutes = require("./routes/questionTypeLayoutRoutes");
+app.use("/api/question-type-layouts", questionTypeLayoutRoutes);
+
+// Question templates: admin template builder (layout with x,y,width,height)
+const templateRoutes = require("./routes/templateRoutes");
+app.use("/api/templates", templateRoutes);
 
 // Upload (auth optional for now - can add authMiddleware if needed)
 const uploadRoutes = require("./routes/uploadRoutes");

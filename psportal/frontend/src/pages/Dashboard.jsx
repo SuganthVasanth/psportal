@@ -36,7 +36,7 @@ export default function Dashboard() {
     })
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((user) => {
-        const roleNames = (user.roles || []).map((r) => String(r).toLowerCase().replace(/\s+/g, "_"));
+        const roleNames = (user.roles || []).map((r) => (typeof r === "object" && r?.role_name ? r.role_name : String(r)).toLowerCase().replace(/\s+/g, "_"));
         localStorage.setItem("roles", JSON.stringify(roleNames));
         const primary = roleNames.includes("super_admin")
           ? "super_admin"
@@ -45,6 +45,7 @@ export default function Dashboard() {
             : roleNames[0] || "student";
         localStorage.setItem("role", primary);
         setRoles(roleNames);
+        if (user.register_no) localStorage.setItem("register_no", user.register_no);
       })
       .catch(() => {})
       .finally(() => setRolesFetched(true));

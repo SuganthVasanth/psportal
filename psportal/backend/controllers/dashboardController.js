@@ -157,9 +157,9 @@ exports.getStudentDashboardData = async (req, res) => {
 
 exports.getMyCourses = async (req, res) => {
     try {
-        const register_no = req.query.register_no;
+        const register_no = (req.query.register_no || "").trim() || null;
         if (!register_no) {
-            return res.status(400).json({ message: "register_no required" });
+            return res.status(400).json({ message: "register_no required. If you are a student, try logging out and logging in again." });
         }
         // Each entry in this list represents a level the student has interacted with.
         // We only keep levels that are not completed, so completed ones disappear from My Courses.

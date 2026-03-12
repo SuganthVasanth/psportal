@@ -10,6 +10,7 @@ import PSActivity from "./pages/PSActivity";
 import MovementPass from "./pages/MovementPass";
 import MyLeaves from "./pages/MyLeaves";
 import MyAttendance from "./pages/MyAttendance";
+import QuestionBankSubmissionView from "./pages/admin/QuestionBankSubmissionView";
 import './App.css'
 
 export default function App() {
@@ -94,6 +95,15 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CourseDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/admin/question-bank-submissions/:id"
+          element={
+            <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
+              <QuestionBankSubmissionView />
             </ProtectedRoute>
           }
         />

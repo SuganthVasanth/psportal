@@ -103,3 +103,82 @@
     line-height: 1.4;
     margin: 0;
 }
+
+.my-enrollments-title {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a202c;
+    margin-top: 32px;
+    margin-bottom: 8px;
+}
+
+.my-enrollments-subtitle {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+
+.my-enrollments-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+}
+
+.my-enrollment-card {
+    background: #fff;
+    border-radius: 10px;
+    border: 1px solid #e2e8f0;
+    padding: 16px;
+}
+
+.my-enrollment-card.locked {
+    border-color: #fcd34d;
+    background: #fffbeb;
+}
+
+.my-enrollment-name {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a202c;
+    margin: 0 0 8px 0;
+}
+
+.my-enrollment-desc {
+    font-size: 13px;
+    color: #64748b;
+    margin: 0 0 12px 0;
+    line-height: 1.4;
+}
+
+.my-enrollment-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.my-enrollment-progress-bar {
+    flex: 1;
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.my-enrollment-progress-fill {
+    height: 100%;
+    background: #8b5cf6;
+    border-radius: 4px;
+    transition: width 0.2s ease;
+}
+
+.my-enrollment-progress-text {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.my-enrollment-prereq {
+    font-size: 12px;
+    color: #b45309;
+    margin: 10px 0 0 0;
+}

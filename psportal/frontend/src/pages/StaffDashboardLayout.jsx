@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, NavLink } from "react-router-dom";
-import { LogOut, Users, Building2, BookOpen, ChevronDown } from "lucide-react";
+import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare } from "lucide-react";
 import "./SuperAdminDashboard.css";
 import "./UserDashboard.css";
 import StaffMentorMentees from "./StaffMentorMentees";
@@ -18,11 +18,11 @@ const STAFF_NAV = [
   {
     id: "mentor",
     label: "Mentor",
-    icon: Users,
+    icon: UserCircle,
     roleKey: "mentor",
     sub: [
-      { id: "mentees", label: "My mentees", path: "/dashboard/mentor/mentees" },
-      { id: "leave-approvals", label: "Student Leaves", path: "/dashboard/mentor/leave-approvals" },
+      { id: "mentees", label: "My mentees", path: "/dashboard/mentor/mentees", icon: Users },
+      { id: "leave-approvals", label: "Student Leaves", path: "/dashboard/mentor/leave-approvals", icon: CalendarCheck },
     ],
   },
   {
@@ -31,9 +31,9 @@ const STAFF_NAV = [
     icon: Building2,
     roleKey: "warden",
     sub: [
-      { id: "wards", label: "My wards", path: "/dashboard/warden/wards" },
-      { id: "biometric", label: "Biometric details", path: "/dashboard/warden/biometric" },
-      { id: "leave-approvals", label: "Warden Leaves", path: "/dashboard/warden/leave-approvals" },
+      { id: "wards", label: "My wards", path: "/dashboard/warden/wards", icon: Home },
+      { id: "biometric", label: "Biometric details", path: "/dashboard/warden/biometric", icon: Fingerprint },
+      { id: "leave-approvals", label: "Warden Leaves", path: "/dashboard/warden/leave-approvals", icon: FileText },
     ],
   },
   {
@@ -42,9 +42,9 @@ const STAFF_NAV = [
     icon: BookOpen,
     roleKey: "technical_faculty",
     sub: [
-      { id: "question-banks", label: "Questions uploading", path: "/dashboard/faculty/question-banks" },
-      { id: "code-review", label: "Code review", path: "/dashboard/faculty/code-review" },
-      { id: "student-answers", label: "Student's answers", path: "/dashboard/faculty/student-answers" },
+      { id: "question-banks", label: "Questions uploading", path: "/dashboard/faculty/question-banks", icon: ClipboardList },
+      { id: "code-review", label: "Code review", path: "/dashboard/faculty/code-review", icon: Code },
+      { id: "student-answers", label: "Student's answers", path: "/dashboard/faculty/student-answers", icon: MessageSquare },
     ],
   },
 ];
@@ -195,21 +195,30 @@ export default function StaffDashboardLayout() {
                     className={`sa-nav-main ${isOpen ? "active" : ""}`}
                     onClick={() => setOpenNav(isOpen ? null : section.id)}
                   >
-                    <span><Icon size={18} /> {section.label}</span>
-                    <ChevronDown size={16} className="sa-chevon" />
+                    <span className="sa-nav-label">
+                      <Icon size={24} />
+                      <span className="sa-nav-label-text">{section.label}</span>
+                    </span>
+                    <ChevronDown size={18} className="sa-chevon" />
                   </div>
                   {isOpen && (
                     <ul className="sa-nav-sub">
-                      {(section.sub || []).map((sub) => (
-                        <li key={sub.id}>
-                          <NavLink
-                            to={sub.path}
-                            className={({ isActive }) => (isActive ? "active" : "")}
-                          >
-                            {sub.label}
-                          </NavLink>
-                        </li>
-                      ))}
+                      {(section.sub || []).map((sub) => {
+                        const SubIcon = sub.icon;
+                        return (
+                          <li key={sub.id}>
+                            <NavLink
+                              to={sub.path}
+                              className={({ isActive }) => (isActive ? "active" : "")}
+                            >
+                              <span className="sa-nav-label">
+                                {SubIcon ? <SubIcon size={20} /> : null}
+                                <span className="sa-nav-label-text">{sub.label}</span>
+                              </span>
+                            </NavLink>
+                          </li>
+                        );
+                      })}
                     </ul>
                   )}
                 </div>

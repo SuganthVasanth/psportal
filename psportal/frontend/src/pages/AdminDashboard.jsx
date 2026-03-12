@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ChevronDown,
   Shield,
@@ -11,6 +11,22 @@ import {
   Pencil,
   X,
   LogOut,
+  Users,
+  UserPlus,
+  Upload,
+  List,
+  BookMarked,
+  ClipboardList,
+  LayoutTemplate,
+  MapPin,
+  Clock,
+  CalendarDays,
+  GitBranch,
+  UserCheck,
+  TrendingUp,
+  PieChart,
+  CalendarCheck,
+  BarChart2,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -27,6 +43,8 @@ import {
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import "./SuperAdminDashboard.css";
 import ChatModal from "../components/ChatModal";
+import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
+import { templateApi } from "../services/templateApi";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -38,9 +56,9 @@ const NAV = [
     label: "RBAC",
     icon: Shield,
     sub: [
-      { id: "roles", label: "Roles" },
-      { id: "users-list", label: " users" },
-      { id: "create-user", label: "Create new users" },
+      { id: "roles", label: "Roles", icon: Shield },
+      { id: "users-list", label: "Users", icon: Users },
+      { id: "create-user", label: "Create new users", icon: UserPlus },
     ],
   },
   {
@@ -48,9 +66,12 @@ const NAV = [
     label: "Courses",
     icon: BookOpen,
     sub: [
-      { id: "course-upload", label: "Create" },
-      { id: "course-points", label: "Details" },
-      { id: "question-banks", label: "Question banks" },
+      { id: "course-upload", label: "Create", icon: Upload },
+      { id: "course-points", label: "Details", icon: List },
+      { id: "ps-courses", label: "PS Courses", icon: BookMarked },
+      { id: "question-banks", label: "Question banks", icon: ClipboardList },
+      { id: "question-form-builder", label: "Question form builder", icon: FileText },
+      { id: "question-template-builder", label: "Question Template Builder", icon: LayoutTemplate },
     ],
   },
   {
@@ -58,9 +79,9 @@ const NAV = [
     label: "Slots",
     icon: Calendar,
     sub: [
-      { id: "venue", label: "Venue" },
-      { id: "time", label: "Time" },
-      { id: "slots-list", label: "Slots (venue, time)" },
+      { id: "venue", label: "Venue", icon: MapPin },
+      { id: "time", label: "Time", icon: Clock },
+      { id: "slots-list", label: "Slots (venue, time)", icon: CalendarDays },
     ],
   },
   {
@@ -68,8 +89,8 @@ const NAV = [
     label: "Leaves",
     icon: FileText,
     sub: [
-      { id: "leave-flow", label: "Leave Flow" },
-      { id: "all-leave-types", label: "All Leave Types" },
+      { id: "leave-flow", label: "Leave Flow", icon: GitBranch },
+      { id: "all-leave-types", label: "All Leave Types", icon: FileText },
     ],
   },
   {
@@ -77,8 +98,8 @@ const NAV = [
     label: "Code review",
     icon: Code,
     sub: [
-      { id: "code-access", label: "Assign Faculty" },
-      { id: "code-students", label: "Students Applied" },
+      { id: "code-access", label: "Assign Faculty", icon: UserCheck },
+      { id: "code-students", label: "Students Applied", icon: Users },
     ],
   },
   {
@@ -86,10 +107,10 @@ const NAV = [
     label: "Reports",
     icon: BarChart3,
     sub: [
-      { id: "stats-course", label: "Students applied per course (year, dept)" },
-      { id: "stats-slot", label: "Slot used most often" },
-      { id: "stats-weekly", label: "Weekly clearing %" },
-      { id: "stats-registered", label: "Course registered/attended most, least, avg" },
+      { id: "stats-course", label: "Students applied per course (year, dept)", icon: TrendingUp },
+      { id: "stats-slot", label: "Slot used most often", icon: PieChart },
+      { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2 },
+      { id: "stats-registered", label: "Course registered/attended most, least, avg", icon: CalendarCheck },
     ],
   },
 ];
@@ -186,8 +207,17 @@ export default function AdminDashboard() {
   const [facultyAssignments, setFacultyAssignments] = useState([]);
   const [facultyAssignUserId, setFacultyAssignUserId] = useState("");
   const [facultyAssignCourseId, setFacultyAssignCourseId] = useState("");
+  const [facultyAssignTemplateId, setFacultyAssignTemplateId] = useState("");
+  const [facultyAssignQuestionCount, setFacultyAssignQuestionCount] = useState(10);
   const [questionBankSubmissions, setQuestionBankSubmissions] = useState([]);
   const [questionBankFilterCourse, setQuestionBankFilterCourse] = useState("");
+  const [psCoursesList, setPsCoursesList] = useState([]);
+  const [psCourseSearch, setPsCourseSearch] = useState("");
+  const [psCourseStatusFilter, setPsCourseStatusFilter] = useState("");
+  const [psCourseSelectedIds, setPsCourseSelectedIds] = useState([]);
+  const [questionTemplatesList, setQuestionTemplatesList] = useState([]);
+  const [templateIdToEditForBuilder, setTemplateIdToEditForBuilder] = useState(null);
+  const [templatesForAssign, setTemplatesForAssign] = useState([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
@@ -211,7 +241,7 @@ export default function AdminDashboard() {
       setLoading(true);
       setLoadError(null);
       try {
-        const [roles, users, courses, venues, timeSlots, slotTemplates, leaveTypes, leaveWorkflows, settings, assignments, qbSubmissions] = await Promise.all([
+        const [roles, users, courses, venues, timeSlots, slotTemplates, leaveTypes, leaveWorkflows, settings, assignments, qbSubmissions, templates] = await Promise.all([
           fetch(`${API_BASE}/api/superadmin/roles`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/users`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/courses`).then((r) => r.json()),
@@ -223,6 +253,7 @@ export default function AdminDashboard() {
           fetch(`${API_BASE}/api/superadmin/settings`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/faculty-assignments`).then((r) => r.json()).catch(() => []),
           fetch(`${API_BASE}/api/superadmin/question-bank-submissions`).then((r) => r.json()).catch(() => []),
+          fetch(`${API_BASE}/api/templates`).then((r) => r.json()).catch(() => []),
         ]);
         setRolesList(Array.isArray(roles) ? roles : []);
         setUsersList(Array.isArray(users) ? users : []);
@@ -234,6 +265,7 @@ export default function AdminDashboard() {
         setLeaveWorkflowList(Array.isArray(leaveWorkflows) ? leaveWorkflows : []);
         setFacultyAssignments(Array.isArray(assignments) ? assignments : []);
         setQuestionBankSubmissions(Array.isArray(qbSubmissions) ? qbSubmissions : []);
+        setTemplatesForAssign(Array.isArray(templates) ? templates : []);
         if (settings && typeof settings === "object") {
           if (settings.leaveApprovalSteps != null) setLeaveApprovalSteps(settings.leaveApprovalSteps);
         }
@@ -245,6 +277,30 @@ export default function AdminDashboard() {
     };
     fetchAll();
   }, []);
+
+  useEffect(() => {
+    if (activeSub !== "ps-courses") return;
+    const token = localStorage.getItem("token");
+    const params = new URLSearchParams();
+    if (psCourseStatusFilter) params.set("status", psCourseStatusFilter);
+    const q = params.toString() ? `?${params.toString()}` : "";
+    fetch(`${API_BASE}/api/ps-courses${q}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+      .then((r) => r.ok ? r.json() : [])
+      .then((data) => setPsCoursesList(Array.isArray(data) ? data : []))
+      .catch(() => setPsCoursesList([]));
+  }, [activeSub, psCourseStatusFilter]);
+
+  const refetchQuestionTemplates = useCallback(() => {
+    templateApi
+      .getAll()
+      .then((data) => setQuestionTemplatesList(Array.isArray(data) ? data : []))
+      .catch(() => setQuestionTemplatesList([]));
+  }, []);
+
+  useEffect(() => {
+    if (activeSub !== "question-form-builder") return;
+    refetchQuestionTemplates();
+  }, [activeSub, refetchQuestionTemplates]);
 
   const userRole = localStorage.getItem("role") || "admin";
   const userName = localStorage.getItem("userName") || "Admin";
@@ -392,6 +448,26 @@ export default function AdminDashboard() {
         if (!res.ok) throw new Error(data.message || "Failed to save workflow");
         if (itemId) setLeaveWorkflowList((prev) => prev.map((w) => (w.id === itemId ? data : w)));
         else setLeaveWorkflowList((prev) => [...prev, data]);
+      } else if (section === "ps-courses") {
+        const token = localStorage.getItem("token");
+        const url = itemId ? `${API_BASE}/api/ps-courses/${itemId}` : `${API_BASE}/api/ps-courses`;
+        const res = await fetch(url, {
+          method: itemId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+          body: JSON.stringify({
+            name: (item.name || "").trim(),
+            description: (item.description || "").trim(),
+            status: item.status || "Active",
+            level: !!item.level,
+            parentCourse: (item.parentCourse || "").trim(),
+            prereq: Array.isArray(item.prereq) ? item.prereq : [],
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to save");
+        const out = { id: data.id || itemId, name: data.name, description: data.description, status: data.status, level: data.level, parentCourse: data.parentCourse, prereq: data.prereq || [] };
+        if (itemId) setPsCoursesList((prev) => prev.map((c) => (c.id === itemId ? out : c)));
+        else setPsCoursesList((prev) => [...prev, out]);
       }
       closeEdit();
     } catch (err) {
@@ -480,43 +556,54 @@ export default function AdminDashboard() {
       </header>
 
       <div className="sa-body">
-        <aside className="sa-sidebar">
-          {NAV.map((section) => {
-            const isOpen = openNav === section.id;
-            const Icon = section.icon;
-            return (
-              <div
-                key={section.id}
-                className={`sa-nav-section ${isOpen ? "open" : ""}`}
-              >
+        <aside className="sa-sidebar" aria-label="Navigation - hover to open">
+          <div className="sa-sidebar-inner">
+            {NAV.map((section) => {
+              const isOpen = openNav === section.id;
+              const Icon = section.icon;
+              return (
                 <div
-                  className={`sa-nav-main ${isOpen ? "active" : ""}`}
-                  onClick={() => setOpenNav(isOpen ? "" : section.id)}
+                  key={section.id}
+                  className={`sa-nav-section ${isOpen ? "open" : ""}`}
                 >
-                  <span><Icon size={18} /> {section.label}</span>
-                  <ChevronDown size={16} className="sa-chevon" />
+                  <div
+                    className={`sa-nav-main ${isOpen ? "active" : ""}`}
+                    onClick={() => setOpenNav(isOpen ? "" : section.id)}
+                  >
+                  <span className="sa-nav-label">
+                    <Icon size={24} />
+                    <span className="sa-nav-label-text">{section.label}</span>
+                  </span>
+                    <ChevronDown size={18} className="sa-chevon" />
+                  </div>
+                  {isOpen && (
+                    <ul className="sa-nav-sub">
+                      {section.sub.map((sub) => {
+                        const SubIcon = sub.icon;
+                        return (
+                          <li key={sub.id}>
+                            <a
+                              href="#"
+                              className={activeSub === sub.id ? "active" : ""}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                setActiveSub(sub.id);
+                              }}
+                            >
+                              <span className="sa-nav-label">
+                                {SubIcon ? <SubIcon size={20} /> : null}
+                                <span className="sa-nav-label-text">{sub.label}</span>
+                              </span>
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  )}
                 </div>
-                {isOpen && (
-                  <ul className="sa-nav-sub">
-                    {section.sub.map((sub) => (
-                      <li key={sub.id}>
-                        <a
-                          href="#"
-                          className={activeSub === sub.id ? "active" : ""}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setActiveSub(sub.id);
-                          }}
-                        >
-                          {sub.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
         </aside>
 
         <main className="sa-main">
@@ -650,58 +737,99 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {/* Nav 2: Courses */}
+          {/* Nav 2: Courses (Admin view as cards, like student dashboard) */}
           {activeSub === "course-upload" && (
             <div className="dashboard-card">
-              <h3 className="card-title">Uploading / creating course</h3>
-              <p className="card-subtitle">Add new courses and edit existing ones.</p>
-              <button
-                type="button"
-                className="sa-btn sa-btn-primary"
-                style={{ marginBottom: 16 }}
-                onClick={() =>
-                  openAdd("courses", {
-                    name: "",
-                    type: "",
-                    course_logo: "",
-                    level: "",
-                    status: "Active",
-                    activityPoints: 0,
-                    rewardPoints: 0,
-                    faculty: "",
-                    prerequisites: [],
-                    levels: [],
-                  })
-                }
-              >
-                <Plus size={16} /> Add new course
-              </button>
-              <table className="sa-table">
-                <thead>
-                  <tr><th>Course name</th><th>Type</th><th>Level</th><th>Course logo</th><th>Status</th><th>Actions</th></tr>
-                </thead>
-                <tbody>
-                  {coursesList.map((row) => (
-                    <tr key={row.id}>
-                      <td>{row.name}</td>
-                      <td>{row.type || "—"}</td>
-                      <td>{row.level || "—"}</td>
-                      <td className="sa-course-logo-cell">
-                        {row.course_logo ? (
-                          <>
-                            <img src={row.course_logo} alt="" className="sa-course-logo-thumb" onError={(e) => { e.target.style.display = "none"; e.target.nextSibling?.classList.remove("sa-hide"); }} />
-                            <span className="sa-muted sa-hide">—</span>
-                          </>
-                        ) : (
-                          <span className="sa-muted">—</span>
+              <h3 className="card-title">Courses</h3>
+              <p className="card-subtitle">Add new courses and manage them in a card view, similar to the student dashboard.</p>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-primary"
+                  onClick={() =>
+                    openAdd("courses", {
+                      name: "",
+                      type: "",
+                      course_logo: "",
+                      level: "",
+                      status: "Active",
+                      activityPoints: 0,
+                      rewardPoints: 0,
+                      faculty: "",
+                      prerequisites: [],
+                      levels: [],
+                    })
+                  }
+                >
+                  <Plus size={16} /> Add new course
+                </button>
+                <span className="sa-muted" style={{ fontSize: 13 }}>
+                  Showing {coursesList.length} courses
+                </span>
+              </div>
+
+              <div className="courses-grid">
+                {coursesList.map((row) => (
+                  <div className="course-card" key={row.id}>
+                    <div className="course-image">
+                      {row.course_logo ? (
+                        <img
+                          src={row.course_logo}
+                          alt={row.name}
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div className="course-image-placeholder">
+                          <BookOpen size={40} style={{ color: "#cbd5e0" }} />
+                        </div>
+                      )}
+                    </div>
+                    <div className="course-content">
+                      <h3 className="course-title">{row.name}</h3>
+                      <div className="course-meta">
+                        <div className="meta-item">
+                          <span className="meta-label">{row.type || "Course"}</span>
+                        </div>
+                        <div className="meta-item">
+                          <span className="meta-label">{row.level || "General"}</span>
+                        </div>
+                        <div className="meta-item">
+                          <span
+                            className={`sa-badge ${
+                              row.status === "Active"
+                                ? "sa-badge-success"
+                                : row.status === "Inactive"
+                                ? "sa-badge-warning"
+                                : "sa-badge-neutral"
+                            }`}
+                          >
+                            {row.status}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="course-progress-container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-sm"
+                          onClick={() => openEdit("courses", row)}
+                        >
+                          <Pencil size={14} /> Edit
+                        </button>
+                        {Array.isArray(row.levels) && row.levels.length > 0 && (
+                          <span className="progress-text">
+                            {row.levels.length} level{row.levels.length !== 1 ? "s" : ""}
+                          </span>
                         )}
-                      </td>
-                      <td><span className={`sa-badge ${row.status === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>{row.status}</span></td>
-                      <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}><Pencil size={14} /></button></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {coursesList.length === 0 && (
+                  <p className="courses-empty">No courses yet. Click "Add new course" to create one.</p>
+                )}
+              </div>
             </div>
           )}
 
@@ -796,6 +924,131 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeSub === "ps-courses" && (
+            <div className="dashboard-card">
+              <h3 className="card-title">PS Courses</h3>
+              <p className="card-subtitle">Courses from docx seed (Analog, Digital, C Programming, etc.). Edit status, add or remove.</p>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16, alignItems: "center" }}>
+                <input
+                  type="text"
+                  placeholder="Search by name or subject..."
+                  value={psCourseSearch}
+                  onChange={(e) => setPsCourseSearch(e.target.value)}
+                  className="sa-form-group"
+                  style={{ minWidth: 200 }}
+                />
+                <select value={psCourseStatusFilter} onChange={(e) => setPsCourseStatusFilter(e.target.value)}>
+                  <option value="">All statuses</option>
+                  <option value="Active">Active</option>
+                  <option value="Inactive">Inactive</option>
+                  <option value="Draft">Draft</option>
+                </select>
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-primary"
+                  onClick={() => openAdd("ps-courses", { name: "", description: "", status: "Active", level: false, parentCourse: "", prereq: [] })}
+                >
+                  <Plus size={16} /> Add course
+                </button>
+                {psCourseSelectedIds.length > 0 && (
+                  <>
+                    <button
+                      type="button"
+                      className="sa-btn"
+                      onClick={async () => {
+                        const token = localStorage.getItem("token");
+                        const res = await fetch(`${API_BASE}/api/ps-courses/bulk-status`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                          body: JSON.stringify({ ids: psCourseSelectedIds, status: "Active" }),
+                        });
+                        if (res.ok) { setPsCourseSelectedIds([]); setPsCoursesList((prev) => prev.map((c) => (psCourseSelectedIds.includes(c.id) ? { ...c, status: "Active" } : c))); }
+                      }}
+                    >
+                      Activate selected
+                    </button>
+                    <button
+                      type="button"
+                      className="sa-btn"
+                      onClick={async () => {
+                        const token = localStorage.getItem("token");
+                        const res = await fetch(`${API_BASE}/api/ps-courses/bulk-status`, {
+                          method: "PATCH",
+                          headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                          body: JSON.stringify({ ids: psCourseSelectedIds, status: "Inactive" }),
+                        });
+                        if (res.ok) { setPsCourseSelectedIds([]); setPsCoursesList((prev) => prev.map((c) => (psCourseSelectedIds.includes(c.id) ? { ...c, status: "Inactive" } : c))); }
+                      }}
+                    >
+                      Deactivate selected
+                    </button>
+                  </>
+                )}
+              </div>
+              <div className="sa-table-wrap">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th><input type="checkbox" checked={psCoursesList.length > 0 && psCourseSelectedIds.length === psCoursesList.filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase())).length} onChange={(e) => { const filtered = psCoursesList.filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase())); setPsCourseSelectedIds(e.target.checked ? filtered.map((c) => c.id) : []); }} /></th>
+                      <th>Name</th>
+                      <th>Description</th>
+                      <th>Subject</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {psCoursesList
+                      .filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase()))
+                      .map((row) => (
+                        <tr key={row.id}>
+                          <td><input type="checkbox" checked={psCourseSelectedIds.includes(row.id)} onChange={(e) => setPsCourseSelectedIds((prev) => (e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id)))} /></td>
+                          <td><strong>{row.name}</strong></td>
+                          <td style={{ maxWidth: 200 }}>{(row.description || "").slice(0, 60)}{(row.description || "").length > 60 ? "…" : ""}</td>
+                          <td>{row.parentCourse || "—"}</td>
+                          <td>
+                            <select
+                              value={row.status || "Active"}
+                              onChange={async (e) => {
+                                const token = localStorage.getItem("token");
+                                const status = e.target.value;
+                                const res = await fetch(`${API_BASE}/api/ps-courses/${row.id}`, {
+                                  method: "PUT",
+                                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                                  body: JSON.stringify({ ...row, status }),
+                                });
+                                if (res.ok) setPsCoursesList((prev) => prev.map((c) => (c.id === row.id ? { ...c, status } : c)));
+                              }}
+                            >
+                              <option value="Active">Active</option>
+                              <option value="Inactive">Inactive</option>
+                              <option value="Draft">Draft</option>
+                            </select>
+                          </td>
+                          <td>
+                            <button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("ps-courses", row)}><Pencil size={14} /> Edit</button>
+                            <button
+                              type="button"
+                              className="sa-btn sa-btn-sm"
+                              style={{ marginLeft: 6, background: "#dc2626", color: "#fff" }}
+                              onClick={async () => {
+                                if (!window.confirm("Delete this course?")) return;
+                                const token = localStorage.getItem("token");
+                                const res = await fetch(`${API_BASE}/api/ps-courses/${row.id}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                                if (res.ok) setPsCoursesList((prev) => prev.filter((c) => c.id !== row.id));
+                              }}
+                            >
+                              <X size={14} /> Delete
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {activeSub === "question-banks" && (
             <div className="dashboard-card">
               <h3 className="card-title">Question bank submissions</h3>
@@ -836,11 +1089,22 @@ export default function AdminDashboard() {
                           </td>
                           <td>{s.submitted_at ? new Date(s.submitted_at).toLocaleString() : "—"}</td>
                           <td>
-                            {s.status === "submitted" || s.status === "draft" ? (
+                            <button
+                              type="button"
+                              className="sa-btn sa-btn-sm"
+                              style={{ marginRight: 6 }}
+                              onClick={() => {
+                                const url = `/admin/question-bank-submissions/${s.id}`;
+                                window.open(url, "_blank", "noopener,noreferrer");
+                              }}
+                            >
+                              View
+                            </button>
+                            {(s.status === "submitted" || s.status === "draft") && (
                               <>
                                 <button
                                   type="button"
-                                  className="sa-btn sa-btn-sm"
+                                  className="sa-btn sa-btn-sm sa-btn-success"
                                   style={{ marginRight: 6 }}
                                   onClick={async () => {
                                     try {
@@ -880,8 +1144,6 @@ export default function AdminDashboard() {
                                   Reject
                                 </button>
                               </>
-                            ) : (
-                              <span className="sa-muted">—</span>
                             )}
                           </td>
                         </tr>
@@ -892,6 +1154,73 @@ export default function AdminDashboard() {
               {questionBankSubmissions.filter((s) => !questionBankFilterCourse || s.course_id === questionBankFilterCourse).length === 0 && (
                 <p className="sa-muted">No question bank submissions yet. Faculty will see tasks on their dashboard and submit here for your approval.</p>
               )}
+            </div>
+          )}
+
+          {activeSub === "question-form-builder" && (
+            <div className="dashboard-card">
+              <h3 className="card-title">Question form builder</h3>
+              <p className="card-subtitle">List of question types. Use Edit to open in the Question Template Builder (drag-and-drop is there).</p>
+              {questionTemplatesList.length > 0 ? (
+                <ul className="sa-table-wrap" style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                  {questionTemplatesList.map((t) => (
+                    <li
+                      key={t._id}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "12px 0",
+                        borderBottom: "1px solid #e2e8f0",
+                        gap: 16,
+                      }}
+                    >
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <span className="card-title" style={{ fontSize: 14, fontWeight: 600 }}>{t.name || "Unnamed"}</span>
+                        {t.key && (
+                          <span className="sa-muted" style={{ display: "block", fontSize: 12, marginTop: 2 }}>{t.key}</span>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        className="sa-btn sa-btn-primary sa-btn-sm"
+                        onClick={() => {
+                          setTemplateIdToEditForBuilder(t._id);
+                          setActiveSub("question-template-builder");
+                        }}
+                      >
+                        <Pencil size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                        Edit
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="sa-muted">No question templates yet. Create one in Question Template Builder (Courses → Question Template Builder) using the drag-and-drop builder.</p>
+              )}
+            </div>
+          )}
+
+          {activeSub === "question-template-builder" && (
+            <div
+              className="qtb-fullscreen"
+              style={{
+                position: "fixed",
+                inset: 0,
+                zIndex: 9999,
+                backgroundColor: "#f1f5f9",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+              }}
+            >
+              <QuestionTemplateBuilder
+                initialTemplateId={templateIdToEditForBuilder}
+                onClose={() => {
+                  setActiveSub("question-form-builder");
+                  refetchQuestionTemplates();
+                }}
+              />
             </div>
           )}
 
@@ -1154,6 +1483,27 @@ export default function AdminDashboard() {
                     ))}
                   </select>
                 </div>
+                <div className="sa-form-group" style={{ minWidth: 200 }}>
+                  <label>Question template (optional)</label>
+                  <select
+                    value={facultyAssignTemplateId}
+                    onChange={(e) => setFacultyAssignTemplateId(e.target.value)}
+                  >
+                    <option value="">None / document only</option>
+                    {templatesForAssign?.map((t) => (
+                      <option key={t._id} value={t._id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="sa-form-group" style={{ minWidth: 140 }}>
+                  <label>No. of questions</label>
+                  <input
+                    type="number"
+                    min={1}
+                    value={facultyAssignQuestionCount}
+                    onChange={(e) => setFacultyAssignQuestionCount(Math.max(1, Number(e.target.value) || 1))}
+                  />
+                </div>
                 <div className="sa-form-group" style={{ alignSelf: "flex-end" }}>
                   <button
                     type="button"
@@ -1164,14 +1514,33 @@ export default function AdminDashboard() {
                         const res = await fetch(`${API_BASE}/api/superadmin/faculty-assignments`, {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({ user_id: facultyAssignUserId, course_id: facultyAssignCourseId }),
+                          body: JSON.stringify({
+                            user_id: facultyAssignUserId,
+                            course_id: facultyAssignCourseId,
+                            template_id: facultyAssignTemplateId || undefined,
+                            question_count: facultyAssignTemplateId ? facultyAssignQuestionCount : undefined,
+                          }),
                         });
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.message || "Failed");
                         const u = usersList.find((x) => x.id === facultyAssignUserId);
-                        setFacultyAssignments((prev) => [...prev, { id: data.id, user_id: data.user_id, course_id: data.course_id, course_name: data.course_name, user_name: u?.name, user_email: u?.email }]);
+                        setFacultyAssignments((prev) => [
+                          ...prev,
+                          {
+                            id: data.id,
+                            user_id: data.user_id,
+                            course_id: data.course_id,
+                            course_name: data.course_name,
+                            user_name: u?.name,
+                            user_email: u?.email,
+                            template_id: data.template_id || null,
+                            template_name: data.template_name || "",
+                            question_count: data.question_count || 0,
+                          },
+                        ]);
                         setFacultyAssignUserId("");
                         setFacultyAssignCourseId("");
+                        setFacultyAssignTemplateId("");
                       } catch (e) {
                         alert(e.message || "Assign failed");
                       }
@@ -1182,7 +1551,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <table className="sa-table">
-                <thead><tr><th>User</th><th>Course</th><th>Actions</th></tr></thead>
+                <thead><tr><th>User</th><th>Course</th><th>Question template</th><th>Qty</th><th>Actions</th></tr></thead>
                 <tbody>
                   {facultyAssignments.map((a) => {
                     const displayName = a.user_name || a.user_email || (usersList.find((u) => u.id === a.user_id)?.name) || (usersList.find((u) => u.id === a.user_id)?.email) || a.user_id;
@@ -1202,6 +1571,8 @@ export default function AdminDashboard() {
                         </button>
                       </td>
                       <td>{a.course_name || a.course_id}</td>
+                      <td>{a.template_name || "—"}</td>
+                      <td>{a.question_count || 0}</td>
                       <td>
                         <button
                           type="button"
@@ -1591,6 +1962,37 @@ export default function AdminDashboard() {
                         <option value="Inactive">Inactive</option>
                       </select>
                     </div>
+                  </div>
+                </>
+              )}
+              {editModal.section === "ps-courses" && (
+                <>
+                  <div className="sa-form-group">
+                    <label>Name</label>
+                    <input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="e.g. Analog Electronics Level - 1A" />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Description</label>
+                    <textarea rows={2} value={editModal.item.description || ""} onChange={(e) => setEditField("description", e.target.value)} placeholder="Short description" />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Status</label>
+                    <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                      <option value="Draft">Draft</option>
+                    </select>
+                  </div>
+                  <div className="sa-form-group">
+                    <label><input type="checkbox" checked={!!editModal.item.level} onChange={(e) => setEditField("level", e.target.checked)} /> Is level (sub-course)</label>
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Parent course</label>
+                    <input type="text" value={editModal.item.parentCourse || ""} onChange={(e) => setEditField("parentCourse", e.target.value)} placeholder="e.g. Analog Electronics" />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Prereq (course names, comma-separated)</label>
+                    <input type="text" value={Array.isArray(editModal.item.prereq) ? editModal.item.prereq.join(", ") : ""} onChange={(e) => setEditField("prereq", e.target.value.split(",").map((s) => s.trim()).filter(Boolean))} placeholder="Course A, Course B" />
                   </div>
                 </>
               )}

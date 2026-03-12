@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
 import StudentSidebar from "../components/StudentSidebar";
 
@@ -15,9 +15,11 @@ const FALLBACK_PROFILE = {
 export default function MyCourses() {
     const [activeTab, setActiveTab] = useState("Assessment");
     const [courses, setCourses] = useState([]);
+    const [enrollments, setEnrollments] = useState([]);
     const [profile, setProfile] = useState(FALLBACK_PROFILE);
 
     const registerNo = localStorage.getItem("register_no");
+    const token = localStorage.getItem("token");
 
     useEffect(() => {
         if (registerNo) {
@@ -57,6 +59,16 @@ export default function MyCourses() {
                 setCourses([]);
             });
     }, [registerNo]);
+
+    useEffect(() => {
+        if (!token) return;
+        fetch(`${API_BASE}/api/enrollments/my`, { headers: { Authorization: `Bearer ${token}` } })
+            .then((r) => r.ok ? r.json() : [])
+            .then((data) => setEnrollments(Array.isArray(data) ? data : []))
+            .catch(() => setEnrollments([]));
+    }, [token]);
+
+    const enrolledNames = useMemo(() => new Set(enrollments.map((e) => e.name).filter(Boolean)), [enrollments]);
 
     const displayProfile = registerNo ? { ...FALLBACK_PROFILE, ...profile, register_no: profile.register_no || registerNo } : FALLBACK_PROFILE;
 
@@ -124,6 +136,37 @@ export default function MyCourses() {
                             ))
                         )}
                     </div>
+
+                    <h2 className="my-enrollments-title">My Enrollments</h2>
+                    <p className="my-enrollments-subtitle">PS courses you registered for. Complete prerequisites to unlock.</p>
+                    {enrollments.length === 0 ? (
+                        <p className="courses-empty">No PS enrollments yet. Go to Courses Available to register.</p>
+                    ) : (
+                        <div className="my-enrollments-grid">
+                            {enrollments.map((e) => {
+                                const prereq = e.prereq || [];
+                                const unmet = prereq.filter((p) => !enrolledNames.has(p));
+                                const locked = unmet.length > 0;
+                                return (
+                                    <div className={`my-enrollment-card ${locked ? "locked" : ""}`} key={e.id}>
+                                        <div className="my-enrollment-content">
+                                            <h3 className="my-enrollment-name">{e.name}</h3>
+                                            <p className="my-enrollment-desc">{(e.description || "").slice(0, 80)}{(e.description || "").length > 80 ? "…" : ""}</p>
+                                            <div className="my-enrollment-progress-wrap">
+                                                <div className="my-enrollment-progress-bar">
+                                                    <div className="my-enrollment-progress-fill" style={{ width: `${e.progress || 0}%` }} />
+                                                </div>
+                                                <span className="my-enrollment-progress-text">{e.progress || 0}%</span>
+                                            </div>
+                                            {locked && (
+                                                <p className="my-enrollment-prereq">Complete prerequisites: {unmet.join(", ")}</p>
+                                            )}
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
 
                 </div>
             </main>

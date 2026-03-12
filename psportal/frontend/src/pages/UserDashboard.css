@@ -166,6 +166,13 @@
   flex-wrap: wrap;
 }
 
+.ud-task-head-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
 .ud-task-name {
   font-weight: 600;
   color: #1e293b;

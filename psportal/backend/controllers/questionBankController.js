@@ -17,11 +17,20 @@ exports.getMyTasks = async (req, res) => {
 
     const assignments = await FacultyCourseAssignment.find({ user_id: userId })
       .populate("course_id", "name status")
+      .populate("template_id", "name key")
       .lean();
     const courseMap = new Map();
     assignments.forEach((a) => {
       const cid = a.course_id?._id?.toString();
-      if (cid) courseMap.set(cid, { name: a.course_id?.name, status: a.course_id?.status });
+      if (cid) {
+        courseMap.set(cid, {
+          name: a.course_id?.name,
+          status: a.course_id?.status,
+          template_id: a.template_id?._id?.toString() || null,
+          template_name: a.template_id?.name || "",
+          question_count: a.question_count ?? 0,
+        });
+      }
     });
 
     if (userName) {
@@ -50,6 +59,12 @@ exports.getMyTasks = async (req, res) => {
     const tasks = courseIds.map((cid) => {
       const meta = courseMap.get(cid);
       const sub = submissionByCourse.get(cid);
+      const questions = (sub?.questions || []).map((q) => ({
+        questionNumber: q.questionNumber,
+        template_id: q.template_id?.toString?.() || q.template_id,
+        value: q.value || {},
+        correctAnswerKey: q.correctAnswerKey ?? "",
+      }));
       return {
         id: sub?._id?.toString(),
         course_id: cid,
@@ -62,6 +77,10 @@ exports.getMyTasks = async (req, res) => {
         submitted_at: sub?.submitted_at,
         reviewed_at: sub?.reviewed_at,
         review_remarks: sub?.review_remarks || "",
+        template_id: meta?.template_id || null,
+        template_name: meta?.template_name || "",
+        question_count: meta?.question_count ?? 0,
+        questions,
       };
     });
 
@@ -78,7 +97,7 @@ exports.upsertSubmission = async (req, res) => {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { course_id, title, content, file_url, file_name, action } = req.body;
+    const { course_id, title, content, file_url, file_name, action, questions } = req.body;
     if (!course_id) return res.status(400).json({ message: "course_id required" });
 
     const assigned = await FacultyCourseAssignment.findOne({ user_id: userId, course_id });
@@ -90,17 +109,26 @@ exports.upsertSubmission = async (req, res) => {
     if (!assigned && !courseByFaculty) return res.status(403).json({ message: "You are not assigned to this course" });
 
     const isSubmit = action === "submit";
+    const update = {
+      title: title ?? "",
+      content: content ?? "",
+      file_url: file_url ?? "",
+      file_name: file_name ?? "",
+      ...(isSubmit
+        ? { status: "submitted", submitted_at: new Date() }
+        : { status: "draft" }),
+    };
+    if (Array.isArray(questions)) {
+      update.questions = questions.map((q) => ({
+        questionNumber: q.questionNumber,
+        template_id: q.template_id || q.templateId,
+        value: q.value || {},
+        correctAnswerKey: q.correctAnswerKey ?? "",
+      }));
+    }
     const doc = await QuestionBankSubmission.findOneAndUpdate(
       { course_id, user_id: userId },
-      {
-        title: title ?? "",
-        content: content ?? "",
-        file_url: file_url ?? "",
-        file_name: file_name ?? "",
-        ...(isSubmit
-          ? { status: "submitted", submitted_at: new Date() }
-          : { status: "draft" }),
-      },
+      update,
       { new: true, upsert: true }
     )
       .populate("course_id", "name")

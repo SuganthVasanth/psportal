@@ -14,7 +14,7 @@ export default function StudentDashboard() {
     const [showAttendanceView, setShowAttendanceView] = useState(false);
 
     useEffect(() => {
-        const registerNo = localStorage.getItem("register_no") || "7376231CS323";
+        const registerNo = (localStorage.getItem("register_no") || "").trim() || "7376231CS323";
         const fetchDashboardData = async () => {
             try {
                 const res = await axios.get(`${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);

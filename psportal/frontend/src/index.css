@@ -1,14 +1,26 @@
-/* :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@import "tailwindcss";
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-} */
+/* Portal palette – pastel-focused for a softer, easier-on-the-eyes UI */
+@theme {
+  --color-portal-bg: #f4f7fe;
+  --color-portal-card: #ffffff;
+  --color-portal-border: #e2e8f0;
+  --color-portal-text: #1e293b;
+  --color-portal-muted: #64748b;
+  --color-portal-primary: #8b5cf6;
+  --color-portal-primary-light: #e0e7ff;
+  --color-portal-success: #22c55e;
+  --color-portal-nav: #6366f1;
+  /* Pastel extensions */
+  --color-pastel-bg: #f8fafc;
+  --color-pastel-surface: #f1f5f9;
+  --color-pastel-lavender: #ede9fe;
+  --color-pastel-lavender-soft: #f5f3ff;
+  --color-pastel-indigo: #e0e7ff;
+  --color-pastel-mint: #d1fae5;
+  --color-pastel-sky: #e0f2fe;
+  --color-pastel-peach: #ffedd5;
+  --color-pastel-border: #e2e8f0;
+  --color-pastel-text: #475569;
+  --color-pastel-primary: #a78bfa;
+}

@@ -53,7 +53,9 @@ async function ensureStudentRegisterNo(user) {
 // Email/password login (for super admin and other password-based users)
 router.post("/login", async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const body = req.body || {};
+    const email = (typeof body.email === "string" ? body.email.trim() : body.email) || "";
+    const password = body.password;
     if (!email || !password) {
       return res.status(400).json({ message: "Email and password required" });
     }
@@ -68,13 +70,13 @@ router.post("/login", async (req, res) => {
     if (!isMatch) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
-    const roleNames = (user.roles || []).map((r) => r.role_name);
+    const roleNames = (user.roles || []).map((r) => (r && r.role_name) || (typeof r === "string" ? r : ""));
     const token = jwt.sign(
       { userId: user._id, roles: roleNames, email: user.email },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
     );
-    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    const isStudent = roleNames.some((r) => String(r || "").toLowerCase() === "student");
     let register_no = null;
     if (isStudent) {
       register_no = await ensureStudentRegisterNo(user);
@@ -122,8 +124,8 @@ router.post("/google", async (req, res) => {
       }
     }
 
-    const roleNames = (user.roles || []).map(r => r.role_name);
-    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    const roleNames = (user.roles || []).map((r) => (r && r.role_name) || (typeof r === "string" ? r : ""));
+    const isStudent = roleNames.some((r) => String(r || "").toLowerCase() === "student");
     let register_no = null;
     if (isStudent) {
       register_no = await ensureStudentRegisterNo(user);
@@ -167,8 +169,8 @@ router.get("/me", async (req, res) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findById(decoded.userId).populate("roles");
     if (!user) return res.status(401).json({ message: "User not found" });
-    const roleNames = (user.roles || []).map((r) => r.role_name);
-    const isStudent = roleNames.some((r) => (r || "").toLowerCase() === "student");
+    const roleNames = (user.roles || []).map((r) => (r && r.role_name) || (typeof r === "string" ? r : ""));
+    const isStudent = roleNames.some((r) => String(r || "").toLowerCase() === "student");
     let register_no = null;
     if (isStudent) {
       register_no = await ensureStudentRegisterNo(user);
