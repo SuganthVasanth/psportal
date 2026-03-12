@@ -8,64 +8,77 @@
 }
 
 .cd-container {
-    padding: 24px 32px;
-    max-width: 1200px;
-    margin: 0 auto;
+    padding: 8px 8px;
+    /* max-width: 1200px; */
+    margin: 0 0;
 }
 
 /* Header Card */
 .cd-header-card {
     background: #fff;
-    border-radius: 12px;
-    padding: 24px;
+    border-radius: 8px;
+    padding: 16px 20px;
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    margin-bottom: 32px;
+    align-items: stretch;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border: 1px solid #e2e8f0;
+    margin-bottom: 16px;
 }
 
 .cd-header-info {
     flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 4px 0;
 }
 
 .cd-title {
-    font-size: 24px;
+    font-size: 18px;
     font-weight: 600;
-    color: #2d3748;
-    margin-bottom: 24px;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+}
+
+.cd-course-desc {
+    font-size: 14px;
+    color: #64748b;
+    margin: 0;
 }
 
 .cd-meta {
     display: flex;
-    gap: 24px;
-    color: #4a5568;
+    gap: 20px;
+    color: #0f172a;
 }
 
 .cd-meta-item {
     display: flex;
     align-items: center;
     font-size: 14px;
-    font-weight: 500;
+    font-weight: 600;
 }
 
 .cd-meta-icon {
-    margin-right: 8px;
-    color: #a0aec0;
+    margin-right: 6px;
+    color: #94a3b8;
 }
 
 .cd-skill-type {
-    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 600;
 }
 
-.cd-header-image {
-    width: 250px;
-    height: 140px;
-    border-radius: 8px;
+.cd-header-img-container {
+    width: 280px;
+    height: 100px;
+    border-radius: 6px;
     overflow: hidden;
+    margin-left: 24px;
 }
 
-.cd-header-image img {
+.cd-header-banner {
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -90,7 +103,9 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding-bottom: 16px;
     margin-bottom: 20px;
+    border-bottom: 1px solid #edf2f7;
 }
 
 .cd-level-title-group {
@@ -125,21 +140,20 @@
 }
 
 .cd-badge {
-    padding: 6px 12px;
+    padding: 6px 16px;
     border-radius: 20px;
     font-size: 13px;
     font-weight: 500;
-    background: #f1f5f9;
 }
 
 .attempt-badge {
-    color: #805ad5;
-    background: #faf5ff;
+    color: #7c3aed;
+    background: #f3e8ff;
 }
 
 .completed-badge {
-    color: #805ad5;
-    background: #faf5ff;
+    color: #7c3aed;
+    background: #f3e8ff;
 }
 
 .cd-level-content {
@@ -155,12 +169,12 @@
 }
 
 .cd-topic-item {
-    background: #f7fafc;
+    background: #eef1f9;
     padding: 12px 16px;
     border-radius: 6px;
     font-size: 14px;
-    color: #2d3748;
-    border: 1px solid #edf2f7;
+    color: #1e293b;
+    font-weight: 500;
 }
 
 .cd-details-column {
@@ -174,19 +188,21 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    margin-bottom: 8px;
 }
 
 .cd-detail-label {
-    font-size: 13px;
-    color: #1a202c;
+    font-size: 14px;
+    color: #0f172a;
     font-weight: 500;
 }
 
 .cd-detail-value {
     font-size: 13px;
-    color: #4a5568;
+    color: #64748b;
     display: flex;
     align-items: center;
+    margin-top: 4px;
 }
 
 .medal-value {
@@ -200,12 +216,12 @@
 }
 
 .cd-level-action {
-    margin-top: 20px;
+    margin-top: 24px;
 }
 
 .cd-register-btn {
     width: 100%;
-    background: #805ad5;
+    background: #7c3aed;
     color: #fff;
     border: none;
     padding: 12px;
@@ -216,8 +232,8 @@
     transition: background 0.2s;
 }
 
-.cd-register-btn:hover {
-    background: #6b46c1;
+.cd-register-btn:hover:not(:disabled) {
+    background: #6d28d9;
 }
 
 /* Page title */
@@ -225,9 +241,11 @@
     font-size: 22px;
     font-weight: 600;
     color: #2d3748;
-    margin-bottom: 24px;
+    margin-bottom: 12px;
 }
-
+.page-title{
+    margin:0px;
+}
 /* Two-column layout */
 .cd-two-col {
     display: grid;
@@ -483,7 +501,7 @@
     padding: 10px 12px;
     border: none;
     background: none;
-  font-size: 14px;
+    font-size: 14px;
     color: #2d3748;
     cursor: pointer;
     text-align: left;

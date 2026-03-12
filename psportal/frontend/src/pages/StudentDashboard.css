@@ -66,10 +66,11 @@
 
 /* --- MAIN DASHBOARD AREA --- */
 .dashboard-main-area {
-    margin-left: 80px;
-    margin-top: 70px;
-    /* padding: 30px 40px; */
+    margin-left: 30px;
+    margin-top: 12px;
+    padding: 50px 40px;
     min-height: calc(100vh - 70px);
+    background-color: #eef1f9;
 }
 
 .dashboard-container-inner {

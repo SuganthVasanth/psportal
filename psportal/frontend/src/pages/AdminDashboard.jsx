@@ -314,8 +314,18 @@ export default function AdminDashboard() {
             activityPoints: Number(item.activityPoints || 0),
             rewardPoints: Number(item.rewardPoints || 0),
             faculty: item.faculty || "",
-            prerequisites: Array.isArray(item.prerequisites) ? item.prerequisites : [],
-            levels: Array.isArray(item.levels) ? item.levels : [],
+            levels: Array.isArray(item.levels) ? item.levels.map(level => ({
+              name: level.name || "",
+              rewardPoints: Number(level.rewardPoints || 0),
+              prerequisiteLevelIndex: level.prerequisiteLevelIndex ?? -1,
+              prerequisiteLevelIndices: Array.isArray(level.prerequisiteLevelIndices) ? level.prerequisiteLevelIndices : [],
+              assessmentType: level.assessmentType || "MCQ",
+              topics: Array.isArray(level.topics) ? level.topics.map(t => t.trim()).filter(Boolean) : [],
+              prerequisiteCourses: Array.isArray(level.prerequisiteCourses) ? level.prerequisiteCourses : [],
+              studyMaterials: Array.isArray(level.studyMaterials)
+                ? level.studyMaterials.filter(m => m.title || m.url).map(m => ({ type: m.type || "link", title: m.title || "", url: m.url || "" }))
+                : [],
+            })) : [],
           }),
         });
         const data = await res.json();
@@ -810,7 +820,6 @@ export default function AdminDashboard() {
                         <th>Activity points</th>
                         <th>Reward points</th>
                         <th>Faculty</th>
-                        <th>Prerequisites</th>
                         <th>Levels</th>
                         <th>Actions</th>
                       </tr>
@@ -819,9 +828,6 @@ export default function AdminDashboard() {
                       {coursesList.map((row) => {
                         const facultyUser = facultyList.find((u) => u.id === row.faculty);
                         const levels = Array.isArray(row.levels) ? row.levels : [];
-                        const prereqNames = Array.isArray(row.prerequisites)
-                          ? row.prerequisites.map((id) => coursesList.find((c) => c.id === id)?.name).filter(Boolean)
-                          : [];
                         const expanded = row._levelsExpanded;
                         return (
                           <React.Fragment key={row.id}>
@@ -831,7 +837,6 @@ export default function AdminDashboard() {
                               <td>{row.activityPoints ?? 0}</td>
                               <td>{row.rewardPoints ?? 0}</td>
                               <td>{facultyUser ? facultyUser.name || facultyUser.email : "—"}</td>
-                              <td>{prereqNames.length ? prereqNames.join(", ") : "—"}</td>
                               <td>
                                 {levels.length > 0 ? (
                                   <button
@@ -861,6 +866,7 @@ export default function AdminDashboard() {
                                     {levels.map((lev, idx) => {
                                       const prereqIndices = Array.isArray(lev.prerequisiteLevelIndices) ? lev.prerequisiteLevelIndices : (lev.prerequisiteLevelIndex != null && lev.prerequisiteLevelIndex >= 0 ? [lev.prerequisiteLevelIndex] : []);
                                       const prereqText = prereqIndices.length === 0 ? "No" : prereqIndices.map((i) => `Level ${i + 1}`).join(", ");
+                                      const prereqCourseNames = Array.isArray(lev.prerequisiteCourses) ? lev.prerequisiteCourses.map((id) => coursesList.find((c) => c.id === id)?.name).filter(Boolean) : [];
                                       return (
                                         <div key={idx} className="sa-details-level-card">
                                           <div className="sa-details-level-info">
@@ -871,7 +877,8 @@ export default function AdminDashboard() {
                                           </div>
                                           <div className="sa-details-level-meta" style={{ textAlign: "right" }}>
                                             <div><strong>{lev.rewardPoints ?? 0} pts</strong></div>
-                                            <div>Prereq: {prereqText}</div>
+                                            <div>Prev Levels: {prereqText}</div>
+                                            {prereqCourseNames.length > 0 && <div>Ext Courses: {prereqCourseNames.join(", ")}</div>}
                                             <div>{lev.assessmentType || "MCQ"}</div>
                                           </div>
                                         </div>
@@ -1463,220 +1470,355 @@ export default function AdminDashboard() {
             </>}
           </div>
         </main>
-      </div>
 
-      {/* Edit / Add modal */}
-      {editModal.open && (
-        <div className="sa-modal-overlay" onClick={closeEdit}>
-          <div className={`sa-modal ${editModal.section === "courses" ? "sa-modal-courses" : ""}`} onClick={(e) => e.stopPropagation()}>
-            <div className="sa-modal-header">
-              <h3>{editModal.itemId ? "Edit" : "Add"}</h3>
-              <button type="button" className="sa-modal-close" onClick={closeEdit} aria-label="Close"><X size={20} /></button>
-            </div>
-            <div className="sa-modal-body">
-              {editModal.section === "roles" && (
-                <>
-                  <div className="sa-form-group"><label>Role name</label><input type="text" value={editModal.item.role || ""} onChange={(e) => setEditField("role", e.target.value)} placeholder="e.g. student, mentor" /></div>
-                  <div className="sa-form-group"><label>Description</label><input type="text" value={editModal.item.description || ""} onChange={(e) => setEditField("description", e.target.value)} placeholder="Short description of this role" /></div>
-                  <div className="sa-form-group">
-                    <label>Accesses (what this role can see/do in user dashboard)</label>
-                    <div className="sa-access-list">
-                      {["Mentor", "Warden", "Technical faculty"].map((group) => (
-                        <div key={group} className="sa-access-group">
-                          <span className="sa-access-group-title">{group}</span>
-                          {ACCESS_OPTIONS.filter((o) => o.group === group).map((opt) => {
-                            const accessList = (editModal.item.accesses || "").split(",").map((s) => s.trim()).filter(Boolean);
-                            const checked = accessList.includes(opt.id);
-                            return (
-                              <label key={opt.id} className="sa-access-option">
-                                <input type="checkbox" checked={checked} onChange={(e) => {
-                                  const next = e.target.checked ? [...accessList, opt.id] : accessList.filter((x) => x !== opt.id);
-                                  setEditField("accesses", next.join(", "));
-                                }} />
-                                <span>{opt.label}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </>
-              )}
-              {editModal.section === "users" && (
-                <>
-                  <div className="sa-form-group"><label>Email</label><input type="email" value={editModal.item.email || ""} onChange={(e) => setEditField("email", e.target.value)} placeholder="user@example.com" /></div>
-                  <div className="sa-form-group"><label>Name</label><input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="Full name" /></div>
-                  <div className="sa-form-group">
-                    <label>Roles</label>
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                      {rolesList.map((r) => {
-                        const roleName = r.role;
-                        const roles = Array.isArray(editModal.item.roles) ? editModal.item.roles : [];
-                        const checked = roles.includes(roleName);
-                        return (
-                          <label key={r.id || roleName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                            <input type="checkbox" checked={checked} onChange={(e) => setEditFieldRoles(e.target.checked ? [...roles, roleName] : roles.filter((x) => x !== roleName))} />
-                            <span className="sa-tag" style={getRoleTagStyle(roleName)}>{roleName}</span>
-                          </label>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </>
-              )}
-              {editModal.section === "courses" && (
-                <>
-                  <div className="sa-course-section">
-                    <h4 className="sa-course-section-title">Basic info</h4>
+        {/* Edit / Add modal */}
+        {editModal.open && (
+          <div className="sa-modal-overlay" onClick={closeEdit}>
+            <div className={`sa-modal ${editModal.section === "courses" ? "sa-modal-courses" : ""}`} onClick={(e) => e.stopPropagation()}>
+              <div className="sa-modal-header">
+                <h3>{editModal.itemId ? "Edit" : "Add"}</h3>
+                <button type="button" className="sa-modal-close" onClick={closeEdit} aria-label="Close"><X size={20} /></button>
+              </div>
+              <div className="sa-modal-body">
+                {editModal.section === "roles" && (
+                  <>
+                    <div className="sa-form-group"><label>Role name</label><input type="text" value={editModal.item.role || ""} onChange={(e) => setEditField("role", e.target.value)} placeholder="e.g. student, mentor" /></div>
+                    <div className="sa-form-group"><label>Description</label><input type="text" value={editModal.item.description || ""} onChange={(e) => setEditField("description", e.target.value)} placeholder="Short description of this role" /></div>
                     <div className="sa-form-group">
-                      <label>Course name</label>
-                      {editModal.itemId ? (
-                        <input type="text" value={editModal.item.name || ""} readOnly disabled className="sa-input-readonly" style={{ opacity: 1, cursor: "default", background: "#f1f5f9" }} />
-                      ) : (
-                        <input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="e.g. C Programming" />
-                      )}
-                    </div>
-                    <div className="sa-form-group">
-                      <label>Course type</label>
-                      <input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} placeholder="e.g. Technical, Assessment" />
-                    </div>
-                    <div className="sa-form-group">
-                      <label>Level (category)</label>
-                      <input type="text" value={editModal.item.level || ""} onChange={(e) => setEditField("level", e.target.value)} placeholder="e.g. Beginner, Level 1" />
-                    </div>
-                    <div className="sa-form-group">
-                      <label>Activity points</label>
-                      <input type="number" value={editModal.item.activityPoints ?? 0} onChange={(e) => setEditField("activityPoints", e.target.value)} placeholder="10" min="0" />
-                    </div>
-                    <div className="sa-form-group">
-                      <label>Faculty (handles questions)</label>
-                      <select value={editModal.item.faculty || ""} onChange={(e) => setEditField("faculty", e.target.value)}>
-                        <option value="">Select faculty</option>
-                        {facultyList.map((u) => (
-                          <option key={u.id} value={u.id}>{u.name || u.email}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-
-                  <div className="sa-course-section">
-                    <h4 className="sa-course-section-title">Course levels</h4>
-                    <p className="sa-muted" style={{ fontSize: 13, marginBottom: 12 }}>Add levels students can register for. Each level can have one or more prerequisite levels.</p>
-                    {(editModal.item.levels || []).map((lev, idx) => {
-                      const levelList = editModal.item.levels || [];
-                      const prereqIndices = Array.isArray(lev.prerequisiteLevelIndices) ? lev.prerequisiteLevelIndices : (lev.prerequisiteLevelIndex != null && lev.prerequisiteLevelIndex >= 0 ? [lev.prerequisiteLevelIndex] : []);
-                      const togglePrereq = (i) => {
-                        const l = [...levelList];
-                        const next = prereqIndices.includes(i) ? prereqIndices.filter((x) => x !== i) : [...prereqIndices, i].sort((a, b) => a - b);
-                        l[idx] = { ...l[idx], prerequisiteLevelIndices: next, prerequisiteLevelIndex: next[0] ?? -1 };
-                        setEditField("levels", l);
-                      };
-                      return (
-                        <div key={idx} className="sa-level-card">
-                          <div className="sa-level-card-header">
-                            <span className="sa-level-card-title">Level {idx + 1}: {lev.name || `Level ${idx}`}</span>
-                            <button type="button" className="sa-btn sa-btn-sm" style={{ background: "#dc2626", color: "#fff" }} onClick={() => setEditField("levels", levelList.filter((_, i) => i !== idx))}>Remove</button>
-                          </div>
-                          <div className="sa-form-group">
-                            <label>Level name</label>
-                            <input type="text" placeholder="e.g. Level 0, Level 1A" value={lev.name || ""} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], name: e.target.value }; setEditField("levels", l); }} />
-                          </div>
-                          <div className="sa-form-group">
-                            <label>Reward points</label>
-                            <input type="number" placeholder="0" value={lev.rewardPoints ?? 0} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], rewardPoints: Number(e.target.value) || 0 }; setEditField("levels", l); }} min="0" />
-                          </div>
-                          <div className="sa-form-group">
-                            <label>Prerequisite levels (select all that must be completed)</label>
-                            <div className="sa-prereq-levels">
-                              {Array.from({ length: idx }, (_, i) => (
-                                <label key={i}>
-                                  <input type="checkbox" checked={prereqIndices.includes(i)} onChange={() => togglePrereq(i)} />
-                                  Level {i + 1} ({(levelList[i]?.name || `Level ${i}`).slice(0, 20)})
+                      <label>Accesses (what this role can see/do in user dashboard)</label>
+                      <div className="sa-access-list">
+                        {["Mentor", "Warden", "Technical faculty"].map((group) => (
+                          <div key={group} className="sa-access-group">
+                            <span className="sa-access-group-title">{group}</span>
+                            {ACCESS_OPTIONS.filter((o) => o.group === group).map((opt) => {
+                              const accessList = (editModal.item.accesses || "").split(",").map((s) => s.trim()).filter(Boolean);
+                              const checked = accessList.includes(opt.id);
+                              return (
+                                <label key={opt.id} className="sa-access-option">
+                                  <input type="checkbox" checked={checked} onChange={(e) => {
+                                    const next = e.target.checked ? [...accessList, opt.id] : accessList.filter((x) => x !== opt.id);
+                                    setEditField("accesses", next.join(", "));
+                                  }} />
+                                  <span>{opt.label}</span>
                                 </label>
+                              );
+                            })}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {editModal.section === "users" && (
+                  <>
+                    <div className="sa-form-group"><label>Email</label><input type="email" value={editModal.item.email || ""} onChange={(e) => setEditField("email", e.target.value)} placeholder="user@example.com" /></div>
+                    <div className="sa-form-group"><label>Name</label><input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="Full name" /></div>
+                    <div className="sa-form-group">
+                      <label>Roles</label>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
+                        {rolesList.map((r) => {
+                          const roleName = r.role;
+                          const roles = Array.isArray(editModal.item.roles) ? editModal.item.roles : [];
+                          const checked = roles.includes(roleName);
+                          return (
+                            <label key={r.id || roleName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                              <input type="checkbox" checked={checked} onChange={(e) => setEditFieldRoles(e.target.checked ? [...roles, roleName] : roles.filter((x) => x !== roleName))} />
+                              <span className="sa-tag" style={getRoleTagStyle(roleName)}>{roleName}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                )}
+                {editModal.section === "courses" && (
+                  <>
+                    <div className="sa-course-section">
+                      <h4 className="sa-course-section-title">Basic info</h4>
+                      <div className="sa-form-group">
+                        <label>Course name</label>
+                        {editModal.itemId ? (
+                          <input type="text" value={editModal.item.name || ""} readOnly disabled className="sa-input-readonly" style={{ opacity: 1, cursor: "default", background: "#f1f5f9" }} />
+                        ) : (
+                          <input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="e.g. C Programming" />
+                        )}
+                      </div>
+                      <div className="sa-form-group">
+                        <label>Course type</label>
+                        <input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} placeholder="e.g. Technical, Assessment" />
+                      </div>
+                      <div className="sa-form-group">
+                        <label>Level (category)</label>
+                        <input type="text" value={editModal.item.level || ""} onChange={(e) => setEditField("level", e.target.value)} placeholder="e.g. Beginner, Level 1" />
+                      </div>
+                      <div className="sa-form-group">
+                        <label>Activity points</label>
+                        <input type="number" value={editModal.item.activityPoints ?? 0} onChange={(e) => setEditField("activityPoints", e.target.value)} placeholder="10" min="0" />
+                      </div>
+                      <div className="sa-form-group">
+                        <label>Faculty (handles questions)</label>
+                        <select value={editModal.item.faculty || ""} onChange={(e) => setEditField("faculty", e.target.value)}>
+                          <option value="">Select faculty</option>
+                          {facultyList.map((u) => (
+                            <option key={u.id} value={u.id}>{u.name || u.email}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="sa-course-section">
+                      <h4 className="sa-course-section-title">Course levels</h4>
+                      <p className="sa-muted" style={{ fontSize: 13, marginBottom: 12 }}>Add levels students can register for. Each level can have one or more prerequisite levels.</p>
+                      {(editModal.item.levels || []).map((lev, idx) => {
+                        const levelList = editModal.item.levels || [];
+                        const prereqIndices = Array.isArray(lev.prerequisiteLevelIndices) ? lev.prerequisiteLevelIndices : (lev.prerequisiteLevelIndex != null && lev.prerequisiteLevelIndex >= 0 ? [lev.prerequisiteLevelIndex] : []);
+                        const togglePrereq = (i) => {
+                          const l = [...levelList];
+                          const next = prereqIndices.includes(i) ? prereqIndices.filter((x) => x !== i) : [...prereqIndices, i].sort((a, b) => a - b);
+                          l[idx] = { ...l[idx], prerequisiteLevelIndices: next, prerequisiteLevelIndex: next[0] ?? -1 };
+                          setEditField("levels", l);
+                        };
+                        return (
+                          <div key={idx} className="sa-level-card">
+                            <div className="sa-level-card-header">
+                              <span className="sa-level-card-title">Level {idx + 1}: {lev.name || `Level ${idx}`}</span>
+                              <button type="button" className="sa-btn sa-btn-sm" style={{ background: "#dc2626", color: "#fff" }} onClick={() => setEditField("levels", levelList.filter((_, i) => i !== idx))}>Remove</button>
+                            </div>
+                            <div className="sa-form-group">
+                              <label>Level name</label>
+                              <input type="text" placeholder="e.g. Level 0, Level 1A" value={lev.name || ""} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], name: e.target.value }; setEditField("levels", l); }} />
+                            </div>
+                            <div className="sa-form-group">
+                              <label>Reward points</label>
+                              <input type="number" placeholder="0" value={lev.rewardPoints ?? 0} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], rewardPoints: Number(e.target.value) || 0 }; setEditField("levels", l); }} min="0" />
+                            </div>
+                            <div className="sa-form-group">
+                              <label>Prerequisite levels (select all that must be completed)</label>
+                              <div className="sa-prereq-levels">
+                                {Array.from({ length: idx }, (_, i) => (
+                                  <label key={i}>
+                                    <input type="checkbox" checked={prereqIndices.includes(i)} onChange={() => togglePrereq(i)} />
+                                    Level {i + 1} ({(levelList[i]?.name || `Level ${i}`).slice(0, 20)})
+                                  </label>
+                                ))}
+                                {idx === 0 && <span className="sa-muted" style={{ fontSize: 13 }}>None (first level)</span>}
+                              </div>
+                            </div>
+                            <div className="sa-form-group">
+                              <label>Assessment type</label>
+                              <input type="text" placeholder="e.g. MCQ, Programming, Manual Grading" value={lev.assessmentType || ""} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], assessmentType: e.target.value }; setEditField("levels", l); }} />
+                            </div>
+                            <div className="sa-form-group">
+                              <label>Topics (one per line)</label>
+                              <textarea rows={2} placeholder="Topic 1&#10;Topic 2" value={(lev.topics || []).join("\n")} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], topics: e.target.value.split("\n") }; setEditField("levels", l); }} />
+                            </div>
+                            <div className="sa-form-group">
+                              <label style={{ marginTop: "16px" }}>Prerequisite external courses for this level</label>
+                              <p className="sa-muted" style={{ fontSize: 13, marginBottom: 10 }}>Type to search; select one or more courses that students should complete before this level.</p>
+                              <div className="sa-autocomplete-wrap">
+                                <input
+                                  type="text"
+                                  className="sa-autocomplete-input"
+                                  placeholder="Type course name to search…"
+                                  value={lev.prereqQuery || ""}
+                                  onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], prereqQuery: e.target.value }; setEditField("levels", l); }}
+                                  onFocus={() => { const l = [...levelList]; l[idx] = { ...l[idx], prereqSuggestOpen: true }; setEditField("levels", l); }}
+                                  onBlur={() => setTimeout(() => { if (document.activeElement.className !== "sa-autocomplete-item") { const l = [...editModal.item.levels]; l[idx] = { ...l[idx], prereqSuggestOpen: false }; setEditField("levels", l); } }, 200)}
+                                />
+                                {lev.prereqSuggestOpen && (lev.prereqQuery || "").trim() && (
+                                  <ul className="sa-autocomplete-list">
+                                    {coursesList
+                                      .filter((c) => c.id !== editModal.item.id && !(lev.prerequisiteCourses || []).includes(c.id))
+                                      .filter((c) => (c.name || "").toLowerCase().includes((lev.prereqQuery || "").toLowerCase()))
+                                      .slice(0, 8)
+                                      .map((c) => (
+                                        <li key={c.id}>
+                                          <button type="button" className="sa-autocomplete-item" onClick={() => { const l = [...levelList]; l[idx] = { ...l[idx], prerequisiteCourses: [...(l[idx].prerequisiteCourses || []), c.id], prereqQuery: "", prereqSuggestOpen: false }; setEditField("levels", l); }}>{c.name}</button>
+                                        </li>
+                                      ))}
+                                    {coursesList.filter((c) => c.id !== editModal.item.id && (c.name || "").toLowerCase().includes((lev.prereqQuery || "").toLowerCase())).length === 0 && (
+                                      <li style={{ padding: "12px", fontSize: 13, color: "#64748b" }}>No matching courses</li>
+                                    )}
+                                  </ul>
+                                )}
+                              </div>
+                              <div className="sa-prereq-tags" style={{ marginTop: "8px" }}>
+                                {(lev.prerequisiteCourses || []).map((pid) => {
+                                  const c = coursesList.find((x) => x.id === pid);
+                                  if (!c) return null;
+                                  return (
+                                    <span key={pid} className="sa-prereq-tag">
+                                      {c.name}
+                                      <button type="button" className="sa-prereq-tag-remove" onClick={() => { const l = [...levelList]; l[idx] = { ...l[idx], prerequisiteCourses: (l[idx].prerequisiteCourses || []).filter((x) => x !== pid) }; setEditField("levels", l); }} aria-label="Remove">×</button>
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            <div className="sa-form-group">
+                              <label style={{ marginTop: "16px" }}>Study Materials</label>
+                              <p className="sa-muted" style={{ fontSize: 13, marginBottom: 10 }}>Add files or links for infinity study materials for this level.</p>
+                              {(lev.studyMaterials || []).map((mat, matIdx) => (
+                                <div key={matIdx} style={{ display: "flex", gap: "8px", marginBottom: "8px", alignItems: "center", flexWrap: "wrap", background: "#f8fafc", padding: "8px", border: "1px solid #e2e8f0", borderRadius: "6px" }}>
+                                  <input
+                                    type="text"
+                                    style={{ flex: 1, minWidth: "150px", padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "14px" }}
+                                    placeholder="Title (e.g., Note 1)"
+                                    value={mat.title || ""}
+                                    onChange={(e) => {
+                                      const l = [...levelList];
+                                      const m = [...(l[idx].studyMaterials || [])];
+                                      m[matIdx] = { ...m[matIdx], title: e.target.value };
+                                      l[idx] = { ...l[idx], studyMaterials: m };
+                                      setEditField("levels", l);
+                                    }}
+                                  />
+                                  <select
+                                    style={{ width: "90px", padding: "6px", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "14px", background: "#fff" }}
+                                    value={mat.type || "link"}
+                                    onChange={(e) => {
+                                      const l = [...levelList];
+                                      const m = [...(l[idx].studyMaterials || [])];
+                                      m[matIdx] = { ...m[matIdx], type: e.target.value, url: "" };
+                                      l[idx] = { ...l[idx], studyMaterials: m };
+                                      setEditField("levels", l);
+                                    }}
+                                  >
+                                    <option value="link">Link</option>
+                                    <option value="file">File</option>
+                                  </select>
+                                  {mat.type === "file" ? (
+                                    <div style={{ flex: 2, minWidth: "200px", display: "flex", alignItems: "center", gap: "8px" }}>
+                                      <input
+                                        type="file"
+                                        style={{ fontSize: "13px", maxWidth: "220px", cursor: "pointer" }}
+                                        onChange={(e) => {
+                                          const file = e.target.files?.[0];
+                                          if (!file) return;
+                                          const reader = new FileReader();
+                                          reader.onload = () => {
+                                            const l = [...levelList];
+                                            const m = [...(l[idx].studyMaterials || [])];
+                                            m[matIdx] = { ...m[matIdx], url: reader.result };
+                                            l[idx] = { ...l[idx], studyMaterials: m };
+                                            setEditField("levels", l);
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }}
+                                      />
+                                      {mat.url && <span style={{ fontSize: "12px", color: "#10b981", fontWeight: "600", whiteSpace: "nowrap" }}>✓ Uploaded</span>}
+                                    </div>
+                                  ) : (
+                                    <input
+                                      type="url"
+                                      style={{ flex: 2, minWidth: "200px", padding: "6px 10px", border: "1px solid #cbd5e1", borderRadius: "4px", fontSize: "14px" }}
+                                      placeholder="https://..."
+                                      value={mat.url || ""}
+                                      onChange={(e) => {
+                                        const l = [...levelList];
+                                        const m = [...(l[idx].studyMaterials || [])];
+                                        m[matIdx] = { ...m[matIdx], url: e.target.value };
+                                        l[idx] = { ...l[idx], studyMaterials: m };
+                                        setEditField("levels", l);
+                                      }}
+                                    />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const l = [...levelList];
+                                      const m = [...(l[idx].studyMaterials || [])].filter((_, i) => i !== matIdx);
+                                      l[idx] = { ...l[idx], studyMaterials: m };
+                                      setEditField("levels", l);
+                                    }}
+                                    style={{ background: "#fee2e2", border: "1px solid #fecaca", color: "#dc2626", cursor: "pointer", padding: "4px 8px", borderRadius: "4px", fontSize: "16px", fontWeight: "bold", marginLeft: "auto" }}
+                                    title="Remove Material"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
                               ))}
-                              {idx === 0 && <span className="sa-muted" style={{ fontSize: 13 }}>None (first level)</span>}
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-sm"
+                                style={{ marginTop: "12px", background: "#f1f5f9", color: "#0f172a", border: "1px solid #cbd5e1" }}
+                                onClick={() => {
+                                  const l = [...levelList];
+                                  const m = [...(l[idx].studyMaterials || []), { title: "", type: "link", url: "" }];
+                                  l[idx] = { ...l[idx], studyMaterials: m };
+                                  setEditField("levels", l);
+                                }}
+                              >
+                                + Add Material
+                              </button>
                             </div>
                           </div>
-                          <div className="sa-form-group">
-                            <label>Assessment type</label>
-                            <input type="text" placeholder="e.g. MCQ, Programming, Manual Grading" value={lev.assessmentType || ""} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], assessmentType: e.target.value }; setEditField("levels", l); }} />
-                          </div>
-                          <div className="sa-form-group">
-                            <label>Topics (one per line)</label>
-                            <textarea rows={2} placeholder="Topic 1&#10;Topic 2" value={(lev.topics || []).join("\n")} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], topics: e.target.value.split("\n").map((t) => t.trim()).filter(Boolean) }; setEditField("levels", l); }} />
-                          </div>
-                        </div>
-                      );
-                    })}
-                    <button type="button" className="sa-btn sa-btn-primary" onClick={() => setEditField("levels", [...(editModal.item.levels || []), { name: "", rewardPoints: 0, prerequisiteLevelIndex: -1, prerequisiteLevelIndices: [], assessmentType: "MCQ", topics: [] }])}>+ Add level</button>
-                  </div>
-
-                  <div className="sa-course-section">
-                    <h4 className="sa-course-section-title">Prerequisite courses</h4>
-                    <p className="sa-muted" style={{ fontSize: 13, marginBottom: 10 }}>Type to search; select one or more courses that students should complete before this course.</p>
-                    <div className="sa-autocomplete-wrap">
-                      <input
-                        type="text"
-                        className="sa-autocomplete-input"
-                        placeholder="Type course name to search…"
-                        value={editModal.item.prereqQuery || ""}
-                        onChange={(e) => setEditField("prereqQuery", e.target.value)}
-                        onFocus={() => setEditField("prereqSuggestOpen", true)}
-                        onBlur={() => setTimeout(() => setEditField("prereqSuggestOpen", false), 180)}
-                      />
-                      {editModal.item.prereqSuggestOpen && (editModal.item.prereqQuery || "").trim() && (
-                        <ul className="sa-autocomplete-list">
-                          {coursesList
-                            .filter((c) => c.id !== editModal.item.id && !(editModal.item.prerequisites || []).includes(c.id))
-                            .filter((c) => (c.name || "").toLowerCase().includes((editModal.item.prereqQuery || "").toLowerCase()))
-                            .slice(0, 8)
-                            .map((c) => (
-                              <li key={c.id}>
-                                <button type="button" className="sa-autocomplete-item" onClick={() => { setEditField("prerequisites", [...(editModal.item.prerequisites || []), c.id]); setEditField("prereqQuery", ""); setEditField("prereqSuggestOpen", false); }}>{c.name}</button>
-                              </li>
-                            ))}
-                          {coursesList.filter((c) => c.id !== editModal.item.id && (c.name || "").toLowerCase().includes((editModal.item.prereqQuery || "").toLowerCase())).length === 0 && (
-                            <li style={{ padding: "12px", fontSize: 13, color: "#64748b" }}>No matching courses</li>
-                          )}
-                        </ul>
-                      )}
-                    </div>
-                    <div className="sa-prereq-tags">
-                      {(editModal.item.prerequisites || []).map((pid) => {
-                        const c = coursesList.find((x) => x.id === pid);
-                        if (!c) return null;
-                        return (
-                          <span key={pid} className="sa-prereq-tag">
-                            {c.name}
-                            <button type="button" className="sa-prereq-tag-remove" onClick={() => setEditField("prerequisites", (editModal.item.prerequisites || []).filter((x) => x !== pid))} aria-label="Remove">×</button>
-                          </span>
                         );
                       })}
-                    </div>
-                  </div>
 
-                  <div className="sa-course-section">
-                    <h4 className="sa-course-section-title">Logo & status</h4>
-                    <div className="sa-form-group">
-                      <label>Course logo</label>
-                      <input type="url" value={editModal.item.course_logo?.startsWith("data:") ? "" : (editModal.item.course_logo || "")} onChange={(e) => setEditField("course_logo", e.target.value)} placeholder="https://… or choose file below" />
-                      <div className="sa-form-group" style={{ marginTop: 8 }}>
-                        <label className="sa-muted" style={{ fontSize: 12 }}>Or choose from your computer</label>
-                        <input type="file" accept="image/*" onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (!file) return;
-                          const reader = new FileReader();
-                          reader.onload = () => setEditField("course_logo", reader.result || "");
-                          reader.readAsDataURL(file);
-                          e.target.value = "";
-                        }} />
-                      </div>
-                      {editModal.item.course_logo && (
-                        <div className="sa-course-logo-preview" style={{ marginTop: 8 }}>
-                          <img src={editModal.item.course_logo} alt="Course logo" onError={(e) => { e.target.style.display = "none"; }} />
+                      <button type="button" className="sa-btn sa-btn-primary" onClick={() => setEditField("levels", [...(editModal.item.levels || []), { name: "", rewardPoints: 0, prerequisiteLevelIndex: -1, prerequisiteLevelIndices: [], assessmentType: "MCQ", topics: [] }])}>+ Add level</button>
+                    </div>
+
+                    <div className="sa-course-section">
+                      <h4 className="sa-course-section-title">Logo & status</h4>
+                      <div className="sa-form-group">
+                        <label>Course logo</label>
+                        <input type="url" value={editModal.item.course_logo?.startsWith("data:") ? "" : (editModal.item.course_logo || "")} onChange={(e) => setEditField("course_logo", e.target.value)} placeholder="https://… or choose file below" />
+                        <div className="sa-form-group" style={{ marginTop: 8 }}>
+                          <label className="sa-muted" style={{ fontSize: 12 }}>Or choose from your computer</label>
+                          <input type="file" accept="image/*" onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const reader = new FileReader();
+                            reader.onload = () => setEditField("course_logo", reader.result || "");
+                            reader.readAsDataURL(file);
+                            e.target.value = "";
+                          }} />
                         </div>
-                      )}
+                        {editModal.item.course_logo && (
+                          <div className="sa-course-logo-preview" style={{ marginTop: 8 }}>
+                            <img src={editModal.item.course_logo} alt="Course logo" onError={(e) => { e.target.style.display = "none"; }} />
+                          </div>
+                        )}
+                      </div>
+                      <div className="sa-form-group">
+                        <label>Status</label>
+                        <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
+                          <option value="Active">Active</option>
+                          <option value="Inactive">Inactive</option>
+                        </select>
+                      </div>
+                    </div>
+                  </>
+                )}
+                {editModal.section === "venues" && (
+                  <>
+                    <div className="sa-form-group"><label>Venue name</label><input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="e.g. Hall A" /></div>
+                    <div className="sa-form-group"><label>Location</label><input type="text" value={editModal.item.location || ""} onChange={(e) => setEditField("location", e.target.value)} placeholder="e.g. Block 1" /></div>
+                  </>
+                )}
+                {editModal.section === "time" && (
+                  <>
+                    <div className="sa-form-group"><label>Start time (24h)</label><input type="text" value={editModal.item.startTime || ""} onChange={(e) => setEditField("startTime", e.target.value)} placeholder="e.g. 09:00" /></div>
+                    <div className="sa-form-group"><label>End time (24h)</label><input type="text" value={editModal.item.endTime || ""} onChange={(e) => setEditField("endTime", e.target.value)} placeholder="e.g. 10:30" /></div>
+                  </>
+                )}
+                {editModal.section === "slots" && (
+                  <>
+                    <div className="sa-form-group">
+                      <label>Venue</label>
+                      <select value={editModal.item.venueId || ""} onChange={(e) => setEditField("venueId", e.target.value)}>
+                        <option value="">Select venue</option>
+                        {venuesList.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="sa-form-group">
+                      <label>Time slot</label>
+                      <select value={editModal.item.timeId || ""} onChange={(e) => setEditField("timeId", e.target.value)}>
+                        <option value="">Select time</option>
+                        {timeSlotsList.map((t) => <option key={t.id} value={t.id}>{formatTime(t.startTime)} – {formatTime(t.endTime)}</option>)}
+                      </select>
                     </div>
                     <div className="sa-form-group">
                       <label>Status</label>
@@ -1685,141 +1827,104 @@ export default function AdminDashboard() {
                         <option value="Inactive">Inactive</option>
                       </select>
                     </div>
-                  </div>
-                </>
-              )}
-              {editModal.section === "venues" && (
-                <>
-                  <div className="sa-form-group"><label>Venue name</label><input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="e.g. Hall A" /></div>
-                  <div className="sa-form-group"><label>Location</label><input type="text" value={editModal.item.location || ""} onChange={(e) => setEditField("location", e.target.value)} placeholder="e.g. Block 1" /></div>
-                </>
-              )}
-              {editModal.section === "time" && (
-                <>
-                  <div className="sa-form-group"><label>Start time (24h)</label><input type="text" value={editModal.item.startTime || ""} onChange={(e) => setEditField("startTime", e.target.value)} placeholder="e.g. 09:00" /></div>
-                  <div className="sa-form-group"><label>End time (24h)</label><input type="text" value={editModal.item.endTime || ""} onChange={(e) => setEditField("endTime", e.target.value)} placeholder="e.g. 10:30" /></div>
-                </>
-              )}
-              {editModal.section === "slots" && (
-                <>
-                  <div className="sa-form-group">
-                    <label>Venue</label>
-                    <select value={editModal.item.venueId || ""} onChange={(e) => setEditField("venueId", e.target.value)}>
-                      <option value="">Select venue</option>
-                      {venuesList.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-                    </select>
-                  </div>
-                  <div className="sa-form-group">
-                    <label>Time slot</label>
-                    <select value={editModal.item.timeId || ""} onChange={(e) => setEditField("timeId", e.target.value)}>
-                      <option value="">Select time</option>
-                      {timeSlotsList.map((t) => <option key={t.id} value={t.id}>{formatTime(t.startTime)} – {formatTime(t.endTime)}</option>)}
-                    </select>
-                  </div>
-                  <div className="sa-form-group">
-                    <label>Status</label>
-                    <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-                </>
-              )}
-              {editModal.section === "leave-types" && (
-                <>
-                  <div className="sa-form-group"><label>Type</label><input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} placeholder="e.g. Sick Leave" /></div>
-                  <div className="sa-form-group"><label>Code</label><input type="text" value={editModal.item.code || ""} onChange={(e) => setEditField("code", e.target.value)} placeholder="e.g. SL" /></div>
-                  <div className="sa-form-group">
-                    <label>Status</label>
-                    <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
-                      <option value="Active">Active</option>
-                      <option value="Inactive">Inactive</option>
-                    </select>
-                  </div>
-                  <div className="sa-form-group">
-                    <label>Leave flow</label>
-                    <p className="sa-form-hint">Click roles below to add; click × on a tag to remove.</p>
-                    <div className="sa-workflow-tags">
-                      {((editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean)).map((step) => (
-                        <span key={step} className="sa-tag sa-tag-removable" style={getRoleTagStyle(step)}>
-                          {step}
-                          <button
-                            type="button"
-                            className="sa-tag-remove"
-                            onClick={() => {
-                              const steps = (editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean);
-                              setEditField("workflow", steps.filter((s) => s !== step).join(", "));
-                            }}
-                            aria-label={`Remove ${step}`}
-                          >
-                            ×
-                          </button>
-                        </span>
-                      ))}
+                  </>
+                )}
+                {editModal.section === "leave-types" && (
+                  <>
+                    <div className="sa-form-group"><label>Type</label><input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} placeholder="e.g. Sick Leave" /></div>
+                    <div className="sa-form-group"><label>Code</label><input type="text" value={editModal.item.code || ""} onChange={(e) => setEditField("code", e.target.value)} placeholder="e.g. SL" /></div>
+                    <div className="sa-form-group">
+                      <label>Status</label>
+                      <select value={editModal.item.status || "Active"} onChange={(e) => setEditField("status", e.target.value)}>
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                      </select>
                     </div>
-                    <div className="sa-workflow-add">
-                      <span className="sa-workflow-add-label">Add step:</span>
-                      {(() => {
-                        const steps = (editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean);
-                        const parentsAdded = steps.includes("Parents");
-                        return (
-                          <>
+                    <div className="sa-form-group">
+                      <label>Leave flow</label>
+                      <p className="sa-form-hint">Click roles below to add; click × on a tag to remove.</p>
+                      <div className="sa-workflow-tags">
+                        {((editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean)).map((step) => (
+                          <span key={step} className="sa-tag sa-tag-removable" style={getRoleTagStyle(step)}>
+                            {step}
                             <button
                               type="button"
-                              className={`sa-tag sa-tag-clickable ${parentsAdded ? "sa-tag-added" : ""}`}
-                              style={getRoleTagStyle("parents")}
+                              className="sa-tag-remove"
                               onClick={() => {
-                                if (parentsAdded) return;
-                                const current = (editModal.item.workflow || "").trim();
-                                setEditField("workflow", current ? `Parents, ${current}` : "Parents");
+                                const steps = (editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean);
+                                setEditField("workflow", steps.filter((s) => s !== step).join(", "));
                               }}
-                              disabled={parentsAdded}
+                              aria-label={`Remove ${step}`}
                             >
-                              Parents
+                              ×
                             </button>
-                            {rolesList
-                              .filter((r) => (r.role || "").toLowerCase() !== "student")
-                              .map((r) => {
-                                const role = r.role;
-                                const added = steps.includes(role);
-                                return (
-                                  <button
-                                    key={r.id}
-                                    type="button"
-                                    className={`sa-tag sa-tag-clickable ${added ? "sa-tag-added" : ""}`}
-                                    style={getRoleTagStyle(role)}
-                                    onClick={() => {
-                                      if (added) return;
-                                      const current = (editModal.item.workflow || "").trim();
-                                      setEditField("workflow", current ? `${current}, ${role}` : role);
-                                    }}
-                                    disabled={added}
-                                  >
-                                    {role}
-                                  </button>
-                                );
-                              })}
-                          </>
-                        );
-                      })()}
+                          </span>
+                        ))}
+                      </div>
+                      <div className="sa-workflow-add">
+                        <span className="sa-workflow-add-label">Add step:</span>
+                        {(() => {
+                          const steps = (editModal.item.workflow || "").split(",").map((s) => s.trim()).filter(Boolean);
+                          const parentsAdded = steps.includes("Parents");
+                          return (
+                            <>
+                              <button
+                                type="button"
+                                className={`sa-tag sa-tag-clickable ${parentsAdded ? "sa-tag-added" : ""}`}
+                                style={getRoleTagStyle("parents")}
+                                onClick={() => {
+                                  if (parentsAdded) return;
+                                  const current = (editModal.item.workflow || "").trim();
+                                  setEditField("workflow", current ? `Parents, ${current}` : "Parents");
+                                }}
+                                disabled={parentsAdded}
+                              >
+                                Parents
+                              </button>
+                              {rolesList
+                                .filter((r) => (r.role || "").toLowerCase() !== "student")
+                                .map((r) => {
+                                  const role = r.role;
+                                  const added = steps.includes(role);
+                                  return (
+                                    <button
+                                      key={r.id}
+                                      type="button"
+                                      className={`sa-tag sa-tag-clickable ${added ? "sa-tag-added" : ""}`}
+                                      style={getRoleTagStyle(role)}
+                                      onClick={() => {
+                                        if (added) return;
+                                        const current = (editModal.item.workflow || "").trim();
+                                        setEditField("workflow", current ? `${current}, ${role}` : role);
+                                      }}
+                                      disabled={added}
+                                    >
+                                      {role}
+                                    </button>
+                                  );
+                                })}
+                            </>
+                          );
+                        })()}
+                      </div>
                     </div>
-                  </div>
-                </>
-              )}
-              {editModal.section === "leave-workflow" && (
-                <>
-                  <div className="sa-form-group"><label>Leave type</label><input type="text" value={editModal.item.leaveType || ""} onChange={(e) => setEditField("leaveType", e.target.value)} placeholder="e.g. Sick Leave" /></div>
-                  <div className="sa-form-group"><label>Workflow</label><input type="text" value={editModal.item.workflow || ""} onChange={(e) => setEditField("workflow", e.target.value)} placeholder="e.g. Mentor → Warden" /></div>
-                </>
-              )}
+                  </>
+                )}
+                {editModal.section === "leave-workflow" && (
+                  <>
+                    <div className="sa-form-group"><label>Leave type</label><input type="text" value={editModal.item.leaveType || ""} onChange={(e) => setEditField("leaveType", e.target.value)} placeholder="e.g. Sick Leave" /></div>
+                    <div className="sa-form-group"><label>Workflow</label><input type="text" value={editModal.item.workflow || ""} onChange={(e) => setEditField("workflow", e.target.value)} placeholder="e.g. Mentor → Warden" /></div>
+                  </>
+                )}
+              </div>
+              <div className="sa-modal-footer">
+                <button type="button" className="sa-btn" onClick={closeEdit}>Cancel</button>
+                <button type="button" className="sa-btn sa-btn-primary" onClick={saveEdit}>Save</button>
+              </div>
             </div>
-            <div className="sa-modal-footer">
-              <button type="button" className="sa-btn" onClick={closeEdit}>Cancel</button>
-              <button type="button" className="sa-btn sa-btn-primary" onClick={saveEdit}>Save</button>
             </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

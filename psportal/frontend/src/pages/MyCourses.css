@@ -1,46 +1,56 @@
+/* ===== My Courses Container ===== */
 .courses-container {
-    /* padding: 32px 40px; */
-    background-color: #f4f7fe;
-    min-height: calc(100vh - 70px);
+    padding: 14px;
+    background-color: #f8fafc;
+    min-height: calc(100vh - 60px);
+    /* Adjust based on your header height */
+    box-sizing: border-box;
 }
 
 .page-title {
-    font-size: 18px;
+    font-size: 1.125rem;
     font-weight: 600;
-    color: #4a5568;
-    margin-bottom: 24px;
+    color: #0f172a;
+    margin-top: 0;
+    /* margin-bottom: 4px; */
 }
 
-/* Toggle Switch Styles */
+/* ===== Toggle Switch Styles ===== */
 .my-courses-toggle {
     display: inline-flex;
     background: #ffffff;
     border-radius: 6px;
     padding: 4px;
-    margin-bottom: 32px;
+    margin-bottom: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .toggle-btn {
-    padding: 8px 48px;
-    font-size: 13px;
+    padding: 8px 32px;
+    font-size: 14px;
     font-weight: 600;
     border: none;
     border-radius: 4px;
     cursor: pointer;
     background: transparent;
-    color: #4a5568;
+    color: #64748b;
     transition: all 0.2s ease;
 }
 
+.toggle-btn:hover:not(.active) {
+    color: #0f172a;
+}
+
 .toggle-btn.active {
-    background: #8b5cf6;
+    background: #7c3aed;
+    /* exact purple from screenshot */
     color: #ffffff;
 }
 
-/* My Courses Grid */
+/* ===== My Courses Grid ===== */
 .my-courses-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 20px;
 }
 
@@ -53,32 +63,40 @@
     cursor: pointer;
     border: 1px solid #e2e8f0;
     padding: 12px;
-    height:13rem;
+    text-decoration: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.my-course-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.08);
 }
 
 .my-course-image {
-    height: 13rem;
     width: 100%;
+    aspect-ratio: 16 / 9;
+    /* Ensures rectangular shape regardless of image dimensions */
     border-radius: 6px;
     overflow: hidden;
-}
-
-.my-course-image {
     position: relative;
+    margin-bottom: 12px;
 }
 
 .my-course-image img {
     width: 100%;
-    height: 13rem;
+    height: 100%;
     object-fit: cover;
+    display: block;
+    /* Removes bottom whitespace reserved for descenders */
 }
 
+/* Optional Badge (if needed later) */
 .my-course-badge {
     position: absolute;
     top: 8px;
     right: 8px;
     padding: 4px 10px;
-    border-radius: 6px;
+    border-radius: 4px;
     font-size: 11px;
     font-weight: 600;
 }
@@ -88,18 +106,23 @@
     color: #fff;
 }
 
+/* ===== Content/Typography ===== */
 .my-course-content {
-    padding: 3px 0 4px 0;
-    /* min-height: 48px; */
+    /* Padding is removed because the card itself provides the outer padding */
     display: flex;
     align-items: flex-start;
 }
 
 .my-course-title {
-    /* font-size: 1.125rem; */
-    font-size: 14.5px;
-    font-weight: 550;
-    color: #1a202c;
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f172a;
     line-height: 1.4;
     margin: 0;
+}
+
+.courses-empty {
+    color: #64748b;
+    font-size: 14px;
+    grid-column: 1 / -1;
 }

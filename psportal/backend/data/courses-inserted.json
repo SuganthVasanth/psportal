@@ -1,0 +1,3613 @@
+[
+  {
+    "name": "Advanced",
+    "description": "Course: Advanced Modelling & Simulation - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Advanced Modelling & Simulation - Level 0",
+        "description": "Course: Advanced Modelling & Simulation - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Advanced Modelling & Simulation - Level 0"
+        ]
+      },
+      {
+        "name": "Advanced Modelling & Simulation - Level 1",
+        "description": "Course: Advanced Modelling & Simulation - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Advanced Modelling & Simulation - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 2
+  },
+  {
+    "name": "Mechanical",
+    "description": "Course: Mechanical Energy - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Mechanical Energy - Level 0",
+        "description": "Course: Mechanical Energy - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Mechanical Energy - Level 0"
+        ]
+      },
+      {
+        "name": "Mechanical Energy - Level 1",
+        "description": "Course: Mechanical Energy - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Mechanical Energy - Level 1"
+        ]
+      },
+      {
+        "name": "Mechanical Energy - Level 2",
+        "description": "Course: Mechanical Energy - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Mechanical Energy - Level 2"
+        ]
+      },
+      {
+        "name": "Mechanical Modelling Level - 3B",
+        "description": "Assessment Type",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Assessment Type"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Analog Electronics",
+    "description": "Course: Analog Electronics - Level 2",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Analog Electronics - Level 2",
+        "description": "Course: Analog Electronics - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics - Level 2"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 1A",
+        "description": "Course: Analog Electronics Level - 1A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 1A"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 1B",
+        "description": "Course: Analog Electronics Level - 1B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 1B"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 1C",
+        "description": "Course: Analog Electronics Level - 1C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 1C"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 1D",
+        "description": "Course: Analog Electronics Level - 1D",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 1D"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 2A",
+        "description": "Course: Analog Electronics Level - 2A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 2A"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 2B",
+        "description": "Course: Analog Electronics Level - 2B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 2B"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 2C",
+        "description": "Course: Analog Electronics Level - 2C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 2C"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 3A",
+        "description": "Course: Analog Electronics Level - 3A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 3A"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 3B",
+        "description": "Course: Analog Electronics Level - 3B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 3B"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 3C",
+        "description": "Course: Analog Electronics Level - 3C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 3C"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 4A",
+        "description": "Course: Analog Electronics Level - 4A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 4A"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 4B",
+        "description": "Course: Analog Electronics Level - 4B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 11,
+        "prerequisiteLevelIndices": [
+          11
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 4B"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 4C",
+        "description": "Course: Analog Electronics Level - 4C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 12,
+        "prerequisiteLevelIndices": [
+          12
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 4C"
+        ]
+      },
+      {
+        "name": "Analog Electronics Level - 5A",
+        "description": "Course: Analog Electronics Level - 5A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 13,
+        "prerequisiteLevelIndices": [
+          13
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Analog Electronics Level - 5A"
+        ]
+      }
+    ],
+    "levelsCount": 15
+  },
+  {
+    "name": "Electronics",
+    "description": "Assessment Type; Manual Grading",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Electronics Level - 0",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "AE",
+    "description": "Course: AE Mock Test 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "AE Mock Test 1",
+        "description": "Course: AE Mock Test 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 1"
+        ]
+      },
+      {
+        "name": "AE Mock Test 10",
+        "description": "Course: AE Mock Test 10",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 10"
+        ]
+      },
+      {
+        "name": "AE Mock Test 11",
+        "description": "Course: AE Mock Test 11",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 11"
+        ]
+      },
+      {
+        "name": "AE Mock Test 12",
+        "description": "Course: AE Mock Test 12",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 12"
+        ]
+      },
+      {
+        "name": "AE Mock Test 13",
+        "description": "Course: AE Mock Test 13",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 13"
+        ]
+      },
+      {
+        "name": "AE Mock Test 14",
+        "description": "Course: AE Mock Test 14",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 14"
+        ]
+      },
+      {
+        "name": "AE Mock Test 15",
+        "description": "Course: AE Mock Test 15",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 15"
+        ]
+      },
+      {
+        "name": "AE Mock Test 16",
+        "description": "Course: AE Mock Test 16",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 16"
+        ]
+      },
+      {
+        "name": "AE Mock Test 17",
+        "description": "Course: AE Mock Test 17",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 17"
+        ]
+      },
+      {
+        "name": "AE Mock Test 18",
+        "description": "Course: AE Mock Test 18",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 18"
+        ]
+      },
+      {
+        "name": "AE Mock Test 19",
+        "description": "Course: AE Mock Test 19",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 19"
+        ]
+      },
+      {
+        "name": "AE Mock Test 2",
+        "description": "Course: AE Mock Test 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 2"
+        ]
+      },
+      {
+        "name": "AE Mock Test 20",
+        "description": "Course: AE Mock Test 20",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 11,
+        "prerequisiteLevelIndices": [
+          11
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 20"
+        ]
+      },
+      {
+        "name": "AE Mock Test 21",
+        "description": "Course: AE Mock Test 21",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 12,
+        "prerequisiteLevelIndices": [
+          12
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 21"
+        ]
+      },
+      {
+        "name": "AE Mock Test 22",
+        "description": "Course: AE Mock Test 22",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 13,
+        "prerequisiteLevelIndices": [
+          13
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 22"
+        ]
+      },
+      {
+        "name": "AE Mock Test 23",
+        "description": "Course: AE Mock Test 23",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 14,
+        "prerequisiteLevelIndices": [
+          14
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 23"
+        ]
+      },
+      {
+        "name": "AE Mock Test 24",
+        "description": "Course: AE Mock Test 24",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 15,
+        "prerequisiteLevelIndices": [
+          15
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 24"
+        ]
+      },
+      {
+        "name": "AE Mock Test 25",
+        "description": "Course: AE Mock Test 25",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 16,
+        "prerequisiteLevelIndices": [
+          16
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 25"
+        ]
+      },
+      {
+        "name": "AE Mock Test 3",
+        "description": "Course: AE Mock Test 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 17,
+        "prerequisiteLevelIndices": [
+          17
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 3"
+        ]
+      },
+      {
+        "name": "AE Mock Test 4",
+        "description": "Course: AE Mock Test 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 18,
+        "prerequisiteLevelIndices": [
+          18
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 4"
+        ]
+      },
+      {
+        "name": "AE Mock Test 5",
+        "description": "Course: AE Mock Test 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 19,
+        "prerequisiteLevelIndices": [
+          19
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 5"
+        ]
+      },
+      {
+        "name": "AE Mock Test 6",
+        "description": "Course: AE Mock Test 6",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 20,
+        "prerequisiteLevelIndices": [
+          20
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 6"
+        ]
+      },
+      {
+        "name": "AE Mock Test 7",
+        "description": "Course: AE Mock Test 7",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 21,
+        "prerequisiteLevelIndices": [
+          21
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 7"
+        ]
+      },
+      {
+        "name": "AE Mock Test 8",
+        "description": "Course: AE Mock Test 8",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 22,
+        "prerequisiteLevelIndices": [
+          22
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 8"
+        ]
+      },
+      {
+        "name": "AE Mock Test 9",
+        "description": "Course: AE Mock Test 9",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 23,
+        "prerequisiteLevelIndices": [
+          23
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: AE Mock Test 9"
+        ]
+      }
+    ],
+    "levelsCount": 25
+  },
+  {
+    "name": "Aptitude",
+    "description": "Course: Aptitude Level - 1K",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Aptitude Level - 1K",
+        "description": "Course: Aptitude Level - 1K",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Aptitude Level - 1K"
+        ]
+      },
+      {
+        "name": "Aptitude Level - 1L",
+        "description": "Course: Aptitude Level - 1L",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Aptitude Level - 1L"
+        ]
+      },
+      {
+        "name": "Aptitude Level - 1M",
+        "description": "Course: Aptitude Level - 1M",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Aptitude Level - 1M"
+        ]
+      },
+      {
+        "name": "Aptitude Level - 1N",
+        "description": "Course: Aptitude Level - 1N",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Aptitude Level - 1N"
+        ]
+      },
+      {
+        "name": "Aptitude level- 1J",
+        "description": "Course: Aptitude level- 1J",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Aptitude level- 1J"
+        ]
+      }
+    ],
+    "levelsCount": 5
+  },
+  {
+    "name": "Automation",
+    "description": "Course: Automation - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Automation - Level 0",
+        "description": "Course: Automation - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Automation - Level 0"
+        ]
+      },
+      {
+        "name": "Automation - Level 1",
+        "description": "Course: Automation - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Automation - Level 1"
+        ]
+      },
+      {
+        "name": "Automation - Level 2",
+        "description": "Course: Automation - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Automation - Level 2"
+        ]
+      }
+    ],
+    "levelsCount": 3
+  },
+  {
+    "name": "Bioinformatics",
+    "description": "Assessment Type; Manual Grading",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Bioinformatics and Data Analytics - Level 0",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      },
+      {
+        "name": "Bioinformatics and Data Analytics - Level 1",
+        "description": "Course: Bioinformatics and Data Analytics - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinformatics and Data Analytics - Level 1"
+        ]
+      },
+      {
+        "name": "Bioinformatics and Data Analytics - Level 2",
+        "description": "Course: Bioinformatics and Data Analytics - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinformatics and Data Analytics - Level 2"
+        ]
+      },
+      {
+        "name": "Bioinformatics and Data Analytics - Level 3",
+        "description": "Course: Bioinformatics and Data Analytics - Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinformatics and Data Analytics - Level 3"
+        ]
+      },
+      {
+        "name": "Bioinformatics and Data Analytics - Level 4",
+        "description": "Course: Bioinformatics and Data Analytics - Level 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinformatics and Data Analytics - Level 4"
+        ]
+      },
+      {
+        "name": "Bioinformatics and Data Analytics - Level 5",
+        "description": "Course: Bioinformatics and Data Analytics - Level 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinformatics and Data Analytics - Level 5"
+        ]
+      },
+      {
+        "name": "Bioinformatics and Data Analytics - Level 6",
+        "description": "Course: Bioinformatics and Data Analytics - Level 6",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinformatics and Data Analytics - Level 6"
+        ]
+      }
+    ],
+    "levelsCount": 7
+  },
+  {
+    "name": "Bioinstrumentation",
+    "description": "Assessment Type; Manual Grading",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Bioinstrumentation - Level 0",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      },
+      {
+        "name": "Bioinstrumentation - Level 1",
+        "description": "Course: Bioinstrumentation - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinstrumentation - Level 1"
+        ]
+      },
+      {
+        "name": "Bioinstrumentation - Level 2",
+        "description": "Course: Bioinstrumentation - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinstrumentation - Level 2"
+        ]
+      },
+      {
+        "name": "Bioinstrumentation - Level 3",
+        "description": "Course: Bioinstrumentation - Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinstrumentation - Level 3"
+        ]
+      },
+      {
+        "name": "Bioinstrumentation - Level 4",
+        "description": "Course: Bioinstrumentation - Level 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinstrumentation - Level 4"
+        ]
+      },
+      {
+        "name": "Bioinstrumentation - Level 5",
+        "description": "Course: Bioinstrumentation - Level 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioinstrumentation - Level 5"
+        ]
+      }
+    ],
+    "levelsCount": 6
+  },
+  {
+    "name": "Biological",
+    "description": "Course: Biological Manuscript and Reference Management - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Biological Manuscript and Reference Management - Level 1",
+        "description": "Course: Biological Manuscript and Reference Management - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Biological Manuscript and Reference Management - Level 1"
+        ]
+      },
+      {
+        "name": "Biological Manuscript and Reference Management - Level 2",
+        "description": "Course: Biological Manuscript and Reference Management - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Biological Manuscript and Reference Management - Level 2"
+        ]
+      }
+    ],
+    "levelsCount": 2
+  },
+  {
+    "name": "Bioprocess",
+    "description": "Assessment Type; Manual Grading",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Bioprocess Technology - Level 0",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      },
+      {
+        "name": "Bioprocess Technology - Level 1",
+        "description": "Course: Bioprocess Technology - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioprocess Technology - Level 1"
+        ]
+      },
+      {
+        "name": "Bioprocess Technology - Level 2",
+        "description": "Course: Bioprocess Technology - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Bioprocess Technology - Level 2"
+        ]
+      }
+    ],
+    "levelsCount": 3
+  },
+  {
+    "name": "C Programming",
+    "description": "Course: C Programming Level - 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "C Programming Level - 1",
+        "description": "Course: C Programming Level - 1",
+        "rewardPoints": 300,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 1"
+        ]
+      },
+      {
+        "name": "C Programming Level - 2",
+        "description": "Course: C Programming Level - 2",
+        "rewardPoints": 600,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 2"
+        ]
+      },
+      {
+        "name": "C Programming Level - 3A",
+        "description": "Course: C Programming Level - 3A",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 3A"
+        ]
+      },
+      {
+        "name": "C Programming Level - 3B",
+        "description": "Course: C Programming Level - 3B",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 3B"
+        ]
+      },
+      {
+        "name": "C Programming Level - 4",
+        "description": "Course: C Programming Level - 4",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 4"
+        ]
+      },
+      {
+        "name": "C Programming Level - 5",
+        "description": "Course: C Programming Level - 5",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 5"
+        ]
+      },
+      {
+        "name": "C Programming Level - 6",
+        "description": "Course: C Programming Level - 6",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: C Programming Level - 6"
+        ]
+      }
+    ],
+    "levelsCount": 7
+  },
+  {
+    "name": "Calculus",
+    "description": "Course: Calculus - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Calculus - Level 0",
+        "description": "Course: Calculus - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Calculus - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Circuit",
+    "description": "Course: Circuit Debugging Level - 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Circuit Debugging Level - 0",
+        "description": "Course: Circuit Debugging Level - 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 0"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 1",
+        "description": "Course: Circuit Debugging Level - 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 1"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 2A",
+        "description": "Course: Circuit Debugging Level - 2A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 2A"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 2B",
+        "description": "Course: Circuit Debugging Level - 2B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 2B"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 2C",
+        "description": "Course: Circuit Debugging Level - 2C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 2C"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 3A",
+        "description": "Course: Circuit Debugging Level - 3A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 3A"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 3B",
+        "description": "Course: Circuit Debugging Level - 3B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 3B"
+        ]
+      },
+      {
+        "name": "Circuit Debugging Level - 3C",
+        "description": "Course: Circuit Debugging Level - 3C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Circuit Debugging Level - 3C"
+        ]
+      }
+    ],
+    "levelsCount": 8
+  },
+  {
+    "name": "Electrical",
+    "description": "Course: Electrical Level - 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Electrical Level - 0",
+        "description": "Course: Electrical Level - 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electrical Level - 0"
+        ]
+      },
+      {
+        "name": "Electrical Level - 1",
+        "description": "Assessment Type",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Assessment Type"
+        ]
+      },
+      {
+        "name": "Electrical Level - 1A",
+        "description": "Course: Electrical Level - 1A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electrical Level - 1A"
+        ]
+      },
+      {
+        "name": "Electrical Level - 1B",
+        "description": "Assessment Type",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Assessment Type"
+        ]
+      },
+      {
+        "name": "Electrical Level - 2",
+        "description": "Course: Electrical Level - 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electrical Level - 2"
+        ]
+      },
+      {
+        "name": "Electrical Level - 4",
+        "description": "Course: Electrical Level - 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electrical Level - 4"
+        ]
+      },
+      {
+        "name": "Electrical Level -3",
+        "description": "Course: Electrical Level -3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electrical Level -3"
+        ]
+      },
+      {
+        "name": "Electrical Skills - Monthly Challenge - Level 1",
+        "description": "Course: Electrical Skills - Monthly Challenge - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electrical Skills - Monthly Challenge - Level 1"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 0",
+        "description": "Course: Electronics (Electrical Domain) Level - 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 0"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 1",
+        "description": "Course: Electronics (Electrical Domain) Level - 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 1"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 2A",
+        "description": "Course: Electronics (Electrical Domain) Level - 2A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 2A"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 2B",
+        "description": "Course: Electronics (Electrical Domain) Level - 2B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 2B"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 2C",
+        "description": "Course: Electronics (Electrical Domain) Level - 2C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 11,
+        "prerequisiteLevelIndices": [
+          11
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 2C"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 3A",
+        "description": "Course: Electronics (Electrical Domain) Level - 3A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 12,
+        "prerequisiteLevelIndices": [
+          12
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 3A"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 3B",
+        "description": "Course: Electronics (Electrical Domain) Level - 3B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 13,
+        "prerequisiteLevelIndices": [
+          13
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 3B"
+        ]
+      },
+      {
+        "name": "Electronics (Electrical Domain) Level - 3C",
+        "description": "Course: Electronics (Electrical Domain) Level - 3C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 14,
+        "prerequisiteLevelIndices": [
+          14
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Electronics (Electrical Domain) Level - 3C"
+        ]
+      },
+      {
+        "name": "Industrial Automation (Electrical) - Level 0",
+        "description": "Course: Industrial Automation (Electrical) - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 15,
+        "prerequisiteLevelIndices": [
+          15
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Industrial Automation (Electrical) - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 17
+  },
+  {
+    "name": "Cloud",
+    "description": "Course: Cloud Infrastructure - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Cloud Infrastructure - Level 1",
+        "description": "Course: Cloud Infrastructure - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Cloud Infrastructure - Level 1"
+        ]
+      },
+      {
+        "name": "Cloud Infrastructure - Level 2",
+        "description": "Course: Cloud Infrastructure - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Cloud Infrastructure - Level 2"
+        ]
+      },
+      {
+        "name": "Cloud Infrastructure - Level 3",
+        "description": "Course: Cloud Infrastructure - Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Cloud Infrastructure - Level 3"
+        ]
+      }
+    ],
+    "levelsCount": 3
+  },
+  {
+    "name": "Network",
+    "description": "Course: Computer Networking - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Computer Networking - Level 1",
+        "description": "Course: Computer Networking - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Computer Networking - Level 1"
+        ]
+      },
+      {
+        "name": "Computer Networking - Level 2",
+        "description": "Course: Computer Networking - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Computer Networking - Level 2"
+        ]
+      },
+      {
+        "name": "Computer Networking - Level 3",
+        "description": "Course: Computer Networking - Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Computer Networking - Level 3"
+        ]
+      },
+      {
+        "name": "Professional Networking skills - Level 1",
+        "description": "Course: Professional Networking skills - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Professional Networking skills - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Linux",
+    "description": "Course: Linux Level - 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Linux Level - 0",
+        "description": "Course: Linux Level - 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Linux Level - 0"
+        ]
+      },
+      {
+        "name": "Linux Level - 1",
+        "description": "Course: Linux Level - 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Linux Level - 1"
+        ]
+      },
+      {
+        "name": "Linux Level - 2",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      },
+      {
+        "name": "Linux Level -1",
+        "description": "Course: Linux Level -1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Linux Level -1"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Communication",
+    "description": "Course: Communication Level - 1A",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Communication Level - 1A",
+        "description": "Course: Communication Level - 1A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Communication Level - 1A"
+        ]
+      },
+      {
+        "name": "Communication Level - 1B",
+        "description": "Course: Communication Level - 1B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Communication Level - 1B"
+        ]
+      }
+    ],
+    "levelsCount": 2
+  },
+  {
+    "name": "Construction",
+    "description": "Course: Construction management - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Construction management - Level 0",
+        "description": "Course: Construction management - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Construction management - Level 0"
+        ]
+      },
+      {
+        "name": "Construction materials - Level 0",
+        "description": "Course: Construction materials - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Construction materials - Level 0"
+        ]
+      },
+      {
+        "name": "Construction materials - Level 1",
+        "description": "Course: Construction materials - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Construction materials - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 3
+  },
+  {
+    "name": "Control Systems",
+    "description": "Course: Control Systems - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Control Systems - Level 0",
+        "description": "Course: Control Systems - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Control Systems - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Digital Electronics",
+    "description": "Course: Digital Electronics Level - 4A",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Digital Electronics Level - 4A",
+        "description": "Course: Digital Electronics Level - 4A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level - 4A"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level - 5A",
+        "description": "Course: Digital Electronics Level - 5A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level - 5A"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -1A",
+        "description": "Course: Digital Electronics Level -1A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -1A"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -1B",
+        "description": "Course: Digital Electronics Level -1B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -1B"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -1C",
+        "description": "Course: Digital Electronics Level -1C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -1C"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -1D",
+        "description": "Course: Digital Electronics Level -1D",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -1D"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -2A",
+        "description": "Course: Digital Electronics Level -2A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -2A"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -2B",
+        "description": "Course: Digital Electronics Level -2B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -2B"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -2C",
+        "description": "Course: Digital Electronics Level -2C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -2C"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -3A",
+        "description": "Course: Digital Electronics Level -3A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -3A"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -3B",
+        "description": "Course: Digital Electronics Level -3B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -3B"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -3C",
+        "description": "Assessment Type",
+        "rewardPoints": 1,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Assessment Type"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -4B",
+        "description": "Course: Digital Electronics Level -4B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 11,
+        "prerequisiteLevelIndices": [
+          11
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -4B"
+        ]
+      },
+      {
+        "name": "Digital Electronics Level -4C",
+        "description": "Course: Digital Electronics Level -4C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 12,
+        "prerequisiteLevelIndices": [
+          12
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Electronics Level -4C"
+        ]
+      },
+      {
+        "name": "Digital electronics - Level 2",
+        "description": "Course: Digital electronics - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 13,
+        "prerequisiteLevelIndices": [
+          13
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital electronics - Level 2"
+        ]
+      }
+    ],
+    "levelsCount": 15
+  },
+  {
+    "name": "Cost",
+    "description": "Course: Cost and Quantity Estimation - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Cost and Quantity Estimation - Level 0",
+        "description": "Course: Cost and Quantity Estimation - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Cost and Quantity Estimation - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "CyberSecurity",
+    "description": "Course: CyberSecurity - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "CyberSecurity - Level 1",
+        "description": "Course: CyberSecurity - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: CyberSecurity - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Data",
+    "description": "Course: Data Science Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Data Science Level 0",
+        "description": "Course: Data Science Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Data Science Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Database Programming",
+    "description": "Course: Database Programming Level - 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Database Programming Level - 1",
+        "description": "Course: Database Programming Level - 1",
+        "rewardPoints": 300,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Database Programming Level - 1"
+        ]
+      },
+      {
+        "name": "Database Programming Level - 2",
+        "description": "Course: Database Programming Level - 2",
+        "rewardPoints": 600,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Database Programming Level - 2"
+        ]
+      },
+      {
+        "name": "Database Programming Level - 3",
+        "description": "Course: Database Programming Level - 3",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Database Programming Level - 3"
+        ]
+      },
+      {
+        "name": "Database Programming Level - 4",
+        "description": "Course: Database Programming Level - 4",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Database Programming Level - 4"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Differential",
+    "description": "Course: Differential Equations - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Differential Equations - Level 0",
+        "description": "Course: Differential Equations - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Differential Equations - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Digital",
+    "description": "Course: Digital Assurance Level - 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Digital Assurance Level - 1",
+        "description": "Course: Digital Assurance Level - 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Digital Assurance Level - 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "DE",
+    "description": "Course: DE Mock Test 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "DE Mock Test 1",
+        "description": "Course: DE Mock Test 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 1"
+        ]
+      },
+      {
+        "name": "DE Mock Test 10",
+        "description": "Course: DE Mock Test 10",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 10"
+        ]
+      },
+      {
+        "name": "DE Mock Test 11",
+        "description": "Course: DE Mock Test 11",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 11"
+        ]
+      },
+      {
+        "name": "DE Mock Test 12",
+        "description": "Course: DE Mock Test 12",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 12"
+        ]
+      },
+      {
+        "name": "DE Mock Test 13",
+        "description": "Course: DE Mock Test 13",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 13"
+        ]
+      },
+      {
+        "name": "DE Mock Test 14",
+        "description": "Course: DE Mock Test 14",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 14"
+        ]
+      },
+      {
+        "name": "DE Mock Test 15",
+        "description": "Course: DE Mock Test 15",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 15"
+        ]
+      },
+      {
+        "name": "DE Mock Test 16",
+        "description": "Course: DE Mock Test 16",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 16"
+        ]
+      },
+      {
+        "name": "DE Mock Test 17",
+        "description": "Course: DE Mock Test 17",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 17"
+        ]
+      },
+      {
+        "name": "DE Mock Test 18",
+        "description": "Course: DE Mock Test 18",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 18"
+        ]
+      },
+      {
+        "name": "DE Mock Test 19",
+        "description": "Course: DE Mock Test 19",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 19"
+        ]
+      },
+      {
+        "name": "DE Mock Test 2",
+        "description": "Course: DE Mock Test 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 2"
+        ]
+      },
+      {
+        "name": "DE Mock Test 20",
+        "description": "Course: DE Mock Test 20",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 11,
+        "prerequisiteLevelIndices": [
+          11
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 20"
+        ]
+      },
+      {
+        "name": "DE Mock Test 21",
+        "description": "Course: DE Mock Test 21",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 12,
+        "prerequisiteLevelIndices": [
+          12
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 21"
+        ]
+      },
+      {
+        "name": "DE Mock Test 22",
+        "description": "Course: DE Mock Test 22",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 13,
+        "prerequisiteLevelIndices": [
+          13
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 22"
+        ]
+      },
+      {
+        "name": "DE Mock Test 23",
+        "description": "Course: DE Mock Test 23",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 14,
+        "prerequisiteLevelIndices": [
+          14
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 23"
+        ]
+      },
+      {
+        "name": "DE Mock Test 24",
+        "description": "Course: DE Mock Test 24",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 15,
+        "prerequisiteLevelIndices": [
+          15
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 24"
+        ]
+      },
+      {
+        "name": "DE Mock Test 25",
+        "description": "Course: DE Mock Test 25",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 16,
+        "prerequisiteLevelIndices": [
+          16
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 25"
+        ]
+      },
+      {
+        "name": "DE Mock Test 3",
+        "description": "Course: DE Mock Test 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 17,
+        "prerequisiteLevelIndices": [
+          17
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 3"
+        ]
+      },
+      {
+        "name": "DE Mock Test 4",
+        "description": "Course: DE Mock Test 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 18,
+        "prerequisiteLevelIndices": [
+          18
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 4"
+        ]
+      },
+      {
+        "name": "DE Mock Test 5",
+        "description": "Course: DE Mock Test 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 19,
+        "prerequisiteLevelIndices": [
+          19
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 5"
+        ]
+      },
+      {
+        "name": "DE Mock Test 6",
+        "description": "Course: DE Mock Test 6",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 20,
+        "prerequisiteLevelIndices": [
+          20
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 6"
+        ]
+      },
+      {
+        "name": "DE Mock Test 7",
+        "description": "Course: DE Mock Test 7",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 21,
+        "prerequisiteLevelIndices": [
+          21
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 7"
+        ]
+      },
+      {
+        "name": "DE Mock Test 8",
+        "description": "Course: DE Mock Test 8",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 22,
+        "prerequisiteLevelIndices": [
+          22
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 8"
+        ]
+      },
+      {
+        "name": "DE Mock Test 9",
+        "description": "Course: DE Mock Test 9",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 23,
+        "prerequisiteLevelIndices": [
+          23
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: DE Mock Test 9"
+        ]
+      }
+    ],
+    "levelsCount": 25
+  },
+  {
+    "name": "Food",
+    "description": "Course: Food Processing and Preservation Technology Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Food Processing and Preservation Technology Level 1",
+        "description": "Course: Food Processing and Preservation Technology Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Food Processing and Preservation Technology Level 1"
+        ]
+      },
+      {
+        "name": "Food Processing and Preservation Technology Level 2",
+        "description": "Course: Food Processing and Preservation Technology Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Food Processing and Preservation Technology Level 2"
+        ]
+      },
+      {
+        "name": "Food Processing and Preservation Technology Level 3",
+        "description": "Course: Food Processing and Preservation Technology Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Food Processing and Preservation Technology Level 3"
+        ]
+      }
+    ],
+    "levelsCount": 3
+  },
+  {
+    "name": "GeoTechnical",
+    "description": "Course: GeoTechnical - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "GeoTechnical - Level 0",
+        "description": "Course: GeoTechnical - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: GeoTechnical - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "HTML",
+    "description": "Course: HTML / CSS - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "HTML / CSS - Level 1",
+        "description": "Course: HTML / CSS - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: HTML / CSS - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "IPR-Patent",
+    "description": "Course: IPR-Patent Search - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "IPR-Patent Search - Level 0",
+        "description": "Course: IPR-Patent Search - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: IPR-Patent Search - Level 0"
+        ]
+      },
+      {
+        "name": "IPR-Patent Search - Level 1",
+        "description": "Course: IPR-Patent Search - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: IPR-Patent Search - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 2
+  },
+  {
+    "name": "Irrigation",
+    "description": "Course: Irrigation Engineering - Level 2",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Irrigation Engineering - Level 2",
+        "description": "Course: Irrigation Engineering - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Irrigation Engineering - Level 2"
+        ]
+      },
+      {
+        "name": "Irrigation Engineering - Level 3",
+        "description": "Course: Irrigation Engineering - Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Irrigation Engineering - Level 3"
+        ]
+      },
+      {
+        "name": "Irrigation Engineering - Level 4",
+        "description": "Course: Irrigation Engineering - Level 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Irrigation Engineering - Level 4"
+        ]
+      },
+      {
+        "name": "Irrigation Engineering - Level 5",
+        "description": "Course: Irrigation Engineering - Level 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Irrigation Engineering - Level 5"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Java",
+    "description": "Course: Java Script - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Java Script - Level 1",
+        "description": "Course: Java Script - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Java Script - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Github",
+    "description": "Assessment Type; Manual Grading",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Github Level 0",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 1,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Leadership",
+    "description": "Course: Leadership Level - 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Leadership Level - 0",
+        "description": "Course: Leadership Level - 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Leadership Level - 0"
+        ]
+      },
+      {
+        "name": "Leadership Level - 1A",
+        "description": "Course: Leadership Level - 1A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Leadership Level - 1A"
+        ]
+      },
+      {
+        "name": "Leadership Level - 1B",
+        "description": "Course: Leadership Level - 1B",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Leadership Level - 1B"
+        ]
+      },
+      {
+        "name": "Leadership Level - 1C",
+        "description": "Course: Leadership Level - 1C",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Leadership Level - 1C"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Maths",
+    "description": "Course: Maths for Machine Learning Level - 1A",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Maths for Machine Learning Level - 1A",
+        "description": "Course: Maths for Machine Learning Level - 1A",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Maths for Machine Learning Level - 1A"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "MPMC",
+    "description": "Course: MPMC Mock Test 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "MPMC Mock Test 1",
+        "description": "Course: MPMC Mock Test 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: MPMC Mock Test 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Mobile",
+    "description": "Course: Mobile App Developement - Android (Java) - Level 0",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Mobile App Developement - Android (Java) - Level 0",
+        "description": "Course: Mobile App Developement - Android (Java) - Level 0",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Mobile App Developement - Android (Java) - Level 0"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "NT",
+    "description": "Course: NT Mock Test 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "NT Mock Test 1",
+        "description": "Course: NT Mock Test 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 1"
+        ]
+      },
+      {
+        "name": "NT Mock Test 10",
+        "description": "Course: NT Mock Test 10",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 10"
+        ]
+      },
+      {
+        "name": "NT Mock Test 11",
+        "description": "Course: NT Mock Test 11",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 11"
+        ]
+      },
+      {
+        "name": "NT Mock Test 12",
+        "description": "Course: NT Mock Test 12",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 12"
+        ]
+      },
+      {
+        "name": "NT Mock Test 13",
+        "description": "Course: NT Mock Test 13",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 13"
+        ]
+      },
+      {
+        "name": "NT Mock Test 14",
+        "description": "Course: NT Mock Test 14",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 14"
+        ]
+      },
+      {
+        "name": "NT Mock Test 15",
+        "description": "Course: NT Mock Test 15",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 15"
+        ]
+      },
+      {
+        "name": "NT Mock Test 16",
+        "description": "Course: NT Mock Test 16",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 16"
+        ]
+      },
+      {
+        "name": "NT Mock Test 17",
+        "description": "Course: NT Mock Test 17",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 17"
+        ]
+      },
+      {
+        "name": "NT Mock Test 18",
+        "description": "Course: NT Mock Test 18",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 18"
+        ]
+      },
+      {
+        "name": "NT Mock Test 19",
+        "description": "Course: NT Mock Test 19",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 19"
+        ]
+      },
+      {
+        "name": "NT Mock Test 2",
+        "description": "Course: NT Mock Test 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 2"
+        ]
+      },
+      {
+        "name": "NT Mock Test 20",
+        "description": "Course: NT Mock Test 20",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 11,
+        "prerequisiteLevelIndices": [
+          11
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 20"
+        ]
+      },
+      {
+        "name": "NT Mock Test 21",
+        "description": "Course: NT Mock Test 21",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 12,
+        "prerequisiteLevelIndices": [
+          12
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 21"
+        ]
+      },
+      {
+        "name": "NT Mock Test 22",
+        "description": "Course: NT Mock Test 22",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 13,
+        "prerequisiteLevelIndices": [
+          13
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 22"
+        ]
+      },
+      {
+        "name": "NT Mock Test 23",
+        "description": "Course: NT Mock Test 23",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 14,
+        "prerequisiteLevelIndices": [
+          14
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 23"
+        ]
+      },
+      {
+        "name": "NT Mock Test 24",
+        "description": "Course: NT Mock Test 24",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 15,
+        "prerequisiteLevelIndices": [
+          15
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 24"
+        ]
+      },
+      {
+        "name": "NT Mock Test 25",
+        "description": "Course: NT Mock Test 25",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 16,
+        "prerequisiteLevelIndices": [
+          16
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 25"
+        ]
+      },
+      {
+        "name": "NT Mock Test 3",
+        "description": "Course: NT Mock Test 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 17,
+        "prerequisiteLevelIndices": [
+          17
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 3"
+        ]
+      },
+      {
+        "name": "NT Mock Test 4",
+        "description": "Course: NT Mock Test 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 18,
+        "prerequisiteLevelIndices": [
+          18
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 4"
+        ]
+      },
+      {
+        "name": "NT Mock Test 5",
+        "description": "Course: NT Mock Test 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 19,
+        "prerequisiteLevelIndices": [
+          19
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 5"
+        ]
+      },
+      {
+        "name": "NT Mock Test 6",
+        "description": "Course: NT Mock Test 6",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 20,
+        "prerequisiteLevelIndices": [
+          20
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 6"
+        ]
+      },
+      {
+        "name": "NT Mock Test 7",
+        "description": "Course: NT Mock Test 7",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 21,
+        "prerequisiteLevelIndices": [
+          21
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 7"
+        ]
+      },
+      {
+        "name": "NT Mock Test 8",
+        "description": "Course: NT Mock Test 8",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 22,
+        "prerequisiteLevelIndices": [
+          22
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 8"
+        ]
+      },
+      {
+        "name": "NT Mock Test 9",
+        "description": "Course: NT Mock Test 9",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 23,
+        "prerequisiteLevelIndices": [
+          23
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: NT Mock Test 9"
+        ]
+      }
+    ],
+    "levelsCount": 25
+  },
+  {
+    "name": "New",
+    "description": "Course: New Product Development and Innovations - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "New Product Development and Innovations - Level 1",
+        "description": "Course: New Product Development and Innovations - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: New Product Development and Innovations - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Design",
+    "description": "Course: Design Recreation Challenge - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Design Recreation Challenge - Level 1",
+        "description": "Course: Design Recreation Challenge - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Design Recreation Challenge - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Physical",
+    "description": "Course: Physical Fitness - Level 4",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Physical Fitness - Level 4",
+        "description": "Course: Physical Fitness - Level 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Physical Fitness - Level 4"
+        ]
+      },
+      {
+        "name": "Physical Fitness Level 1",
+        "description": "Course: Physical Fitness Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Physical Fitness Level 1"
+        ]
+      },
+      {
+        "name": "Physical Fitness Level 2",
+        "description": "Course: Physical Fitness Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Physical Fitness Level 2"
+        ]
+      },
+      {
+        "name": "Physical Fitness Level 3",
+        "description": "Course: Physical Fitness Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Physical Fitness Level 3"
+        ]
+      }
+    ],
+    "levelsCount": 4
+  },
+  {
+    "name": "Power",
+    "description": "Course: Power Electronics - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Power Electronics - Level 1",
+        "description": "Course: Power Electronics - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Power Electronics - Level 1"
+        ]
+      },
+      {
+        "name": "Power Electronics - Level 2",
+        "description": "Course: Power Electronics - Level 2",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Power Electronics - Level 2"
+        ]
+      },
+      {
+        "name": "Power Electronics - Level 3",
+        "description": "Course: Power Electronics - Level 3",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Power Electronics - Level 3"
+        ]
+      },
+      {
+        "name": "Power Electronics - Level 4",
+        "description": "Course: Power Electronics - Level 4",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Power Electronics - Level 4"
+        ]
+      },
+      {
+        "name": "Power Electronics - Level 5",
+        "description": "Course: Power Electronics - Level 5",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Power Electronics - Level 5"
+        ]
+      },
+      {
+        "name": "Power Electronics - Level 6",
+        "description": "Course: Power Electronics - Level 6",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Power Electronics - Level 6"
+        ]
+      }
+    ],
+    "levelsCount": 6
+  },
+  {
+    "name": "Programming",
+    "description": "Course: Programming C++ - Level 2",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Programming C++ - Level 2",
+        "description": "Course: Programming C++ - Level 2",
+        "rewardPoints": 600,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming C++ - Level 2"
+        ]
+      },
+      {
+        "name": "Programming C++ - Level 3",
+        "description": "Course: Programming C++ - Level 3",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming C++ - Level 3"
+        ]
+      },
+      {
+        "name": "Programming C++ Level - 1",
+        "description": "Course: Programming C++ Level - 1",
+        "rewardPoints": 300,
+        "prerequisiteLevelIndex": 1,
+        "prerequisiteLevelIndices": [
+          1
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming C++ Level - 1"
+        ]
+      },
+      {
+        "name": "Programming Java Level - 1",
+        "description": "Course: Programming Java Level - 1",
+        "rewardPoints": 300,
+        "prerequisiteLevelIndex": 2,
+        "prerequisiteLevelIndices": [
+          2
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Java Level - 1"
+        ]
+      },
+      {
+        "name": "Programming Java Level - 2",
+        "description": "Course: Programming Java Level - 2",
+        "rewardPoints": 600,
+        "prerequisiteLevelIndex": 3,
+        "prerequisiteLevelIndices": [
+          3
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Java Level - 2"
+        ]
+      },
+      {
+        "name": "Programming Java Level - 3",
+        "description": "Course: Programming Java Level - 3",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 4,
+        "prerequisiteLevelIndices": [
+          4
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Java Level - 3"
+        ]
+      },
+      {
+        "name": "Programming Java Level - 4",
+        "description": "Course: Programming Java Level - 4",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 5,
+        "prerequisiteLevelIndices": [
+          5
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Java Level - 4"
+        ]
+      },
+      {
+        "name": "Programming Python Level - 1",
+        "description": "Course: Programming Python Level - 1",
+        "rewardPoints": 300,
+        "prerequisiteLevelIndex": 6,
+        "prerequisiteLevelIndices": [
+          6
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Python Level - 1"
+        ]
+      },
+      {
+        "name": "Programming Python Level - 2",
+        "description": "Course: Programming Python Level - 2",
+        "rewardPoints": 600,
+        "prerequisiteLevelIndex": 7,
+        "prerequisiteLevelIndices": [
+          7
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Python Level - 2"
+        ]
+      },
+      {
+        "name": "Programming Python Level - 3",
+        "description": "Course: Programming Python Level - 3",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 8,
+        "prerequisiteLevelIndices": [
+          8
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Python Level - 3"
+        ]
+      },
+      {
+        "name": "Programming Python Level - 4",
+        "description": "Course: Programming Python Level - 4",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 9,
+        "prerequisiteLevelIndices": [
+          9
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Python Level - 4"
+        ]
+      },
+      {
+        "name": "Programming Python Level - 5",
+        "description": "Course: Programming Python Level - 5",
+        "rewardPoints": 900,
+        "prerequisiteLevelIndex": 10,
+        "prerequisiteLevelIndices": [
+          10
+        ],
+        "assessmentType": "Programming",
+        "topics": [
+          "Course: Programming Python Level - 5"
+        ]
+      }
+    ],
+    "levelsCount": 12
+  },
+  {
+    "name": "React",
+    "description": "Course: React - Level 1",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "React - Level 1",
+        "description": "Course: React - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: React - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 1
+  },
+  {
+    "name": "Regulatory",
+    "description": "Assessment Type; Manual Grading",
+    "status": "Active",
+    "level": true,
+    "parentCourse": "",
+    "prereq": [],
+    "levels": [
+      {
+        "name": "Regulatory Affairs and Drug Applications Fillings - Level 0",
+        "description": "Assessment Type; Manual Grading",
+        "rewardPoints": 2,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Type",
+        "topics": [
+          "Assessment Type",
+          "Manual Grading"
+        ]
+      },
+      {
+        "name": "Regulatory Affairs and Drug Applications Fillings - Level 1",
+        "description": "Course: Regulatory Affairs and Drug Applications Fillings - Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": 0,
+        "prerequisiteLevelIndices": [
+          0
+        ],
+        "assessmentType": "MCQ",
+        "topics": [
+          "Course: Regulatory Affairs and Drug Applications Fillings - Level 1"
+        ]
+      }
+    ],
+    "levelsCount": 2
+  }
+]

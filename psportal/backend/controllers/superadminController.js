@@ -110,7 +110,6 @@ exports.getCourses = async (req, res) => {
         activityPoints: c.activity_points ?? 0,
         rewardPoints: c.reward_points ?? 0,
         faculty: c.faculty || "",
-        prerequisites: Array.isArray(c.prerequisites) ? c.prerequisites : [],
         levels: Array.isArray(c.levels) ? c.levels.map((l) => ({
           name: l.name || "",
           rewardPoints: l.rewardPoints ?? 0,
@@ -118,6 +117,8 @@ exports.getCourses = async (req, res) => {
           prerequisiteLevelIndices: Array.isArray(l.prerequisiteLevelIndices) ? l.prerequisiteLevelIndices : (l.prerequisiteLevelIndex != null && l.prerequisiteLevelIndex >= 0 ? [l.prerequisiteLevelIndex] : []),
           assessmentType: l.assessmentType || "MCQ",
           topics: Array.isArray(l.topics) ? l.topics : [],
+          prerequisiteCourses: Array.isArray(l.prerequisiteCourses) ? l.prerequisiteCourses : [],
+          studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials.map((m) => ({ type: m.type || "link", title: m.title || "", url: m.url || "" })) : [],
         })) : [],
       }))
     );
@@ -138,7 +139,6 @@ exports.createCourse = async (req, res) => {
       activityPoints,
       rewardPoints,
       faculty,
-      prerequisites,
       levels,
     } = req.body;
     const doc = await AdminCourse.create({
@@ -151,7 +151,6 @@ exports.createCourse = async (req, res) => {
       activity_points: activityPoints ?? 0,
       reward_points: rewardPoints ?? 0,
       faculty: faculty || "",
-      prerequisites: Array.isArray(prerequisites) ? prerequisites : [],
       levels: Array.isArray(levels) ? levels : [],
     });
     res.status(201).json({
@@ -165,8 +164,16 @@ exports.createCourse = async (req, res) => {
       activityPoints: doc.activity_points,
       rewardPoints: doc.reward_points,
       faculty: doc.faculty,
-      prerequisites: doc.prerequisites || [],
-      levels: doc.levels || [],
+      levels: Array.isArray(doc.levels) ? doc.levels.map((l) => ({
+        name: l.name || "",
+        rewardPoints: l.rewardPoints ?? 0,
+        prerequisiteLevelIndex: l.prerequisiteLevelIndex ?? -1,
+        prerequisiteLevelIndices: Array.isArray(l.prerequisiteLevelIndices) ? l.prerequisiteLevelIndices : [],
+        assessmentType: l.assessmentType || "MCQ",
+        topics: Array.isArray(l.topics) ? l.topics : [],
+        prerequisiteCourses: Array.isArray(l.prerequisiteCourses) ? l.prerequisiteCourses : [],
+        studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials.map((m) => ({ type: m.type || "link", title: m.title || "", url: m.url || "" })) : [],
+      })) : [],
     });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -185,7 +192,6 @@ exports.updateCourse = async (req, res) => {
       activityPoints,
       rewardPoints,
       faculty,
-      prerequisites,
       levels,
     } = req.body;
     const update = {};
@@ -198,7 +204,6 @@ exports.updateCourse = async (req, res) => {
     if (activityPoints !== undefined) update.activity_points = activityPoints;
     if (rewardPoints !== undefined) update.reward_points = rewardPoints;
     if (faculty !== undefined) update.faculty = faculty;
-    if (prerequisites !== undefined) update.prerequisites = Array.isArray(prerequisites) ? prerequisites : [];
     if (levels !== undefined) update.levels = Array.isArray(levels) ? levels : [];
     const doc = await AdminCourse.findByIdAndUpdate(req.params.id, update, { returnDocument: 'after' });
     if (!doc) return res.status(404).json({ message: "Course not found" });
@@ -213,8 +218,16 @@ exports.updateCourse = async (req, res) => {
       activityPoints: doc.activity_points,
       rewardPoints: doc.reward_points,
       faculty: doc.faculty,
-      prerequisites: doc.prerequisites || [],
-      levels: doc.levels || [],
+      levels: Array.isArray(doc.levels) ? doc.levels.map((l) => ({
+        name: l.name || "",
+        rewardPoints: l.rewardPoints ?? 0,
+        prerequisiteLevelIndex: l.prerequisiteLevelIndex ?? -1,
+        prerequisiteLevelIndices: Array.isArray(l.prerequisiteLevelIndices) ? l.prerequisiteLevelIndices : [],
+        assessmentType: l.assessmentType || "MCQ",
+        topics: Array.isArray(l.topics) ? l.topics : [],
+        prerequisiteCourses: Array.isArray(l.prerequisiteCourses) ? l.prerequisiteCourses : [],
+        studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials.map((m) => ({ type: m.type || "link", title: m.title || "", url: m.url || "" })) : [],
+      })) : [],
     });
   } catch (err) {
     res.status(500).json({ message: err.message });

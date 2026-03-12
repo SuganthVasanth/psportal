@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import StudentSidebar from "../components/StudentSidebar";
 import { BookOpen, Award, ChevronDown, X } from "lucide-react";
 import "./CourseDetails.css";
@@ -20,6 +20,7 @@ const getLevelActionLabel = (courseName, level, index) => {
 
 export default function CourseDetails() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const [course, setCourse] = useState(null);
   const [progress, setProgress] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -269,7 +270,7 @@ export default function CourseDetails() {
           <div className="cd-header-card">
             <div className="cd-header-info">
               <h1 className="cd-title">{courseName}</h1>
-              {course.description && <p className="cd-course-name" style={{ marginBottom: 12 }}>{course.description}</p>}
+              {course.description && <p className="cd-course-desc">{course.description}</p>}
               <div className="cd-meta">
                 <div className="cd-meta-item">
                   <BookOpen size={18} className="cd-meta-icon" />
@@ -282,134 +283,97 @@ export default function CourseDetails() {
               </div>
             </div>
             {course.course_logo && (
-              <div className="cd-header-image">
-                <img src={course.course_logo} alt={courseName} />
+              <div className="cd-header-img-container">
+                <img src={course.course_logo} alt={courseName} className="cd-header-banner" />
               </div>
             )}
           </div>
 
           {registerError && <p className="cd-modal-error" style={{ marginBottom: 16 }}>{registerError}</p>}
 
-          <div className={levelFilterName ? "cd-two-col" : ""}>
-            <div className="cd-left">
-              {levels.length === 0 ? (
-                <p className="cd-content-placeholder">No levels defined for this course yet. Check back later.</p>
-              ) : (
-                <div className="cd-levels-list">
-                  {levels.map((level, index) => {
-                const prereqIndices = Array.isArray(level.prerequisiteLevelIndices) && level.prerequisiteLevelIndices.length > 0
-                  ? level.prerequisiteLevelIndices
-                  : (level.prerequisiteLevelIndex != null && level.prerequisiteLevelIndex >= 0 ? [level.prerequisiteLevelIndex] : []);
-                const prereqCleared = prereqIndices.length === 0 || prereqIndices.every((i) => completedLevelIndices.has(i));
-                const prereqLabel = prereqIndices.length === 0 ? "No" : prereqIndices.map((i) => `${i + 1}. ${levels[i]?.name || `Level ${i}`}`).join(", ");
-                const isEnrolled = enrolledLevelIndices.has(index);
-                const isCompleted = completedLevelIndices.has(index);
-                const canRegister = prereqCleared && !isEnrolled && !isCompleted;
-                const actionLabel = getLevelActionLabel(courseName, level, index);
+          <div className="cd-levels-full-width">
+            {levels.length === 0 ? (
+              <p className="cd-content-placeholder">No levels defined for this course yet. Check back later.</p>
+            ) : (
+              <div className="cd-levels-list">
+                {levels.map((level, index) => {
+                  const prereqIndices = Array.isArray(level.prerequisiteLevelIndices) && level.prerequisiteLevelIndices.length > 0
+                    ? level.prerequisiteLevelIndices
+                    : (level.prerequisiteLevelIndex != null && level.prerequisiteLevelIndex >= 0 ? [level.prerequisiteLevelIndex] : []);
+                  const prereqCleared = prereqIndices.length === 0 || prereqIndices.every((i) => completedLevelIndices.has(i));
+                  const prereqLabel = prereqIndices.length === 0 ? "No" : prereqIndices.map((i) => `${i + 1}. ${levels[i]?.name || `Level ${i}`}`).join(", ");
+                  const isEnrolled = enrolledLevelIndices.has(index);
+                  const isCompleted = completedLevelIndices.has(index);
+                  const canRegister = prereqCleared && !isEnrolled && !isCompleted;
+                  const actionLabel = getLevelActionLabel(courseName, level, index);
 
-                return (
-                  <div key={index} className="cd-level-card">
-                    <div className="cd-level-top">
-                      <div className="cd-level-title-group">
-                        <div className="cd-level-number">{index + 1}</div>
-                        <span className="cd-level-title">{courseName} – {level.name || `Level ${index}`}</span>
+                  return (
+                    <div key={index} className="cd-level-card">
+                      <div className="cd-level-top">
+                        <div className="cd-level-title-group">
+                          <div className="cd-level-number">{index + 1}</div>
+                          <span className="cd-level-title">{courseName} Level - {level.name || index + 1}</span>
+                        </div>
+                        <div className="cd-level-badges">
+                          <span className="cd-badge attempt-badge">Attempts: {progress.find((p) => p.level_index === index)?.attempts ?? 0}</span>
+                          {isCompleted && <span className="cd-badge completed-badge">Completed</span>}
+                          {isEnrolled && !isCompleted && <span className="cd-badge attempt-badge">Enrolled</span>}
+                        </div>
                       </div>
-                      <div className="cd-level-badges">
-                        <span className="cd-badge attempt-badge">Attempts: {progress.find((p) => p.level_index === index)?.attempts ?? 0}</span>
-                        {isCompleted && <span className="cd-badge completed-badge">Completed</span>}
-                        {isEnrolled && !isCompleted && <span className="cd-badge">Enrolled</span>}
+                      <div className="cd-level-content">
+                        <div className="cd-topics-column">
+                          {(level.topics && level.topics.length) ? (
+                            level.topics.map((topic, i) => (
+                              <div key={i} className="cd-topic-item">
+                                {i + 1}. {topic}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="cd-topic-item">No topics listed</div>
+                          )}
+                        </div>
+                        <div className="cd-details-column">
+                          <div className="cd-detail-item">
+                            <span className="cd-detail-label">With Rewards</span>
+                            <span className="cd-detail-value medal-value">
+                              <Award size={14} className="medal-icon" />
+                              {level.rewardPoints ? `${level.rewardPoints} RP` : "No RPs"}
+                            </span>
+                          </div>
+                          <div className="cd-detail-item">
+                            <span className="cd-detail-label">Pre Request</span>
+                            <span className="cd-detail-value">{prereqLabel}</span>
+                          </div>
+                          <div className="cd-detail-item">
+                            <span className="cd-detail-label">Assessment Type</span>
+                            <span className="cd-detail-value">{level.assessmentType || "Programming"}</span>
+                          </div>
+                          <div className="cd-level-action">
+                            {canRegister ? (
+                              <button
+                                type="button"
+                                className="cd-register-btn"
+                                onClick={() => handleRegisterLevel(index)}
+                                disabled={registeringLevel !== null}
+                              >
+                                {registeringLevel === index ? "Registering…" : "Register"}
+                              </button>
+                            ) : !prereqCleared ? (
+                              <button
+                                type="button"
+                                className="cd-register-btn"
+                                disabled
+                                style={{ opacity: 0.7, cursor: "not-allowed", border: "none" }}
+                              >
+                                Locked
+                              </button>
+                            ) : null}
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    <div className="cd-level-content">
-                      <div className="cd-topics-column">
-                        <strong className="cd-detail-label">Topics</strong>
-                        {(level.topics && level.topics.length) ? (
-                          level.topics.map((topic, i) => (
-                            <div key={i} className="cd-topic-item">
-                              {topic}
-                            </div>
-                          ))
-                        ) : (
-                          <div className="cd-topic-item">No topics listed</div>
-                        )}
-                      </div>
-                      <div className="cd-details-column">
-                        <div className="cd-detail-item">
-                          <span className="cd-detail-label">With rewards</span>
-                          <span className="cd-detail-value medal-value">
-                            <Award size={16} className="medal-icon" />
-                            {level.rewardPoints ?? 0} pts
-                          </span>
-                        </div>
-                        <div className="cd-detail-item">
-                          <span className="cd-detail-label">Prerequisite</span>
-                          <span className="cd-detail-value">{prereqLabel}</span>
-                        </div>
-                        <div className="cd-detail-item">
-                          <span className="cd-detail-label">Assessment type</span>
-                          <span className="cd-detail-value">{level.assessmentType || "MCQ"}</span>
-                        </div>
-                        <div className="cd-level-action">
-                          {canRegister ? (
-                            <button
-                              type="button"
-                              className="cd-register-btn"
-                              onClick={() => handleRegisterLevel(index)}
-                              disabled={registeringLevel !== null}
-                            >
-                              {registeringLevel === index ? "Registering…" : actionLabel}
-                            </button>
-                          ) : !prereqCleared ? (
-                            <button
-                              type="button"
-                              className="cd-register-btn"
-                              disabled
-                              style={{ opacity: 0.7, cursor: "not-allowed" }}
-                            >
-                              Complete prerequisite first
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-                </div>
-              )}
-            </div>
-
-            {levelFilterName && (
-              <div className="cd-right">
-                <div className="cd-details-card">
-                  <h3 className="cd-card-title">Course Details</h3>
-                  <p className="cd-course-name">{levels[0]?.name || courseName}</p>
-                  {!bookingForThisCourse && (
-                    <button type="button" className="cd-book-slot-btn" onClick={() => setBookSlotOpen(true)}>
-                      Book a Slot
-                    </button>
-                  )}
-                </div>
-
-                {bookingForThisCourse && (
-                  <div className="cd-booked-card">
-                    <h3 className="cd-card-title">Slot Booked</h3>
-                    <p><strong>Venue:</strong> {bookingForThisCourse.venue_label}</p>
-                    <p><strong>Time:</strong> {bookingForThisCourse.time_label}</p>
-                    {bookingForThisCourse.booked_at && (
-                      <p><strong>Booked at:</strong> {new Date(bookingForThisCourse.booked_at).toLocaleString()}</p>
-                    )}
-                  </div>
-                )}
-
-                <div className="cd-materials-card">
-                  <h3 className="cd-card-title">Course Materials</h3>
-                  <div className="cd-material-row">
-                    <span className="cd-material-label">1. Materials</span>
-                    <span className="cd-material-count">Materials: 0 / 0</span>
-                    <ChevronDown size={16} className="cd-material-chevron" />
-                  </div>
-                </div>
+                  );
+                })}
               </div>
             )}
           </div>

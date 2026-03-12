@@ -190,6 +190,7 @@ exports.getMyCourses = async (req, res) => {
         image: c.course_logo || "",
         completed: p.status === "completed",
         levelName,
+        levelIndex: p.level_index,
       });
     }
 

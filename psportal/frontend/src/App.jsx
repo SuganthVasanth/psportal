@@ -6,6 +6,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import OAuthSuccess from "./pages/OAuthSuccess";
 import CoursesAvailable from "./pages/CoursesAvailable";
 import CourseDetails from "./pages/CourseDetails";
+import CourseLevelContent from "./pages/CourseLevelContent";
 import MyCourses from "./pages/MyCourses";
 import PSActivity from "./pages/PSActivity";
 import MovementPass from "./pages/MovementPass";
@@ -95,6 +96,16 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CourseDetails />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Course Level Content Route */}
+        <Route
+          path="/course/:courseId/level/:levelIndex"
+          element={
+            <ProtectedRoute>
+              <CourseLevelContent />
             </ProtectedRoute>
           }
         />

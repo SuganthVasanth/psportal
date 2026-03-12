@@ -32,7 +32,7 @@ export default function MyCourses() {
                         });
                     }
                 })
-                .catch(() => {});
+                .catch(() => { });
         }
     }, [registerNo]);
 
@@ -47,7 +47,8 @@ export default function MyCourses() {
                         title: c.title,
                         image: c.image || "",
                         completed: !!c.completed,
-                        levelName: c.levelName || ""
+                        levelName: c.levelName || "",
+                        levelIndex: c.levelIndex !== undefined ? c.levelIndex : 0
                     })));
                 } else {
                     setCourses([]);
@@ -109,7 +110,7 @@ export default function MyCourses() {
                         ) : (
                             courses.map((course) => (
                                 <Link
-                                    to={`/course/${course.id}${course.levelName ? `?level=${encodeURIComponent(course.levelName)}` : ""}`}
+                                    to={`/course/${course.id}/level/${course.levelIndex}`}
                                     className="my-course-card"
                                     key={course.id}
                                 >

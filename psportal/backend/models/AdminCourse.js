@@ -8,6 +8,12 @@ const levelSchema = new mongoose.Schema({
   prerequisiteLevelIndices: [{ type: Number }],
   assessmentType: { type: String, default: "MCQ" },
   topics: [{ type: String }],
+  studyMaterials: [{
+    type: { type: String, enum: ["file", "link"], required: true, default: "link" },
+    title: { type: String, required: true, default: "Study Material" },
+    url: { type: String, required: true, default: "" }
+  }],
+  prerequisiteCourses: [{ type: String }],
 }, { _id: false });
 
 const adminCourseSchema = new mongoose.Schema({
@@ -20,7 +26,6 @@ const adminCourseSchema = new mongoose.Schema({
   activity_points: { type: Number, default: 0 },
   reward_points: { type: Number, default: 0 },
   faculty: { type: String, default: "" },
-  prerequisites: [{ type: String }],
   levels: [levelSchema],
 }, { timestamps: true });
 

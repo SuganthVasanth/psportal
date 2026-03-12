@@ -11,15 +11,19 @@
 }
 
 .page-title {
-    font-size: 24px;
+    /* font-size: 24px; */
     font-weight: 700;
     color: #1a202c;
-    margin-bottom: 8px;
+    margin-bottom: 8px ;
 }
+/* .page-title h1{
+    margin: 0px;
+} */
 
 .page-subtitle {
     font-size: 15px;
     color: #718096;
+    margin: 0;
 }
 
 .filters-card {
