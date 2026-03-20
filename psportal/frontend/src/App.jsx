@@ -21,6 +21,8 @@ import WebPracticeProblem from "./pages/practice/WebPracticeProblem";
 import CodeforcesPractice from "./pages/practice/CodeforcesPractice";
 import Leaderboard from "./pages/practice/Leaderboard";
 import CodeReviewDashboard from "./pages/CodeReviewDashboard";
+import BusTracking from "./pages/staff/BusTracking";
+import BusIncharge from "./pages/staff/BusIncharge";
 import "./App.css";
 
 export default function App() {
@@ -170,6 +172,22 @@ export default function App() {
           element={
             <ProtectedRoute>
               <CodeReviewDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/bus-tracking"
+          element={
+            <ProtectedRoute>
+              <BusTracking />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/staff/bus-incharge"
+          element={
+            <ProtectedRoute>
+              <BusIncharge />
             </ProtectedRoute>
           }
         />

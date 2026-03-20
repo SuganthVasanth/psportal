@@ -166,6 +166,7 @@ export default function CodeforcesPractice() {
                 submitMode="backend"
                 submitMeta={{ level, problemId: selected?.problemId }}
                 problem={selected}
+              resizable={false}
               />
             </div>
           </main>

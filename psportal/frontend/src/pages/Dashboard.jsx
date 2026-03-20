@@ -7,7 +7,7 @@ import StudentDashboard from "./StudentDashboard";
 import StaffDashboardLayout from "./StaffDashboardLayout";
 
 const API_BASE = "http://localhost:5000";
-const STAFF_ROLES = ["mentor", "warden", "technical_faculty", "technical faculty", "non_teaching_faculty"];
+const STAFF_ROLES = ["mentor", "warden", "technical_faculty", "technical faculty", "non_teaching_faculty", "bus_incharge"];
 
 function getRolesFromStorage() {
   try {

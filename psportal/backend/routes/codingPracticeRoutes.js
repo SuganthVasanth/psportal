@@ -6,6 +6,8 @@ const router = express.Router();
 router.get("/problems/:level", codingPracticeController.getProblems);
 router.get("/problem/:problemId", codingPracticeController.getProblemDetails);
 router.get("/testcases/:level/:problemId", codingPracticeController.getTestCases);
+router.get("/submission", codingPracticeController.getSubmission);
+router.get("/submissions/status", codingPracticeController.getSubmissionStatus);
 router.post("/run", codingPracticeController.run);
 router.post("/submit", codingPracticeController.submit);
 

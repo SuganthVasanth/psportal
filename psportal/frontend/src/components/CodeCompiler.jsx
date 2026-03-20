@@ -51,6 +51,7 @@ export default function CodeCompiler({
   submitMeta = null,
   initialLanguage = "c",
   initialCode = "",
+  initialStdin = "",
   editorHeight = "360px",
   resizable = true,
 }) {
@@ -59,7 +60,7 @@ export default function CodeCompiler({
     : "c";
   const [language, setLanguage] = useState(initialLang);
   const [code, setCode] = useState(initialCode || DEFAULT_SNIPPETS[initialLang]);
-  const [stdin, setStdin] = useState("");
+  const [stdin, setStdin] = useState(initialStdin || "");
   const [running, setRunning] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [runResult, setRunResult] = useState(null);
@@ -72,6 +73,7 @@ export default function CodeCompiler({
   const [editorHeightPx, setEditorHeightPx] = useState(() => {
     const fromProp = parseHeightPx(editorHeight, 360);
     if (typeof window === "undefined") return fromProp;
+    if (!resizable) return Math.max(EDITOR_MIN_HEIGHT, Math.min(EDITOR_MAX_HEIGHT, fromProp));
     try {
       const saved = window.localStorage.getItem(EDITOR_HEIGHT_STORAGE_KEY);
       hasStoredHeightRef.current = saved != null;
@@ -83,6 +85,7 @@ export default function CodeCompiler({
   });
   const [editorWidthPx, setEditorWidthPx] = useState(() => {
     if (typeof window === "undefined") return null;
+    if (!resizable) return null;
     try {
       const saved = window.localStorage.getItem(EDITOR_WIDTH_STORAGE_KEY);
       hasStoredWidthRef.current = saved != null && saved !== "";
@@ -100,6 +103,7 @@ export default function CodeCompiler({
   );
 
   useEffect(() => {
+    if (!resizable) return;
     // If parent changes editorHeight, honor it unless user has already resized (stored).
     const fromProp = parseHeightPx(editorHeight, 360);
     if (typeof window === "undefined") {
@@ -114,6 +118,7 @@ export default function CodeCompiler({
   }, [editorHeight]);
 
   useEffect(() => {
+    if (!resizable) return;
     if (typeof window === "undefined") return;
     try {
       if (hasStoredHeightRef.current) {
@@ -127,6 +132,7 @@ export default function CodeCompiler({
   }, [editorHeightPx]);
 
   useEffect(() => {
+    if (!resizable) return;
     if (typeof window === "undefined") return;
     try {
       if (!hasStoredWidthRef.current || editorWidthPx == null) {
@@ -140,6 +146,7 @@ export default function CodeCompiler({
   }, [editorWidthPx]);
 
   useEffect(() => {
+    if (!resizable) return;
     if (typeof window === "undefined") return;
     const keepWithinParent = () => {
       if (editorWidthPx == null || !editorWrapRef.current?.parentElement) return;
@@ -241,10 +248,25 @@ export default function CodeCompiler({
             language_id: languageId,
             level: submitMeta?.level,
             problemId: submitMeta?.problemId,
+            register_no: submitMeta?.register_no,
+            language,
           }),
         });
         const data = await res.json().catch(() => ({}));
         setSubmitResult(data);
+
+        // Allow parent (WebPracticeProblem) to update completion UI / status.
+        if (typeof onSubmit === "function") {
+          const custom = await onSubmit({
+            evaluated: data,
+            code,
+            language,
+            problem,
+            stdin,
+            testCases,
+          });
+          setSubmitResult(custom || data);
+        }
       } else {
         const evaluated = await runAgainstTestCases();
         if (typeof onSubmit === "function") {
@@ -470,7 +492,7 @@ export default function CodeCompiler({
             onChange={(e) => setStdin(e.target.value)}
             className="sa-input"
             rows={5}
-            style={{ width: "100%", marginTop: 6, fontFamily: "ui-monospace,monospace" }}
+            style={{ width: "100%", marginTop: 6, fontFamily: "ui-monospace,monospace", resize: "none" }}
             placeholder="Enter stdin..."
           />
         </div>

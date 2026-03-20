@@ -28,6 +28,8 @@ import {
   PieChart,
   CalendarCheck,
   BarChart2,
+  Bus,
+  Trash2,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -113,6 +115,15 @@ const NAV = [
       { id: "stats-slot", label: "Slot used most often", icon: PieChart, path: "reports-slots" },
       { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2, path: "reports-weekly" },
       { id: "stats-registered", label: "Course registered/attended", icon: CalendarCheck, path: "reports-registered" },
+    ],
+  },
+  {
+    id: "buses",
+    label: "Buses",
+    icon: Bus,
+    sub: [
+      { id: "bus-list", label: "Manage Buses", icon: List, path: "bus-list" },
+      { id: "bus-assign", label: "Assign Students", icon: Users, path: "bus-assign" },
     ],
   },
 ];
@@ -259,6 +270,16 @@ export default function AdminDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
+
+  // Bus management (Admin -> Buses)
+  const [busesList, setBusesList] = useState([]);
+  const [dayscholarsList, setDayscholarsList] = useState([]);
+  const [busMgmtLoading, setBusMgmtLoading] = useState(false);
+  const [studentSearchQuery, setStudentSearchQuery] = useState("");
+  const [studentDeptFilter, setStudentDeptFilter] = useState("");
+  const [selectedStudentIds, setSelectedStudentIds] = useState([]);
+  const [bulkAssignBusId, setBulkAssignBusId] = useState("none");
+
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
@@ -268,6 +289,33 @@ export default function AdminDashboard() {
     itemId: null,
     item: {},
   });
+
+  const busOptions = useMemo(
+    () => [
+      { value: "none", label: "None" },
+      ...(busesList || []).map((bus) => ({
+        value: bus._id,
+        label: `${bus.busNumber} - ${bus.route}`,
+      })),
+    ],
+    [busesList]
+  );
+
+  const filteredDayscholarsForBusAssign = useMemo(() => {
+    const q = (studentSearchQuery || "").trim().toLowerCase();
+    return (dayscholarsList || []).filter((s) => {
+      const matchesSearch =
+        !q ||
+        String(s.register_no || "").toLowerCase().includes(q) ||
+        String(s.name || "").toLowerCase().includes(q);
+      const matchesDept = !studentDeptFilter || s.department === studentDeptFilter;
+      return matchesSearch && matchesDept;
+    });
+  }, [dayscholarsList, studentSearchQuery, studentDeptFilter]);
+
+  const allFilteredSelected =
+    filteredDayscholarsForBusAssign.length > 0 &&
+    selectedStudentIds.length === filteredDayscholarsForBusAssign.length;
 
   const facultyCandidates = usersList.filter((u) =>
     (u.roles || []).some((r) => r.toLowerCase().includes("faculty") || r.toLowerCase().includes("mentor"))
@@ -339,6 +387,35 @@ export default function AdminDashboard() {
     if (activeSub !== "question-form-builder") return;
     refetchQuestionTemplates();
   }, [activeSub, refetchQuestionTemplates]);
+
+  // Bus management data
+  useEffect(() => {
+    if (activeSub !== "bus-list" && activeSub !== "bus-assign") return;
+    let cancelled = false;
+    const load = async () => {
+      setBusMgmtLoading(true);
+      try {
+        const [busesRes, daysRes] = await Promise.all([
+          fetch(`${API_BASE}/api/buses`).then((r) => r.json()).catch(() => []),
+          fetch(`${API_BASE}/api/buses/dayscholars`).then((r) => r.json()).catch(() => []),
+        ]);
+        if (cancelled) return;
+        setBusesList(Array.isArray(busesRes) ? busesRes : []);
+        setDayscholarsList(Array.isArray(daysRes) ? daysRes : []);
+      } catch (_) {
+        if (!cancelled) {
+          setBusesList([]);
+          setDayscholarsList([]);
+        }
+      } finally {
+        if (!cancelled) setBusMgmtLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSub]);
 
   // Combined list for PS Courses page: all Admin (Course details) + all PS courses
   const psCoursesCombinedList = useMemo(() => {
@@ -512,6 +589,21 @@ export default function AdminDashboard() {
         if (!res.ok) throw new Error(data.message || "Failed to save workflow");
         if (itemId) setLeaveWorkflowList((prev) => prev.map((w) => (w.id === itemId ? data : w)));
         else setLeaveWorkflowList((prev) => [...prev, data]);
+      } else if (section === "buses") {
+        const url = itemId ? `${API_BASE}/api/buses/${itemId}` : `${API_BASE}/api/buses`;
+        const res = await fetch(url, {
+          method: itemId ? "PUT" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            busNumber: item.busNumber,
+            route: item.route,
+            incharge_id: item.incharge_id,
+          }),
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Failed to save bus");
+        if (itemId) setBusesList((prev) => prev.map((b) => (b._id === itemId ? data : b)));
+        else setBusesList((prev) => [...prev, data]);
       } else if (section === "ps-courses") {
         const token = localStorage.getItem("token");
         const url = itemId ? `${API_BASE}/api/ps-courses/${itemId}` : `${API_BASE}/api/ps-courses`;
@@ -549,6 +641,11 @@ export default function AdminDashboard() {
     else if (section === "slots") setSlotsList((prev) => prev.filter((s) => s.id !== itemId));
     else if (section === "leave-types") setLeaveTypesList((prev) => prev.filter((l) => l.id !== itemId));
     else if (section === "leave-workflow") setLeaveWorkflowList((prev) => prev.filter((w) => w.id !== itemId));
+    else if (section === "buses") {
+      fetch(`${API_BASE}/api/buses/${itemId}`, { method: "DELETE" })
+        .then(() => setBusesList((prev) => prev.filter((b) => b._id !== itemId)))
+        .catch((err) => alert(err.message));
+    }
     closeEdit();
   };
 
@@ -2095,6 +2192,278 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {/* Nav 7: Bus management */}
+          {activeSub === "bus-list" && (
+            <div className="dashboard-card">
+              <h3 className="card-title">Manage Buses</h3>
+              <p className="card-subtitle">Add, edit, or remove buses and assign staff incharges.</p>
+              <button
+                type="button"
+                className="sa-btn sa-btn-primary"
+                style={{ marginBottom: 16 }}
+                onClick={() =>
+                  openAdd("buses", {
+                    busNumber: "",
+                    route: "",
+                    incharge_id: "",
+                  })
+                }
+              >
+                <Plus size={16} /> Add Bus
+              </button>
+              <div className="sa-table-wrap">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th>Bus Number</th>
+                      <th>Route</th>
+                      <th>Incharge</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {busMgmtLoading ? (
+                      <tr>
+                        <td colSpan={4} style={{ color: "#64748b" }}>
+                          Loading buses...
+                        </td>
+                      </tr>
+                    ) : (
+                      (busesList || []).map((bus) => (
+                        <tr key={bus._id}>
+                          <td>{bus.busNumber}</td>
+                          <td>{bus.route}</td>
+                          <td>{bus.incharge_id?.name || bus.incharge_id?.email || "Unassigned"}</td>
+                          <td>
+                            <button
+                              type="button"
+                              className="sa-btn sa-btn-sm"
+                              onClick={() =>
+                                openEdit("buses", {
+                                  ...bus,
+                                  id: bus._id,
+                                  incharge_id: bus.incharge_id?._id || bus.incharge_id || "",
+                                })
+                              }
+                              title="Edit"
+                            >
+                              <Pencil size={14} />
+                            </button>
+                            <button
+                              type="button"
+                              className="sa-btn sa-btn-sm"
+                              style={{ marginLeft: 8, color: "#dc2626" }}
+                              onClick={() => deleteItem("buses", bus._id)}
+                              title="Delete"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {activeSub === "bus-assign" && (
+            <div className="dashboard-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <h3 className="card-title">Assign Students to Buses</h3>
+                  <p className="card-subtitle">Select students to assign them to buses in bulk or individually.</p>
+                </div>
+                <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    placeholder="Search Register No / Name..."
+                    className="sa-input"
+                    style={{ maxWidth: 220 }}
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                  />
+                  <select
+                    className="sa-input"
+                    style={{ maxWidth: 200 }}
+                    value={studentDeptFilter}
+                    onChange={(e) => setStudentDeptFilter(e.target.value)}
+                  >
+                    <option value="">All Departments</option>
+                    {[...new Set((dayscholarsList || []).map((s) => s.department))]
+                      .filter(Boolean)
+                      .map((dept) => (
+                        <option key={dept} value={dept}>
+                          {dept}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedStudentIds.length > 0 && (
+                <div
+                  style={{
+                    background: "#f8fafc",
+                    padding: "12px 20px",
+                    borderRadius: 12,
+                    marginBottom: 16,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    border: "1px solid #e2e8f0",
+                    flexWrap: "wrap",
+                  }}
+                >
+                  <span style={{ fontSize: 14, fontWeight: 600, color: "#475569" }}>
+                    {selectedStudentIds.length} students selected
+                  </span>
+                  <span style={{ fontSize: 13, color: "#64748b" }}>Assign to:</span>
+                  <select
+                    className="sa-input"
+                    style={{ width: 220 }}
+                    value={bulkAssignBusId}
+                    onChange={async (e) => {
+                      const busId = e.target.value;
+                      setBulkAssignBusId(busId);
+                      if (!busId) return;
+                      if (!window.confirm(`Assign ${selectedStudentIds.length} students to this bus?`)) return;
+                      try {
+                        const res = await fetch(`${API_BASE}/api/buses/bulk-assign`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            studentIds: selectedStudentIds,
+                            busId: busId === "none" ? null : busId,
+                          }),
+                        });
+                        if (!res.ok) throw new Error("Bulk assign failed");
+
+                        const busObj = busId === "none" ? null : (busesList || []).find((b) => b._id === busId) || null;
+                        setDayscholarsList((prev) =>
+                          prev.map((s) =>
+                            selectedStudentIds.includes(s._id)
+                              ? { ...s, bus_id: busObj ? busObj : null }
+                              : s
+                          )
+                        );
+                        setSelectedStudentIds([]);
+                        setBulkAssignBusId("none");
+                      } catch (err) {
+                        alert(err.message);
+                      }
+                    }}
+                  >
+                    {busOptions.map((b) => (
+                      <option key={b.value} value={b.value}>
+                        {b.label}
+                      </option>
+                    ))}
+                  </select>
+                  <button type="button" className="sa-btn sa-btn-sm" onClick={() => setSelectedStudentIds([])}>
+                    Clear Selection
+                  </button>
+                </div>
+              )}
+
+              <div className="sa-table-wrap">
+                <table className="sa-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: 50 }}>
+                        <input
+                          type="checkbox"
+                          checked={allFilteredSelected}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setSelectedStudentIds(filteredDayscholarsForBusAssign.map((s) => s._id));
+                            } else {
+                              setSelectedStudentIds([]);
+                            }
+                          }}
+                        />
+                      </th>
+                      <th>Register No</th>
+                      <th>Name</th>
+                      <th>Department</th>
+                      <th>Status</th>
+                      <th>Assigned Bus</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredDayscholarsForBusAssign.map((student) => {
+                      const isAssigned = !!student.bus_id;
+                      return (
+                        <tr key={student._id}>
+                          <td>
+                            <input
+                              type="checkbox"
+                              checked={selectedStudentIds.includes(student._id)}
+                              onChange={(e) => {
+                                if (e.target.checked) setSelectedStudentIds((prev) => [...prev, student._id]);
+                                else setSelectedStudentIds((prev) => prev.filter((id) => id !== student._id));
+                              }}
+                            />
+                          </td>
+                          <td>
+                            <strong>{student.register_no}</strong>
+                          </td>
+                          <td>{student.name}</td>
+                          <td>
+                            <span style={{ fontSize: 13, color: "#64748b" }}>{student.department}</span>
+                          </td>
+                          <td>
+                            <span className={`sa-badge ${isAssigned ? "sa-badge-success" : "sa-badge-neutral"}`}>
+                              {isAssigned ? "Assigned" : "Not Assigned"}
+                            </span>
+                          </td>
+                          <td>
+                            <select
+                              className="sa-input"
+                              style={{ width: "100%", maxWidth: 200 }}
+                              value={student.bus_id?._id || student.bus_id || "none"}
+                              onChange={async (e) => {
+                                const nextBusId = e.target.value;
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/buses/assign-student`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json" },
+                                    body: JSON.stringify({
+                                      studentId: student._id,
+                                      busId: nextBusId === "none" ? null : nextBusId,
+                                    }),
+                                  });
+                                  if (!res.ok) throw new Error("Failed to assign");
+                                  const busObj = nextBusId === "none" ? null : (busesList || []).find((b) => b._id === nextBusId) || null;
+                                  setDayscholarsList((prev) =>
+                                    prev.map((s) =>
+                                      s._id === student._id
+                                        ? { ...s, bus_id: busObj ? busObj : null }
+                                        : s
+                                    )
+                                  );
+                                } catch (err) {
+                                  alert(err.message);
+                                }
+                              }}
+                            >
+                              {busOptions.map((b) => (
+                                <option key={b.value} value={b.value}>
+                                  {b.label}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
           {!NAV.flatMap((s) => s.sub).some((s) => s.id === activeSub) && (
             <div className="dashboard-card">
               <p className="sa-empty">Select a section from the sidebar to view and manage content.</p>
@@ -2663,6 +3032,44 @@ export default function AdminDashboard() {
                 <>
                   <div className="sa-form-group"><label>Leave type</label><input type="text" value={editModal.item.leaveType || ""} onChange={(e) => setEditField("leaveType", e.target.value)} placeholder="e.g. Sick Leave" /></div>
                   <div className="sa-form-group"><label>Workflow</label><input type="text" value={editModal.item.workflow || ""} onChange={(e) => setEditField("workflow", e.target.value)} placeholder="e.g. Mentor → Warden" /></div>
+                </>
+              )}
+              {editModal.section === "buses" && (
+                <>
+                  <div className="sa-form-group">
+                    <label>Bus Number</label>
+                    <input
+                      type="text"
+                      value={editModal.item.busNumber || ""}
+                      onChange={(e) => setEditField("busNumber", e.target.value)}
+                      placeholder="e.g. B101"
+                    />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Route</label>
+                    <input
+                      type="text"
+                      value={editModal.item.route || ""}
+                      onChange={(e) => setEditField("route", e.target.value)}
+                      placeholder="e.g. Coimbatore - BITS"
+                    />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Incharge Staff</label>
+                    <select
+                      value={editModal.item.incharge_id?._id || editModal.item.incharge_id || ""}
+                      onChange={(e) => setEditField("incharge_id", e.target.value)}
+                    >
+                      <option value="">Select Incharge staff</option>
+                      {usersList
+                        .filter((u) => !(u.roles || []).some((r) => String(r).toLowerCase() === "student"))
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name || u.email}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </>
               )}
             </div>

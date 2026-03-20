@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, NavLink } from "react-router-dom";
-import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound } from "lucide-react";
+import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound, Bus, MapPin } from "lucide-react";
 import "./SuperAdminDashboard.css";
 import "./UserDashboard.css";
 import StaffMentorMentees from "./StaffMentorMentees";
@@ -11,6 +11,7 @@ import StaffHostelManagerWardens from "./staff/StaffHostelManagerWardens";
 import StaffSecurityLeaves from "./staff/StaffSecurityLeaves";
 import StaffSecurityBiometric from "./staff/StaffSecurityBiometric";
 import StaffWardenLeaveApprovals from "./staff/StaffWardenLeaveApprovals";
+import BusIncharge from "./staff/BusIncharge";
 import FacultyDashboard from "./FacultyDashboard";
 import StaffFacultyCodeReview from "./StaffFacultyCodeReview";
 import StaffFacultyStudentAnswers from "./StaffFacultyStudentAnswers";
@@ -69,6 +70,13 @@ const STAFF_NAV = [
       { id: "biometric", label: "Biometric log", path: "/dashboard/security/biometric", icon: Fingerprint },
     ],
   },
+  {
+    id: "bus-incharge",
+    label: "Bus Incharge",
+    icon: Bus,
+    roleKey: "bus_incharge",
+    sub: [{ id: "tracking", label: "Live tracking", path: "/dashboard/bus-incharge/tracking", icon: MapPin }],
+  },
 ];
 
 function getStaffNavSections(roles) {
@@ -103,6 +111,11 @@ export default function StaffDashboardLayout() {
     }
   }, [data?.user?.roles]);
 
+  useEffect(() => {
+    const uid = data?.user?.id;
+    if (uid) localStorage.setItem("userId", uid);
+  }, [data?.user?.id]);
+
   const token = localStorage.getItem("token");
   const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
@@ -135,11 +148,16 @@ export default function StaffDashboardLayout() {
     if (loading || error || !data) return;
     const path = location.pathname.replace(/\/+$/, "") || "";
     if (path === "/dashboard" && staffNavSections.length > 0) {
-      const first = staffNavSections[0];
+      const first = staffNavSections.find((s) => s.id === "bus-incharge") || staffNavSections[0];
       if (first.sub?.length) navigate(first.sub[0].path, { replace: true });
       return;
     }
-    if (path === "/dashboard/mentor" || path === "/dashboard/warden" || path === "/dashboard/faculty") {
+    if (
+      path === "/dashboard/mentor" ||
+      path === "/dashboard/warden" ||
+      path === "/dashboard/faculty" ||
+      path === "/dashboard/bus-incharge"
+    ) {
       const section = staffNavSections.find((s) => s.id === pathSection);
       if (section?.sub?.length) navigate(section.sub[0].path, { replace: true });
     }
@@ -274,6 +292,7 @@ export default function StaffDashboardLayout() {
               <StaffSecurityLeaves data={data} selectedRegisterNo={securitySelectedRegisterNo} />
             )}
             {showNav && pathSection === "security" && pathSub === "biometric" && <StaffSecurityBiometric data={data} />}
+            {showNav && pathSection === "bus-incharge" && pathSub === "tracking" && <BusIncharge />}
           </div>
         </main>
       </div>

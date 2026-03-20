@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import StudentLayout from "../../components/StudentLayout";
-import { useNavigate } from "react-router-dom";
+// no react-router navigation needed (Solve opens in a new tab)
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 const LEVEL_OPTIONS = [
@@ -9,24 +9,15 @@ const LEVEL_OPTIONS = [
   { value: 3, label: "Level 3" },
 ];
 
-function getStatus(level, problemId) {
-  const key = `cf:${level}:${problemId}`;
-  try {
-    const raw = localStorage.getItem("codeforcesPracticeStatus");
-    const parsed = raw ? JSON.parse(raw) : {};
-    const s = parsed?.[key]?.status;
-    return s || "Not attempted";
-  } catch {
-    return "Not attempted";
-  }
-}
-
 export default function WebPractice() {
-  const navigate = useNavigate();
   const [level, setLevel] = useState(1);
   const [query, setQuery] = useState("");
   const [problems, setProblems] = useState([]);
+  const [statusMap, setStatusMap] = useState({});
+  const [loadingStatus, setLoadingStatus] = useState(false);
+  const [completedOnly, setCompletedOnly] = useState(false);
   const [loading, setLoading] = useState(true);
+  const registerNo = (localStorage.getItem("register_no") || "").trim();
 
   useEffect(() => {
     const fetchProblems = async () => {
@@ -44,16 +35,53 @@ export default function WebPractice() {
     fetchProblems();
   }, [level]);
 
+  useEffect(() => {
+    const fetchStatuses = async () => {
+      if (!registerNo) {
+        setStatusMap({});
+        return;
+      }
+      setLoadingStatus(true);
+      try {
+        const url = `${API_BASE}/api/coding/submissions/status?level=${level}&register_no=${encodeURIComponent(registerNo)}`;
+        const res = await fetch(url);
+        const data = await res.json().catch(() => ({ statuses: [] }));
+        const map = {};
+        if (Array.isArray(data?.statuses)) {
+          for (const s of data.statuses) {
+            map[s.problemId] = s;
+          }
+        }
+        setStatusMap(map);
+      } catch {
+        setStatusMap({});
+      } finally {
+        setLoadingStatus(false);
+      }
+    };
+    fetchStatuses();
+  }, [level, registerNo]);
+
   const filtered = useMemo(() => {
     const q = (query || "").trim().toLowerCase();
-    return (problems || []).filter((p) => {
+    return (problems || [])
+      .filter((p) => {
       if (!q) return true;
       return (
         (p.title || "").toLowerCase().includes(q) ||
         (Array.isArray(p.tags) ? p.tags.join(" ").toLowerCase().includes(q) : false)
       );
-    });
-  }, [problems, query]);
+      })
+      .filter((p) => {
+        if (!completedOnly) return true;
+        return !!statusMap?.[p.problemId]?.isAccepted;
+      });
+  }, [problems, query, statusMap, completedOnly]);
+
+  const solveInNewTab = (problemId) => {
+    const url = `${window.location.origin}/web-practice/${level}/${encodeURIComponent(problemId)}`;
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   return (
     <StudentLayout>
@@ -83,6 +111,17 @@ export default function WebPractice() {
                 </button>
               ))}
             </div>
+          </div>
+          <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
+              <input
+                type="checkbox"
+                checked={completedOnly}
+                onChange={(e) => setCompletedOnly(e.target.checked)}
+              />
+              <span style={{ fontSize: 13, color: "#334155" }}>Completed only</span>
+            </label>
+            {loadingStatus && <span style={{ fontSize: 13, color: "#64748b" }}>Loading completion status...</span>}
           </div>
         </div>
 
@@ -117,18 +156,18 @@ export default function WebPractice() {
                     <td>{Array.isArray(p.tags) && p.tags.length ? p.tags.slice(0, 2).join(", ") : "—"}</td>
                     <td>
                       <span className="sa-pill" style={{ background: "#f1f5f9", color: "#334155" }}>
-                        {getStatus(level, p.problemId)}
+                        {statusMap?.[p.problemId]?.isAccepted
+                          ? "Passed"
+                          : statusMap?.[p.problemId]?.lastVerdict === "Failed"
+                            ? "Attempted"
+                            : "Not attempted"}
                       </span>
                     </td>
                     <td>
                       <button
                         type="button"
                         className="sa-btn sa-btn-sm sa-btn-primary"
-                        onClick={() =>
-                          navigate(`/web-practice/${level}/${encodeURIComponent(p.problemId)}`, {
-                            state: { selectedProblem: p },
-                          })
-                        }
+                        onClick={() => solveInNewTab(p.problemId)}
                       >
                         Solve
                       </button>

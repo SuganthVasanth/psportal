@@ -1,11 +1,21 @@
 const express = require("express");
 const cors = require("cors");
+const http = require("http");
+const { Server } = require("socket.io");
 const passport = require("passport");
 
 require("dotenv").config();
 require("./config/passport");
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+});
+app.set("io", io);
 
 const connectDB = require("./config/db");
 const { seedDefaultQuestionTemplates } = require("./templates/seedDefaultQuestionTemplates");
@@ -90,6 +100,10 @@ app.use("/api/leaves", leaveRoutes);
 const attendanceRoutes = require("./routes/attendanceRoutes");
 app.use("/api/attendance", attendanceRoutes);
 
+// Bus routes + tracking
+const busRoutes = require("./routes/busRoutes");
+app.use("/api/buses", busRoutes);
+
 // Practice / coding: courses, levels, problems, daily task, streak, submissions, leaderboard
 const practiceRoutes = require("./routes/practiceRoutes");
 app.use("/api/practice", practiceRoutes);
@@ -110,6 +124,19 @@ app.use("/api/coding", codingPracticeRoutes);
 const seedRoutes = require("./routes/seedRoutes");
 app.use("/api/seed", seedRoutes);
 
-app.listen(5000, "0.0.0.0", () => {
+io.on("connection", (socket) => {
+  socket.on("join-bus", (busId) => {
+    if (!busId) return;
+    socket.join(`bus-${busId}`);
+  });
+
+  socket.on("update-location", (data) => {
+    const { busId, latitude, longitude } = data || {};
+    if (!busId || latitude == null || longitude == null) return;
+    io.to(`bus-${busId}`).emit("location-updated", { latitude, longitude });
+  });
+});
+
+server.listen(5000, "0.0.0.0", () => {
   console.log("Server running on http://localhost:5000");
 });

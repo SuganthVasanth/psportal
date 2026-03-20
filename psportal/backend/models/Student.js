@@ -12,7 +12,11 @@ const studentSchema = new mongoose.Schema({
     warden_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     type: { type: String, enum: ['hosteler', 'dayscholar'], default: 'dayscholar' },
     room_number: { type: String, default: '' },
-    biometric_details: { type: String, default: '' }
+    biometric_details: { type: String, default: '' },
+    bus_id: { type: mongoose.Schema.Types.ObjectId, ref: "Bus" },
+    total_reward_points: { type: Number, default: 0 },
+    redeemed_reward_points: { type: Number, default: 0 },
+    year: { type: String, default: "III" }
 }, {
     timestamps: true
 });

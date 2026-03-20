@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import StudentLayout from "../../components/StudentLayout";
 import CodeCompiler from "../../components/CodeCompiler";
@@ -6,28 +6,22 @@ import "./WebPracticeProblem.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
-function updateStatus(level, problemId, status) {
-  const key = `cf:${level}:${problemId}`;
-  try {
-    const raw = localStorage.getItem("codeforcesPracticeStatus");
-    const parsed = raw ? JSON.parse(raw) : {};
-    parsed[key] = { status, updatedAt: Date.now() };
-    localStorage.setItem("codeforcesPracticeStatus", JSON.stringify(parsed));
-  } catch {
-    // no-op
-  }
-}
-
 export default function WebPracticeProblem() {
   const { level, problemId } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
   const levelNum = Math.max(1, Math.min(3, parseInt(level, 10) || 1));
+  const registerNo = (localStorage.getItem("register_no") || "").trim();
   const [problem, setProblem] = useState(null);
   const [details, setDetails] = useState(null);
   const [testCases, setTestCases] = useState([]);
+  const [savedSubmission, setSavedSubmission] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const lastSavedText = savedSubmission?.lastSubmittedAt
+    ? new Date(savedSubmission.lastSubmittedAt).toLocaleString()
+    : "";
 
   useEffect(() => {
     const load = async () => {
@@ -58,17 +52,29 @@ export default function WebPracticeProblem() {
         );
         setTestCases(Array.isArray(casesData) ? casesData : []);
         setDetails(detailsData && typeof detailsData === "object" ? detailsData : null);
+
+        if (registerNo) {
+          const subRes = await fetch(
+            `${API_BASE}/api/coding/submission?level=${levelNum}&problemId=${encodeURIComponent(problemId)}&register_no=${encodeURIComponent(registerNo)}`
+          );
+          const subData = await subRes.json().catch(() => ({}));
+          if (subData?.exists) setSavedSubmission(subData);
+          else setSavedSubmission(null);
+        } else {
+          setSavedSubmission(null);
+        }
       } catch (e) {
         setError("Failed to load problem.");
         setProblem(null);
         setDetails(null);
         setTestCases([]);
+        setSavedSubmission(null);
       } finally {
         setLoading(false);
       }
     };
     load();
-  }, [levelNum, problemId, location?.state]);
+  }, [levelNum, problemId, location?.state, registerNo]);
 
   if (loading) {
     return (
@@ -93,8 +99,17 @@ export default function WebPracticeProblem() {
     );
   }
 
-  const handleSubmit = async ({ evaluated }) => {
-    updateStatus(levelNum, problem.problemId, evaluated?.success ? "Passed" : "Failed");
+  const handleSubmit = async ({ evaluated, code, language, stdin }) => {
+    const verdict = evaluated?.verdict || (evaluated?.success ? "Accepted" : "Failed");
+    setSavedSubmission((prev) => ({
+      ...(prev || {}),
+      code: code ?? prev?.code ?? "",
+      stdin: stdin ?? prev?.stdin ?? "",
+      language: language ?? prev?.language ?? "c",
+      isAccepted: verdict === "Accepted" ? true : prev?.isAccepted ?? false,
+      lastVerdict: verdict,
+      lastSubmittedAt: new Date().toISOString(),
+    }));
     return evaluated;
   };
 
@@ -117,6 +132,13 @@ export default function WebPracticeProblem() {
                   Rating {problem.rating}
                 </span>
               )}
+              <span
+                className={`sa-pill web-problem-pill ${
+                  savedSubmission?.isAccepted ? "web-problem-pill-success" : "web-problem-pill-neutral"
+                }`}
+              >
+                {savedSubmission?.isAccepted ? "Completed" : "In progress"}
+              </span>
             </div>
             <a
               href={problem.link}
@@ -127,9 +149,40 @@ export default function WebPracticeProblem() {
               Open on Codeforces
             </a>
           </div>
+          {savedSubmission && (
+            <div className="web-problem-meta-row">
+              <span className="web-meta-label">Last verdict:</span>
+              <span className={savedSubmission?.isAccepted ? "web-meta-success" : "web-meta-muted"}>
+                {savedSubmission?.lastVerdict || "Attempted"}
+              </span>
+              {lastSavedText && (
+                <>
+                  <span className="web-meta-dot">-</span>
+                  <span className="web-meta-muted">Saved on {lastSavedText}</span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="practice-problem-layout web-problem-layout">
+          <div className="practice-problem-right web-problem-right-sticky web-problem-compiler-first">
+            <CodeCompiler
+              key={`${levelNum}-${problem.problemId}`}
+              problem={problem}
+              testCases={testCases}
+              onSubmit={handleSubmit}
+              showSubmit
+              submitMode="backend"
+              submitMeta={{ level: levelNum, problemId: problem.problemId, register_no: registerNo }}
+              initialLanguage={savedSubmission?.language || "c"}
+              initialCode={savedSubmission?.code || ""}
+              initialStdin={savedSubmission?.stdin || ""}
+              resizable={false}
+              editorHeight="560px"
+            />
+          </div>
+
           <div className="practice-problem-left">
             <div className="dashboard-card web-problem-card">
               <h3 className="card-title web-problem-card-title">{problem.title}</h3>
@@ -190,19 +243,6 @@ export default function WebPracticeProblem() {
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="practice-problem-right">
-            <CodeCompiler
-              problem={problem}
-              testCases={testCases}
-              onSubmit={handleSubmit}
-              showSubmit
-              submitMode="backend"
-              submitMeta={{ level: levelNum, problemId: problem.problemId }}
-              initialLanguage="c"
-              editorHeight="560px"
-            />
           </div>
         </div>
       </div>
