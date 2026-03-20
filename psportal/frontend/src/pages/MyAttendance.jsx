@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import StudentSidebar from "../components/StudentSidebar";
+import StudentLayout from "../components/StudentLayout";
 import AttendanceDetails from "../components/AttendanceDetails";
 import "./MyLeaves.css";
 
@@ -35,19 +35,16 @@ export default function MyAttendance() {
   }, [registerNo]);
 
   return (
-    <div className="dashboard-layout leaves-layout">
-      <StudentSidebar />
-      <main className="dashboard-main-area leaves-main">
-        <div className="leaves-container">
-          <div className="leaves-header">
-            <h1 className="leaves-title">My Attendance</h1>
-            <p className="leaves-subtitle">View your daily attendance and session-wise status.</p>
-          </div>
-          {loading && <div className="leaves-loading">Loading attendance…</div>}
-          {error && <div className="leaves-error">{error}</div>}
-          {!loading && !error && <AttendanceDetails attendance={attendance} />}
+    <StudentLayout>
+      <div className="leaves-container leaves-main">
+        <div className="leaves-header">
+          <h1 className="leaves-title">My Attendance</h1>
+          <p className="leaves-subtitle">View your daily attendance and session-wise status.</p>
         </div>
-      </main>
-    </div>
+        {loading && <div className="leaves-loading">Loading attendance…</div>}
+        {error && <div className="leaves-error">{error}</div>}
+        {!loading && !error && <AttendanceDetails attendance={attendance} />}
+      </div>
+    </StudentLayout>
   );
 }

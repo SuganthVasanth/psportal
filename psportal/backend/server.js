@@ -25,7 +25,7 @@ const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 app.get("/", (req, res) => {
-  res.send("PS Portal Backend Running 🚀");
+  res.send("PS Portal Backend Running ");
 });
 
 // Use your auth routes instead of duplicating them
@@ -89,6 +89,22 @@ app.use("/api/leaves", leaveRoutes);
 // Attendance: student attendance by register_no
 const attendanceRoutes = require("./routes/attendanceRoutes");
 app.use("/api/attendance", attendanceRoutes);
+
+// Practice / coding: courses, levels, problems, daily task, streak, submissions, leaderboard
+const practiceRoutes = require("./routes/practiceRoutes");
+app.use("/api/practice", practiceRoutes);
+
+// External coding questions (LeetCode etc.)
+const externalCodingRoutes = require("./routes/externalCodingRoutes");
+app.use("/api/external", externalCodingRoutes);
+
+// C compiler: run C code (temp dir, gcc, timeout)
+const compilerRoutes = require("./routes/compilerRoutes");
+app.use("/api/compiler", compilerRoutes);
+
+// Coding practice: Codeforces problems + Judge0 run/submit (no DB for questions)
+const codingPracticeRoutes = require("./routes/codingPracticeRoutes");
+app.use("/api/coding", codingPracticeRoutes);
 
 // Seed: push fake students (and their courses, points) into MongoDB
 const seedRoutes = require("./routes/seedRoutes");

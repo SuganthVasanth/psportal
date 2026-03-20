@@ -1,6 +1,17 @@
 import React from "react";
 import MCQ from "../questionComponents/MCQ";
 import MatchFollowing from "../questionComponents/MatchFollowing";
+import MatchFollowingStudent from "../questionComponents/MatchFollowingStudent";
+import FillBlank from "../questionComponents/FillBlank";
+import NumericAnswer from "../questionTypes/NumericAnswer";
+import ArrangeOrder from "../questionTypes/ArrangeOrder";
+import ClozePassage from "../questionTypes/ClozePassage";
+import MatrixMCQ from "../questionTypes/MatrixMCQ";
+import ImageQuestion from "../questionTypes/ImageQuestion";
+import FileUploadQuestion from "../questionTypes/FileUploadQuestion";
+import CodeOutputQuestion from "../questionTypes/CodeOutputQuestion";
+import DebuggingQuestion from "../questionTypes/DebuggingQuestion";
+import ProgrammingQuestion from "../questionTypes/ProgrammingQuestion";
 const cardClass = "rounded-xl border border-slate-200 bg-white p-4 shadow-sm";
 const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm";
 
@@ -11,12 +22,16 @@ const inputClass = "w-full rounded-lg border border-slate-200 bg-white px-3 py-2
  * - type: question_text | paragraph | input_field | multiple_choice | checkbox_options |
  *         dropdown | image | match_pairs | blank_space | drag_drop_area
  */
+/** When true, question_text and paragraph are read-only (student exam: show question, edit answers only). */
+const CONTENT_ONLY_TYPES = new Set(["question_text", "paragraph", "image"]);
+
 export default function DynamicTemplateRenderer({
   layout = [],
   value = {},
   onChange,
   readOnly = false,
   componentPrefix = "",
+  studentMode = false,
 }) {
   const updateField = (id, fieldValue) => {
     const next = { ...(value || {}), [id]: fieldValue };
@@ -25,12 +40,15 @@ export default function DynamicTemplateRenderer({
 
   const sortedLayout = [...layout].sort((a, b) => (a.y !== b.y ? a.y - b.y : a.x - b.x));
 
+  const isReadOnly = (type) => (studentMode && CONTENT_ONLY_TYPES.has(type)) || readOnly;
+
   return (
     <div className="flex flex-col gap-4">
       {sortedLayout.map((item) => {
         const type = item.type;
         const props = item.properties || {};
         const val = (value || {})[item.id];
+        const itemReadOnly = isReadOnly(type);
         const commonStyle =
           item.width || item.height
             ? { width: item.width, minHeight: item.height }
@@ -50,7 +68,7 @@ export default function DynamicTemplateRenderer({
                 placeholder={props.placeholder || "Question here"}
                 value={val?.value ?? ""}
                 onChange={(e) => updateField(item.id, { value: e.target.value })}
-                readOnly={readOnly}
+                readOnly={itemReadOnly}
               />
             </div>
           );
@@ -62,7 +80,7 @@ export default function DynamicTemplateRenderer({
               {props.label && (
                 <label className="text-sm font-medium text-slate-700">{props.label}</label>
               )}
-              {readOnly ? (
+              {itemReadOnly ? (
                 <p className="mt-1 text-sm text-slate-600">{displayText}</p>
               ) : (
                 <textarea
@@ -90,7 +108,7 @@ export default function DynamicTemplateRenderer({
                 placeholder={props.placeholder}
                 value={val?.value ?? ""}
                 onChange={(e) => updateField(item.id, { value: e.target.value })}
-                readOnly={readOnly}
+                readOnly={itemReadOnly}
               />
             </div>
           );
@@ -102,6 +120,7 @@ export default function DynamicTemplateRenderer({
             options: props.numberOfOptions ?? 4,
             required: props.required,
             prefix: componentPrefix,
+            optionLabels: Array.isArray(props.optionLabels) ? props.optionLabels : undefined,
           };
           return (
             <div key={item.id} style={commonStyle}>
@@ -130,7 +149,7 @@ export default function DynamicTemplateRenderer({
                           : checked.filter((x) => x !== String(i));
                         updateField(item.id, { value: next });
                       }}
-                      readOnly={readOnly}
+                      readOnly={itemReadOnly}
                     />
                     <span className="text-sm">{typeof o === "string" ? o : o?.text}</span>
                   </label>
@@ -151,7 +170,7 @@ export default function DynamicTemplateRenderer({
                 className={inputClass}
                 value={val?.value ?? ""}
                 onChange={(e) => updateField(item.id, { value: e.target.value })}
-                disabled={readOnly}
+                disabled={itemReadOnly}
               >
                 <option value="">{props.placeholder || "Select..."}</option>
                 {opts.map((opt, i) => (
@@ -179,8 +198,93 @@ export default function DynamicTemplateRenderer({
             </div>
           );
         }
+        if (type === "numeric_answer") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <NumericAnswer config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "arrange_order") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <ArrangeOrder config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "cloze_passage") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <ClozePassage config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "matrix_mcq") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <MatrixMCQ config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "image_question") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <ImageQuestion config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "file_upload_question") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <FileUploadQuestion config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "code_output_question") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <CodeOutputQuestion config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "debugging_question") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <DebuggingQuestion config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+            </div>
+          );
+        }
+        if (type === "programming_question") {
+          return (
+            <div key={item.id} style={commonStyle}>
+              <ProgrammingQuestion config={item} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} studentMode={studentMode} />
+            </div>
+          );
+        }
+        if (type === "fill_blank") {
+          const fillConfig = { ...item, numberOfBlanks: props.numberOfBlanks ?? 2, label: props.label };
+          return (
+            <div key={item.id} style={commonStyle}>
+              <FillBlank config={fillConfig} value={val} onChange={(v) => updateField(item.id, v)} />
+            </div>
+          );
+        }
         if (type === "match_pairs") {
-          const config = { ...item, pairs: props.pairs ?? 4, label: props.label, required: props.required };
+          const config = {
+            ...item,
+            pairs: props.pairs ?? 4,
+            label: props.label,
+            required: props.required,
+            leftColumnLabel: props.leftColumnLabel,
+            rightColumnLabel: props.rightColumnLabel,
+          };
+          if (studentMode) {
+            return (
+              <div key={item.id} style={commonStyle}>
+                <MatchFollowingStudent config={config} value={val} onChange={(v) => updateField(item.id, v)} readOnly={itemReadOnly} />
+              </div>
+            );
+          }
           return (
             <div key={item.id} style={commonStyle}>
               <MatchFollowing config={config} value={val} onChange={(v) => updateField(item.id, v)} />

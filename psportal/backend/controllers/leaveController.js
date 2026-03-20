@@ -84,6 +84,52 @@ async function workflowIncludesRole(leaveType, roleKey) {
   return (wf.workflow || "").toLowerCase().includes(roleKey.toLowerCase());
 }
 
+// Derive overall status (Pending / Approved / Rejected) from individual approvals.
+// This is used for student dashboard & history views so that once all
+// required approvers have approved, the student sees "Approved" even if
+// the raw `status` field was not updated.
+function computeOverallStatus(leaveDoc) {
+  if (!leaveDoc) return "Pending";
+
+  // If any role explicitly rejected, overall is Rejected.
+  if (
+    leaveDoc.parentStatus === "Rejected" ||
+    (leaveDoc.mentorApproval && leaveDoc.mentorApproval.status === "Rejected") ||
+    (leaveDoc.wardenApproval && leaveDoc.wardenApproval.status === "Rejected")
+  ) {
+    return "Rejected";
+  }
+
+  const hasMentor = !!leaveDoc.mentorApproval;
+  const hasWarden = !!leaveDoc.wardenApproval;
+
+  // Parent-only flow
+  if (!hasMentor && !hasWarden) {
+    if (leaveDoc.parentStatus === "Approved") return "Approved";
+    return "Pending";
+  }
+
+  // Mentor + Warden flow
+  if (hasMentor && hasWarden) {
+    const m = leaveDoc.mentorApproval.status;
+    const w = leaveDoc.wardenApproval.status;
+    if (m === "Approved" && w === "Approved") return "Approved";
+    return "Pending";
+  }
+
+  // Only Mentor in flow
+  if (hasMentor) {
+    return leaveDoc.mentorApproval.status === "Approved" ? "Approved" : "Pending";
+  }
+
+  // Only Warden in flow
+  if (hasWarden) {
+    return leaveDoc.wardenApproval.status === "Approved" ? "Approved" : "Pending";
+  }
+
+  return "Pending";
+}
+
 /** List only leave types created by admin with status Active. For student Apply Leave dropdown. GET /api/leaves/leave-types */
 exports.getActiveLeaveTypes = async (req, res) => {
   try {
@@ -108,23 +154,26 @@ exports.getMyLeaves = async (req, res) => {
       return days <= 1 ? "1 day" : `${days} days`;
     };
     res.json(
-      list.map((l) => ({
-        id: l._id.toString(),
-        leaveType: l.leaveType,
-        type: l.type,
-        fromDate: formatDate(l.fromDate),
-        toDate: formatDate(l.toDate),
-        fromDateFull: formatDateTime(l.fromDate),
-        toDateFull: formatDateTime(l.toDate),
-        gateOut: l.gateOut || "-",
-        gateIn: l.gateIn || "-",
-        duration: getDuration(l.fromDate, l.toDate),
-        remarks: l.remarks || "-",
-        parentStatus: l.parentStatus || "Pending",
-        status: l.status || "Pending",
-        wardenApproval: l.wardenApproval || null,
-        mentorApproval: l.mentorApproval || null,
-      }))
+      list.map((l) => {
+        const derivedStatus = computeOverallStatus(l);
+        return {
+          id: l._id.toString(),
+          leaveType: l.leaveType,
+          type: l.type,
+          fromDate: formatDate(l.fromDate),
+          toDate: formatDate(l.toDate),
+          fromDateFull: formatDateTime(l.fromDate),
+          toDateFull: formatDateTime(l.toDate),
+          gateOut: l.gateOut || "-",
+          gateIn: l.gateIn || "-",
+          duration: getDuration(l.fromDate, l.toDate),
+          remarks: l.remarks || "-",
+          parentStatus: l.parentStatus || "Pending",
+          status: derivedStatus,
+          wardenApproval: l.wardenApproval || null,
+          mentorApproval: l.mentorApproval || null,
+        };
+      })
     );
   } catch (err) {
     console.error("getMyLeaves error:", err);

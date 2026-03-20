@@ -1,0 +1,83 @@
+/* Shared student portal layout: top bar + sidebar + main area */
+.dashboard-layout.student-portal-layout {
+  min-height: 100vh;
+  background: var(--pastel-bg, #f8fafc);
+  font-family: "Inter", sans-serif;
+}
+
+.student-portal-layout .top-navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  height: 64px;
+  background: var(--pastel-surface, #ffffff);
+  padding: 0 var(--space-10, 40px) 0 var(--space-5, 20px);
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 110;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--pastel-border-soft, #e2e8f0);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.04));
+}
+
+.student-portal-layout .top-nav-brand {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  font-weight: 700;
+  color: var(--pastel-text, #1e293b);
+  font-size: 18px;
+}
+
+.student-portal-layout .top-nav-profile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  background: var(--pastel-surface-soft, #f1f5f9);
+  padding: 6px var(--space-4, 16px) 6px 6px;
+  border-radius: var(--radius-pill, 9999px);
+  border: 1px solid var(--pastel-border-soft, #e2e8f0);
+  transition: box-shadow 0.2s ease;
+}
+.student-portal-layout .top-nav-profile:hover {
+  box-shadow: var(--shadow-sm);
+}
+
+.student-portal-layout .profile-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.student-portal-layout .profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.student-portal-layout .profile-id {
+  font-size: 11px;
+  color: #718096;
+  font-weight: 500;
+}
+
+.student-portal-layout .profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2d3748;
+}
+
+.student-portal-layout .dashboard-main-area {
+  margin-left: 72px;
+  margin-top: 64px;
+  padding: 24px 40px;
+  min-height: calc(100vh - 64px);
+  background: #f5f6fa;
+}
+
+.student-portal-layout .dashboard-container-inner {
+  max-width: 1300px;
+  margin: 0 auto;
+}

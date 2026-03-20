@@ -190,6 +190,7 @@ exports.getMyCourses = async (req, res) => {
                 image: c.course_logo || "",
                 completed: p.status === "completed",
                 levelName,
+                levelIndex: p.level_index,
             });
         }
 
@@ -239,6 +240,11 @@ exports.getDashboardMe = async (req, res) => {
 
     const has = (key) => accesses.includes(key);
 
+    // Debug: high-level user + accesses (helps when checking warden behavior)
+    console.log("DashboardMe userId:", userId?.toString?.() || userId);
+    console.log("DashboardMe roles:", roleNames);
+    console.log("DashboardMe accesses:", accesses);
+
     // Leave types that require mentor/warden (from admin-created workflows)
     const allWorkflows = await LeaveWorkflow.find().lean();
     const leaveTypesWithMentor = allWorkflows
@@ -249,6 +255,18 @@ exports.getDashboardMe = async (req, res) => {
       .filter((w) => (w.workflow || "").toLowerCase().includes("warden"))
       .map((w) => w.leaveType)
       .filter(Boolean);
+    // Order-sensitive helpers for Mentor/Warden flows
+    const mentorBeforeWardenTypes = new Set();
+    const wardenBeforeMentorTypes = new Set();
+    allWorkflows.forEach((w) => {
+      const wf = (w.workflow || "").toLowerCase();
+      const mIdx = wf.indexOf("mentor");
+      const wIdx = wf.indexOf("warden");
+      if (mIdx >= 0 && wIdx >= 0) {
+        if (mIdx < wIdx) mentorBeforeWardenTypes.add(w.leaveType);
+        else if (wIdx < mIdx) wardenBeforeMentorTypes.add(w.leaveType);
+      }
+    });
 
     // Mentees (students where I am mentor)
     if (has("mentees.view") || has("mentees.courses") || has("mentees.reward_points") || has("mentees.activity_points") || has("mentees.leave_approve") || has("mentees.attendance")) {
@@ -287,7 +305,7 @@ exports.getDashboardMe = async (req, res) => {
         payload.mentees.push(row);
       }
 
-      // Leave requests sent to me (assigned mentor): leave types whose workflow includes "mentor"
+      // Leave requests sent to me (assigned mentor)
       if (has("mentees.leave_approve")) {
         const mentorLeavesQuery = {
           $and: [
@@ -299,7 +317,6 @@ exports.getDashboardMe = async (req, res) => {
                   : []),
               ],
             },
-            { leaveType: { $in: leaveTypesWithMentor } },
             {
               $or: [
                 { "mentorApproval.status": { $ne: "Approved" } },
@@ -309,8 +326,24 @@ exports.getDashboardMe = async (req, res) => {
             },
           ],
         };
-        const leaves = await Leave.find(mentorLeavesQuery).sort({ createdAt: -1 }).lean();
-        payload.leave_requests_to_approve.push(...leaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "mentor" })));
+        const leavesRaw = await Leave.find(mentorLeavesQuery).sort({ createdAt: -1 }).lean();
+        payload.leave_requests_to_approve.push(
+          ...leavesRaw.map((l) => {
+            let canAct = true;
+            let blockReason = "";
+            if (wardenBeforeMentorTypes.has(l.leaveType) && (!l.wardenApproval || l.wardenApproval.status !== "Approved")) {
+              canAct = false;
+              blockReason = "Warden approval is required before Mentor can take action on this leave request.";
+            }
+            return {
+              ...l,
+              id: l._id.toString(),
+              approval_type: "mentor",
+              canAct,
+              blockReason,
+            };
+          })
+        );
 
         // Leaves history: same mentor's leaves (workflow includes mentor) already approved/rejected by mentor
         const historyQuery = {
@@ -326,9 +359,19 @@ exports.getDashboardMe = async (req, res) => {
     }
 
     // Ward students (students where I am warden)
-    if (has("ward_students.view") || has("ward_students.room") || has("ward_students.biometric") || has("ward_students.leave_approve")) {
+    if (
+      has("ward_students.view") ||
+      has("ward_students.room") ||
+      has("ward_students.biometric") ||
+      has("ward_students.leave_approve")
+    ) {
       const wards = await Student.find({ warden_id: userId }).lean();
       const wardRegisterNos = wards.map((w) => w.register_no);
+
+      // Debug: warden mapping (exact strings requested)
+      console.log("Warden ID:", userId?.toString?.() || userId);
+      console.log("Ward students:", wards);
+      console.log("Ward register numbers:", wardRegisterNos);
 
       for (const w of wards) {
         const row = {
@@ -341,12 +384,17 @@ exports.getDashboardMe = async (req, res) => {
         payload.ward_students.push(row);
       }
 
-      // Warden leave requests: leave types whose workflow includes "warden"
+      // Warden leave requests: all leaves for students mapped to this warden (or with warden_id = userId).
+      // Workflow order is enforced only at approval time, not when fetching.
       if (has("ward_students.leave_approve") && wardRegisterNos.length) {
         const wardenLeavesQuery = {
           $and: [
-            { register_no: { $in: wardRegisterNos } },
-            { leaveType: { $in: leaveTypesWithWarden } },
+            {
+              $or: [
+                { warden_id: userId },
+                ...(wardRegisterNos.length ? [{ register_no: { $in: wardRegisterNos } }] : []),
+              ],
+            },
             {
               $or: [
                 { "wardenApproval.status": { $ne: "Approved" } },
@@ -356,28 +404,131 @@ exports.getDashboardMe = async (req, res) => {
             },
           ],
         };
-        const leaves = await Leave.find(wardenLeavesQuery).sort({ createdAt: -1 }).lean();
-        payload.leave_requests_to_approve.push(...leaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "warden" })));
 
-        // Warden leave history: workflow includes warden, already approved/rejected by warden
+        // Debug: log the exact query shape before hitting Mongo
+        console.log("Warden leave query:", {
+          warden_id: userId,
+          register_no: { $in: wardRegisterNos },
+        });
+
+        const leavesRaw = await Leave.find(wardenLeavesQuery).sort({ fromDate: -1 }).lean();
+
+        // Debug: raw leaves returned from DB (trimmed)
+        console.log(
+          "Leaves returned from DB (warden pending):",
+          leavesRaw.slice(0, 5).map((l) => ({
+            id: l._id?.toString?.(),
+            register_no: l.register_no,
+            leaveType: l.leaveType,
+            mentorApproval: l.mentorApproval,
+            wardenApproval: l.wardenApproval,
+          }))
+        );
+        payload.leave_requests_to_approve.push(
+          ...leavesRaw.map((l) => {
+            let canAct = true;
+            let blockReason = "";
+            if (mentorBeforeWardenTypes.has(l.leaveType) && (!l.mentorApproval || l.mentorApproval.status !== "Approved")) {
+              canAct = false;
+              blockReason = "Mentor approval is required before Warden can take action on this leave request.";
+            }
+            return {
+              ...l,
+              id: l._id.toString(),
+              approval_type: "warden",
+              canAct,
+              blockReason,
+            };
+          })
+        );
+
+        // Warden leave history: already approved/rejected by this warden
         const wardenHistoryQuery = {
           $and: [
-            { register_no: { $in: wardRegisterNos } },
-            { leaveType: { $in: leaveTypesWithWarden } },
+            {
+              $or: [
+                { warden_id: userId },
+                ...(wardRegisterNos.length ? [{ register_no: { $in: wardRegisterNos } }] : []),
+              ],
+            },
             { "wardenApproval.status": { $in: ["Approved", "Rejected"] } },
           ],
         };
         const wardenHistoryLeaves = await Leave.find(wardenHistoryQuery).sort({ createdAt: -1 }).limit(200).lean();
+
+        console.log(
+          "DashboardMe warden history leaves count:",
+          wardenHistoryLeaves.length,
+          "examples:",
+          wardenHistoryLeaves.slice(0, 3).map((l) => ({
+            id: l._id?.toString?.(),
+            register_no: l.register_no,
+            leaveType: l.leaveType,
+            mentorApproval: l.mentorApproval,
+            wardenApproval: l.wardenApproval,
+          }))
+        );
         payload.leave_history_warden = wardenHistoryLeaves.map((l) => ({ ...l, id: l._id.toString(), approval_type: "warden" }));
       }
     }
 
-    // Dedupe leave_requests_to_approve by _id
+    // Hostel manager view: see all wardens and their wards (room & biometric)
+    if (has("hostel.manage")) {
+      const allWards = await Student.find({ warden_id: { $ne: null } }).populate("warden_id", "name email").lean();
+      const byWarden = new Map();
+      for (const s of allWards) {
+        const wid = s.warden_id?._id?.toString() || String(s.warden_id);
+        if (!wid) continue;
+        if (!byWarden.has(wid)) {
+          byWarden.set(wid, {
+            warden_id: wid,
+            warden_name: s.warden_id?.name || s.warden_id?.email || "Warden",
+            students: [],
+          });
+        }
+        const group = byWarden.get(wid);
+        group.students.push({
+          register_no: s.register_no,
+          name: s.name,
+          department: s.department,
+          room_number: s.room_number || "",
+          biometric_details: s.biometric_details || "",
+        });
+      }
+      payload.hostel_wardens = Array.from(byWarden.values());
+    }
+
+    // Security: approved leaves (searchable in frontend)
+    if (has("security.leaves")) {
+      const allLeaves = await Leave.find({}).sort({ fromDate: -1 }).limit(500).lean();
+      const approved = allLeaves.filter((l) => {
+        const needsMentor = leaveTypesWithMentor.includes(l.leaveType);
+        const needsWarden = leaveTypesWithWarden.includes(l.leaveType);
+        if (needsMentor && (!l.mentorApproval || l.mentorApproval.status !== "Approved")) return false;
+        if (needsWarden && (!l.wardenApproval || l.wardenApproval.status !== "Approved")) return false;
+        return true;
+      });
+      payload.approved_leaves = approved.map((l) => ({
+        id: l._id.toString(),
+        register_no: l.register_no,
+        student_name: l.student_name || "",
+        leaveType: l.leaveType,
+        fromDate: l.fromDate,
+        toDate: l.toDate,
+        remarks: l.remarks || "",
+      }));
+    }
+
+    // Dedupe leave_requests_to_approve by (_id, approval_type) pair.
+    // We want the *same* leave to appear separately for Mentor and Warden,
+    // so we cannot collapse purely by _id.
     const seen = new Set();
     payload.leave_requests_to_approve = payload.leave_requests_to_approve.filter((l) => {
       const id = l._id?.toString?.() || l.id;
-      if (seen.has(id)) return false;
-      seen.add(id);
+      const approvalType = l.approval_type || "";
+      const key = `${id}::${approvalType}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
       return true;
     });
 

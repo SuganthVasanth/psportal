@@ -1,6 +1,6 @@
 .cd-layout {
     min-height: 100vh;
-    background-color: #f7fafc;
+    background: var(--pastel-bg, #f8fafc);
 }
 
 .cd-main {
@@ -8,21 +8,26 @@
 }
 
 .cd-container {
-    padding: 24px 32px;
+    padding: var(--space-6, 24px) var(--space-8, 32px);
     max-width: 1200px;
     margin: 0 auto;
 }
 
-/* Header Card */
+/* Header Card – pastel SaaS */
 .cd-header-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 24px;
+    background: var(--pastel-surface, #fff);
+    border-radius: var(--radius-md, 12px);
+    padding: var(--space-6, 24px);
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-    margin-bottom: 32px;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--pastel-border-soft);
+    margin-bottom: var(--space-8, 32px);
+    transition: box-shadow 0.25s ease;
+}
+.cd-header-card:hover {
+    box-shadow: var(--shadow-md);
 }
 
 .cd-header-info {
@@ -79,11 +84,16 @@
 }
 
 .cd-level-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 20px 24px;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-    border: 1px solid #e2e8f0;
+    background: var(--pastel-surface, #fff);
+    border-radius: var(--radius-md, 12px);
+    padding: var(--space-5, 20px) var(--space-6, 24px);
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--pastel-border-soft);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+.cd-level-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
 
 .cd-level-top {
@@ -102,8 +112,7 @@
 .cd-level-number {
     width: 32px;
     height: 32px;
-    background: #805ad5;
-    /* Purple */
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
     color: #fff;
     border-radius: 50%;
     display: flex;
@@ -111,6 +120,7 @@
     justify-content: center;
     font-weight: 600;
     font-size: 14px;
+    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
 }
 
 .cd-level-title {
@@ -533,40 +543,153 @@
 }
 
 .cd-btn-primary {
-    background: #805ad5;
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
     color: #fff;
     border: none;
-    padding: 10px 20px;
-    border-radius: 8px;
+    padding: var(--space-2, 10px) var(--space-5, 20px);
+    border-radius: var(--radius-sm, 8px);
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .cd-btn-primary:hover:not(:disabled) {
-    background: #6b46c1;
+    transform: scale(1.02);
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
 }
 
 .cd-btn-primary:disabled {
     opacity: 0.7;
     cursor: not-allowed;
+    transform: none;
 }
 
 .cd-btn-secondary {
-    background: #fff;
-    color: #4a5568;
-    border: 1px solid #e2e8f0;
-    padding: 10px 20px;
-    border-radius: 8px;
+    background: var(--pastel-surface, #fff);
+    color: var(--pastel-text-muted);
+    border: 1px solid var(--pastel-border);
+    padding: var(--space-2, 10px) var(--space-5, 20px);
+    border-radius: var(--radius-sm, 8px);
     font-weight: 600;
     font-size: 14px;
     cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease;
 }
 
 .cd-btn-secondary:hover {
-    background: #f7fafc;
+    background: var(--pastel-surface-soft);
+    transform: scale(1.01);
 }
 
 .cd-main {
     margin-top: 70px;
+}
+
+/* Portal banner when slot is active */
+.cd-portal-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    background: linear-gradient(135deg, #e6fffa 0%, #b2f5ea 100%);
+    border: 1px solid #81e6d9;
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin-bottom: 24px;
+}
+
+.cd-launch-portal-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2, 8px);
+    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+    color: #fff;
+    border: none;
+    padding: var(--space-2, 10px) var(--space-5, 20px);
+    border-radius: var(--radius-sm, 8px);
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cd-launch-portal-btn:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+}
+
+.cd-already-attempted {
+    font-weight: 500;
+    color: #744210;
+}
+
+.cd-already-attempted-small {
+    margin: 8px 0 0;
+    font-size: 13px;
+    color: #744210;
+}
+
+/* Exam / Portal view */
+.cd-exam-header {
+    margin-bottom: 24px;
+}
+
+.cd-back-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+    color: #4a5568;
+    border: 1px solid #e2e8f0;
+    padding: 8px 14px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+    margin-bottom: 12px;
+}
+
+.cd-back-btn:hover {
+    background: #f7fafc;
+}
+
+.cd-exam-title {
+    font-size: 22px;
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.cd-questions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    margin-bottom: 32px;
+}
+
+.cd-question-block {
+    background: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.cd-question-heading {
+    font-size: 16px;
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 16px;
+}
+
+.cd-exam-footer {
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+}
+
+.cd-success-msg {
+    color: #276749;
+    background: #c6f6d5;
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-weight: 500;
 }

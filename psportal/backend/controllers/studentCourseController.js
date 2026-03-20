@@ -1,5 +1,6 @@
 const AdminCourse = require("../models/AdminCourse");
 const StudentLevelProgress = require("../models/StudentLevelProgress");
+const StudentExamAttempt = require("../models/StudentExamAttempt");
 
 // Group by course name so same name = one course with combined levels (one card per name)
 function groupCoursesByName(list) {
@@ -117,7 +118,12 @@ exports.getStudentLevelProgress = async (req, res) => {
       if (mergedIndex == null) return null;
       return { level_index: mergedIndex, status: p.status, completed_at: p.completed_at };
     }).filter(Boolean);
-    res.json(out);
+
+    const courseAttempts = await StudentExamAttempt.countDocuments({
+      register_no,
+      course_id: { $in: courseIds },
+    });
+    res.json({ progress: out, courseAttempts });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

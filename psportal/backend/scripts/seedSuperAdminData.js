@@ -20,11 +20,52 @@ const bcrypt = require("bcryptjs");
 const DEFAULT_PASSWORD = "Password@123";
 
 const ROLES = [
-  { role_name: "Student", description: "Can view courses, apply leave", accesses: "courses.view, leave.apply" },
-  { role_name: "Mentor", description: "Can approve leave, view students", accesses: "leave.approve, students.view" },
-  { role_name: "Warden", description: "Hostel warden approvals", accesses: "leave.approve, hostel.view" },
-  { role_name: "Hostel Manager", description: "Manage hostel and leave flow", accesses: "hostel.manage, leave.approve" },
-  { role_name: "Admin", description: "Manage students and courses", accesses: "admin.*" },
+  {
+    role_name: "Student",
+    description: "Can view courses, apply leave",
+    accesses: "courses.view, leave.apply",
+  },
+  {
+    role_name: "Mentor",
+    description: "Can approve leave, view students",
+    // Mentor dashboard permissions
+    accesses: [
+      "mentees.view",
+      "mentees.courses",
+      "mentees.reward_points",
+      "mentees.activity_points",
+      "mentees.leave_approve",
+      "mentees.attendance",
+    ].join(", "),
+  },
+  {
+    role_name: "Warden",
+    description: "Hostel warden approvals",
+    // Warden dashboard permissions
+    accesses: [
+      "ward_students.view",
+      "ward_students.room",
+      "ward_students.biometric",
+      "ward_students.leave_approve",
+    ].join(", "),
+  },
+  {
+    role_name: "Hostel Manager",
+    description: "Manage hostel and leave flow",
+    // Hostel manager dashboard permissions
+    accesses: ["hostel.manage"].join(", "),
+  },
+  {
+    role_name: "Security",
+    description: "View approved leaves and biometric logs",
+    // Security dashboard permissions
+    accesses: ["security.leaves"].join(", "),
+  },
+  {
+    role_name: "Admin",
+    description: "Manage students and courses",
+    accesses: "admin.*",
+  },
 ];
 
 const SAMPLE_USERS = [

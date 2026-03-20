@@ -14,18 +14,26 @@ const cardClass = "rounded-xl border border-[#e2e8f0] bg-[#f4f7fe] p-4 shadow-sm
 const inputClass = "w-full rounded-lg border border-[#e2e8f0] bg-white/80 px-3 py-2.5 text-sm min-w-0";
 
 export default function MCQ({ config = {}, value = {}, onChange }) {
-  const { id: fieldId, label = "Options", required, options: numOptions = 4, prefix } = config;
+  const { id: fieldId, label = "Options", required, options: numOptions = 4, prefix, optionLabels } = config;
   const radioName = `mcq-correct-${prefix || "q"}-${fieldId || "default"}`;
-  const [optionList, setOptionList] = useState(value.options || Array.from({ length: Math.max(1, numOptions) }, (_, i) => ({ text: `Option ${i + 1}`, correct: i === 0 })));
+  const defaultOptions = Array.from({ length: Math.max(1, numOptions) }, (_, i) => ({
+    text: (Array.isArray(optionLabels) && optionLabels[i]) || `Option ${i + 1}`,
+    correct: i === 0,
+  }));
+  const [optionList, setOptionList] = useState(value.options || defaultOptions);
 
   useEffect(() => {
+    const labels = Array.isArray(optionLabels) ? optionLabels : [];
     const next =
       value?.options ||
-      Array.from({ length: Math.max(1, numOptions) }, (_, i) => ({ text: `Option ${i + 1}`, correct: i === 0 }));
+      Array.from({ length: Math.max(1, numOptions) }, (_, i) => ({
+        text: labels[i] || `Option ${i + 1}`,
+        correct: i === 0,
+      }));
     setOptionList(next);
     // Only when switching questions / values
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fieldId, prefix, numOptions, JSON.stringify(value?.options || null)]);
+  }, [fieldId, prefix, numOptions, JSON.stringify(value?.options || null), JSON.stringify(optionLabels || null)]);
 
   const syncValue = (next) => {
     setOptionList(next);

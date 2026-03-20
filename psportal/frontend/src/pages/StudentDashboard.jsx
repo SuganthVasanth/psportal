@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import StudentSidebar from "../components/StudentSidebar";
+import { useNavigate } from "react-router-dom";
+import StudentLayout from "../components/StudentLayout";
 import AttendanceDetails from "../components/AttendanceDetails";
 import axios from "axios";
 import "./StudentDashboard.css";
@@ -9,9 +10,11 @@ const API_BASE = "http://localhost:5000";
 export default function StudentDashboard() {
     const [dashboardData, setDashboardData] = useState(null);
     const [attendance, setAttendance] = useState(null);
+    const [practiceDashboard, setPracticeDashboard] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
     const [showAttendanceView, setShowAttendanceView] = useState(false);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const registerNo = (localStorage.getItem("register_no") || "").trim() || "7376231CS323";
@@ -34,59 +37,127 @@ export default function StudentDashboard() {
                 setAttendance({ percentage: 0, presentDays: 0, absentDays: 0, records: [] });
             }
         };
+        const fetchPracticeDashboard = () => {
+            fetch(`${API_BASE}/api/practice/dashboard?register_no=${encodeURIComponent(registerNo)}`)
+                .then((r) => r.json())
+                .then(setPracticeDashboard)
+                .catch(() => setPracticeDashboard(null));
+        };
         fetchDashboardData();
         fetchAttendance();
+        fetchPracticeDashboard();
     }, []);
 
     if (loading) {
         return (
-            <div className="dashboard-layout" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <StudentSidebar />
-                <h2 style={{ marginLeft: 80 }}>Loading Dashboard...</h2>
-            </div>
+            <StudentLayout>
+                <div className="dashboard-container-inner" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 360 }}>
+                    <h2>Loading Dashboard...</h2>
+                </div>
+            </StudentLayout>
         );
     }
 
     if (error) {
         return (
-            <div className="dashboard-layout" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                <StudentSidebar />
-                <h2 style={{ marginLeft: 80, color: 'red' }}>{error}</h2>
-            </div>
+            <StudentLayout>
+                <div className="dashboard-container-inner" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 360 }}>
+                    <h2 style={{ color: 'red' }}>{error}</h2>
+                </div>
+            </StudentLayout>
         );
     }
 
     const { profile, points, skills } = dashboardData;
 
     return (
-        <div className="dashboard-layout">
-            {/* Top Navbar Header */}
-            <header className="top-navbar">
-                <div className="top-nav-brand">
-                    <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px" }} />
-                    <span>PCDP Portal</span>
-                </div>
-
-                <div className="top-nav-profile">
-                    <img
-                        src={profile.avatarUrl}
-                        alt="Profile"
-                        className="profile-avatar"
-                    />
-                    <div className="profile-info">
-                        <span className="profile-id">{profile.register_no}</span>
-                        <span className="profile-name">{profile.name}</span>
-                    </div>
-                </div>
-            </header>
-
-            <StudentSidebar />
-
-            <main className="dashboard-main-area">
-                <div className="dashboard-container-inner">
+        <StudentLayout>
+            <div className="dashboard-container-inner">
                     <div className="welcome-banner">
-                        Welcome back, <span className="highlight">{profile.name}</span>
+                        <div>
+                            <div className="welcome-banner-text">
+                                Welcome back, <span className="highlight">{profile.name}</span>! Ready to code?
+                            </div>
+                            <div className="welcome-banner-sub">
+                                Keep your streak alive by solving today&apos;s challenge.
+                            </div>
+                        </div>
+                        <img
+                            src="/assets/dashboard-rocket.svg"
+                            alt=""
+                            className="welcome-banner-illustration"
+                        />
                     </div>
+
+                    {practiceDashboard && (
+                        <div className="dashboard-grid" style={{ marginBottom: 24 }}>
+                            <div className="left-column">
+                                <div className="dashboard-card practice-card">
+                                    <h3 className="card-title">Daily Coding Challenge</h3>
+                                    <p className="card-subtitle">Topic and points from MongoDB.</p>
+                                    {practiceDashboard.dailyTask && practiceDashboard.dailyTask.title ? (
+                                        <>
+                                            <h4 style={{ marginTop: 8 }}>{practiceDashboard.dailyTask.title}</h4>
+                                            <p className="card-subtitle">Topic: {practiceDashboard.dailyTask.topic || "—"} · Points: {practiceDashboard.dailyTask.points}</p>
+                                            <button type="button" className="sa-btn sa-btn-primary" style={{ marginTop: 12 }} onClick={() => navigate(`/practice/problem/${encodeURIComponent(practiceDashboard.dailyTask.problemId)}`)}>
+                                                Start Coding
+                                            </button>
+                                        </>
+                                    ) : (
+                                        <p className="sa-muted">No daily challenge for today.</p>
+                                    )}
+                                </div>
+                                <div className="dashboard-card practice-card" style={{ marginTop: 16 }}>
+                                    <h3 className="card-title">Streak</h3>
+                                    <p className="card-subtitle">Your coding streak.</p>
+                                    <div style={{ fontSize: 28, fontWeight: 700, color: "#8b5cf6" }}>{practiceDashboard.streak?.currentStreak ?? 0} days</div>
+                                </div>
+                            </div>
+                            <div className="right-column">
+                                <div className="dashboard-card practice-card">
+                                    <h3 className="card-title">Recent Activity</h3>
+                                    <p className="card-subtitle">Latest submissions from MongoDB.</p>
+                                    {practiceDashboard.recentActivity?.length ? (
+                                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                                            {practiceDashboard.recentActivity.slice(0, 5).map((a) => (
+                                                <li key={a.id} style={{ padding: "6px 0", borderBottom: "1px solid #eee" }}>Problem {a.problemId} – {a.result}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="sa-muted">No recent activity.</p>
+                                    )}
+                                </div>
+                                <div className="dashboard-card practice-card" style={{ marginTop: 16 }}>
+                                    <h3 className="card-title">Recommended for you</h3>
+                                    <p className="card-subtitle">Problems from MongoDB.</p>
+                                    {practiceDashboard.recommended?.length ? (
+                                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                                            {practiceDashboard.recommended.slice(0, 3).map((p) => (
+                                                <li key={p.problemId} style={{ padding: "6px 0" }}>
+                                                    <button type="button" className="sa-btn sa-btn-sm" onClick={() => navigate(`/practice/problem/${encodeURIComponent(p.problemId)}`)}>{p.title}</button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="sa-muted">No recommendations yet.</p>
+                                    )}
+                                </div>
+                                <div className="dashboard-card practice-card" style={{ marginTop: 16 }}>
+                                    <h3 className="card-title">Achievements</h3>
+                                    <p className="card-subtitle">Unlock by solving and streaking.</p>
+                                    {practiceDashboard.achievements?.length ? (
+                                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
+                                            {practiceDashboard.achievements.map((a) => (
+                                                <li key={a.id} style={{ padding: "6px 0" }}>{a.unlocked ? "✓" : "○"} {a.name}</li>
+                                            ))}
+                                        </ul>
+                                    ) : (
+                                        <p className="sa-muted">No achievements yet.</p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     <div className="dashboard-grid">
 
@@ -254,7 +325,6 @@ export default function StudentDashboard() {
 
                     </div>
                 </div>
-            </main>
-        </div>
+        </StudentLayout>
     );
 }

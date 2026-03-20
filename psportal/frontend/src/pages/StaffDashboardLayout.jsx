@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, NavLink } from "react-router-dom";
-import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare } from "lucide-react";
+import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound } from "lucide-react";
 import "./SuperAdminDashboard.css";
 import "./UserDashboard.css";
 import StaffMentorMentees from "./StaffMentorMentees";
 import StaffMentorLeaveApprovals from "./StaffMentorLeaveApprovals";
 import StaffWardenWards from "./StaffWardenWards";
 import StaffWardenBiometric from "./StaffWardenBiometric";
+import StaffHostelManagerWardens from "./staff/StaffHostelManagerWardens";
+import StaffSecurityLeaves from "./staff/StaffSecurityLeaves";
+import StaffSecurityBiometric from "./staff/StaffSecurityBiometric";
 import StaffWardenLeaveApprovals from "./staff/StaffWardenLeaveApprovals";
 import FacultyDashboard from "./FacultyDashboard";
 import StaffFacultyCodeReview from "./StaffFacultyCodeReview";
@@ -45,6 +48,25 @@ const STAFF_NAV = [
       { id: "question-banks", label: "Questions uploading", path: "/dashboard/faculty/question-banks", icon: ClipboardList },
       { id: "code-review", label: "Code review", path: "/dashboard/faculty/code-review", icon: Code },
       { id: "student-answers", label: "Student's answers", path: "/dashboard/faculty/student-answers", icon: MessageSquare },
+    ],
+  },
+  {
+    id: "hostel-manager",
+    label: "Hostel manager",
+    icon: Building2,
+    roleKey: "hostel_manager",
+    sub: [
+      { id: "wardens", label: "Wardens & wards", path: "/dashboard/hostel-manager/wardens", icon: Home },
+    ],
+  },
+  {
+    id: "security",
+    label: "Security",
+    icon: Shield,
+    roleKey: "security",
+    sub: [
+      { id: "leaves", label: "Approved leaves", path: "/dashboard/security/leaves", icon: FileText },
+      { id: "biometric", label: "Biometric log", path: "/dashboard/security/biometric", icon: Fingerprint },
     ],
   },
 ];
@@ -105,6 +127,8 @@ export default function StaffDashboardLayout() {
   const pathSegments = location.pathname.split("/").filter(Boolean);
   const pathSection = pathSegments[1] || "";
   const pathSub = pathSegments[2] || "";
+  const securitySelectedRegisterNo =
+    pathSection === "security" && pathSub === "leaves" && pathSegments[3] ? decodeURIComponent(pathSegments[3]) : "";
 
   // Redirect /dashboard or /dashboard/mentor (no sub) to first available sub
   useEffect(() => {
@@ -235,7 +259,7 @@ export default function StaffDashboardLayout() {
             </div>
 
             {staffNavSections.length === 0 && (
-              <p className="ud-empty">No role-specific view available. Ask admin to assign you Mentor, Warden, or Faculty role.</p>
+              <p className="ud-empty">No role-specific view available. Ask admin to assign you Mentor, Warden, Hostel manager, Security or Faculty role.</p>
             )}
             {showNav && pathSection === "mentor" && pathSub === "mentees" && <StaffMentorMentees data={data} has={has} />}
             {showNav && pathSection === "mentor" && pathSub === "leave-approvals" && <StaffMentorLeaveApprovals data={data} has={has} onRefresh={loadData} />}
@@ -245,6 +269,11 @@ export default function StaffDashboardLayout() {
             {showNav && pathSection === "faculty" && pathSub === "question-banks" && <FacultyDashboard data={data} has={has} authHeaders={authHeaders} />}
             {showNav && pathSection === "faculty" && pathSub === "code-review" && <StaffFacultyCodeReview />}
             {showNav && pathSection === "faculty" && pathSub === "student-answers" && <StaffFacultyStudentAnswers />}
+            {showNav && pathSection === "hostel-manager" && pathSub === "wardens" && <StaffHostelManagerWardens data={data} />}
+            {showNav && pathSection === "security" && pathSub === "leaves" && (
+              <StaffSecurityLeaves data={data} selectedRegisterNo={securitySelectedRegisterNo} />
+            )}
+            {showNav && pathSection === "security" && pathSub === "biometric" && <StaffSecurityBiometric data={data} />}
           </div>
         </main>
       </div>

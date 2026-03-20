@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useLocation, useNavigate, NavLink } from "react-router-dom";
 import {
   ChevronDown,
   Shield,
@@ -44,6 +45,7 @@ import { Bar, Doughnut, Line } from "react-chartjs-2";
 import "./SuperAdminDashboard.css";
 import ChatModal from "../components/ChatModal";
 import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
+import TimePicker12h from "../components/TimePicker12h";
 import { templateApi } from "../services/templateApi";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
@@ -56,9 +58,9 @@ const NAV = [
     label: "RBAC",
     icon: Shield,
     sub: [
-      { id: "roles", label: "Roles", icon: Shield },
-      { id: "users-list", label: "Users", icon: Users },
-      { id: "create-user", label: "Create new users", icon: UserPlus },
+      { id: "roles", label: "Roles", icon: Shield, path: "roles" },
+      { id: "users-list", label: "Users", icon: Users, path: "users" },
+      { id: "create-user", label: "Create user", icon: UserPlus, path: "create-user" },
     ],
   },
   {
@@ -66,12 +68,12 @@ const NAV = [
     label: "Courses",
     icon: BookOpen,
     sub: [
-      { id: "course-upload", label: "Create", icon: Upload },
-      { id: "course-points", label: "Details", icon: List },
-      { id: "ps-courses", label: "PS Courses", icon: BookMarked },
-      { id: "question-banks", label: "Question banks", icon: ClipboardList },
-      { id: "question-form-builder", label: "Question form builder", icon: FileText },
-      { id: "question-template-builder", label: "Question Template Builder", icon: LayoutTemplate },
+      { id: "course-upload", label: "Create", icon: Upload, path: "courses" },
+      { id: "course-points", label: "Details", icon: List, path: "course-details" },
+      { id: "ps-courses", label: "PS Courses", icon: BookMarked, path: "ps-courses" },
+      { id: "question-banks", label: "Question banks", icon: ClipboardList, path: "question-banks" },
+      { id: "question-form-builder", label: "Question form builder", icon: FileText, path: "question-form-builder" },
+      { id: "question-template-builder", label: "Question Template Builder", icon: LayoutTemplate, path: "question-template-builder" },
     ],
   },
   {
@@ -79,9 +81,9 @@ const NAV = [
     label: "Slots",
     icon: Calendar,
     sub: [
-      { id: "venue", label: "Venue", icon: MapPin },
-      { id: "time", label: "Time", icon: Clock },
-      { id: "slots-list", label: "Slots (venue, time)", icon: CalendarDays },
+      { id: "venue", label: "Venue", icon: MapPin, path: "venues" },
+      { id: "time", label: "Time", icon: Clock, path: "time-slots" },
+      { id: "slots-list", label: "Slots (venue, time)", icon: CalendarDays, path: "slots" },
     ],
   },
   {
@@ -89,8 +91,8 @@ const NAV = [
     label: "Leaves",
     icon: FileText,
     sub: [
-      { id: "leave-flow", label: "Leave Flow", icon: GitBranch },
-      { id: "all-leave-types", label: "All Leave Types", icon: FileText },
+      { id: "leave-flow", label: "Leave Flow", icon: GitBranch, path: "leave-flow" },
+      { id: "all-leave-types", label: "All Leave Types", icon: FileText, path: "leave-types" },
     ],
   },
   {
@@ -98,8 +100,8 @@ const NAV = [
     label: "Code review",
     icon: Code,
     sub: [
-      { id: "code-access", label: "Assign Faculty", icon: UserCheck },
-      { id: "code-students", label: "Students Applied", icon: Users },
+      { id: "code-access", label: "Assign Faculty", icon: UserCheck, path: "code-access" },
+      { id: "code-students", label: "Students Applied", icon: Users, path: "code-students" },
     ],
   },
   {
@@ -107,30 +109,49 @@ const NAV = [
     label: "Reports",
     icon: BarChart3,
     sub: [
-      { id: "stats-course", label: "Students applied per course (year, dept)", icon: TrendingUp },
-      { id: "stats-slot", label: "Slot used most often", icon: PieChart },
-      { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2 },
-      { id: "stats-registered", label: "Course registered/attended most, least, avg", icon: CalendarCheck },
+      { id: "stats-course", label: "Students applied per course", icon: TrendingUp, path: "reports" },
+      { id: "stats-slot", label: "Slot used most often", icon: PieChart, path: "reports-slots" },
+      { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2, path: "reports-weekly" },
+      { id: "stats-registered", label: "Course registered/attended", icon: CalendarCheck, path: "reports-registered" },
     ],
   },
 ];
 
+const PATH_TO_SECTION = {};
+NAV.forEach((sec) => {
+  (sec.sub || []).forEach((sub) => {
+    if (sub.path) PATH_TO_SECTION[sub.path] = { openNav: sec.id, activeSub: sub.id };
+  });
+});
+PATH_TO_SECTION[""] = PATH_TO_SECTION["overview"] = { openNav: "rbac", activeSub: "roles" };
+
 // Role access options: admin selects what each role can see/do in the user dashboard
 const ACCESS_OPTIONS = [
+  // Mentor
   { id: "mentees.view", label: "List of mentees", group: "Mentor" },
   { id: "mentees.courses", label: "Mentees' completed & ongoing courses", group: "Mentor" },
   { id: "mentees.reward_points", label: "Mentees' reward points", group: "Mentor" },
   { id: "mentees.activity_points", label: "Mentees' activity points", group: "Mentor" },
   { id: "mentees.leave_approve", label: "Leave approvals (mentor)", group: "Mentor" },
   { id: "mentees.attendance", label: "Mentees' attendance %", group: "Mentor" },
+
+  // Warden
   { id: "ward_students.view", label: "Students in their wards", group: "Warden" },
   { id: "ward_students.room", label: "Room numbers", group: "Warden" },
   { id: "ward_students.biometric", label: "Biometric details", group: "Warden" },
   { id: "ward_students.leave_approve", label: "Leave approvals (warden)", group: "Warden" },
+
+  // Technical faculty
   { id: "faculty.courses_assigned", label: "Assigned courses (admin assigns)", group: "Technical faculty" },
   { id: "faculty.question_bank", label: "Submit question banks to admin", group: "Technical faculty" },
   { id: "faculty.student_answers", label: "View student answers (if granted)", group: "Technical faculty" },
   { id: "faculty.answer_key", label: "View answer key (if granted)", group: "Technical faculty" },
+
+  // Hostel manager
+  { id: "hostel.manage", label: "Wardens & wards (hostel manager view)", group: "Hostel manager" },
+
+  // Security
+  { id: "security.leaves", label: "Approved leaves list (security)", group: "Security" },
 ];
 
 // Known roles use fixed colors; any other role gets a stable color from the palette (hash of name)
@@ -139,6 +160,7 @@ const ROLE_TAG_STYLES = {
   mentor: { backgroundColor: "#d1fae5", color: "#047857" },
   warden: { backgroundColor: "#fef3c7", color: "#b45309" },
   "hostel manager": { backgroundColor: "#e0e7ff", color: "#3730a3" },
+  security: { backgroundColor: "#fee2e2", color: "#b91c1c" },
   admin: { backgroundColor: "#cffafe", color: "#0e7490" },
   super_admin: { backgroundColor: "#e2e8f0", color: "#334155" },
   parents: { backgroundColor: "#fce7f3", color: "#9d174d" },
@@ -190,8 +212,23 @@ const emptyLists = {
 };
 
 export default function AdminDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [openNav, setOpenNav] = useState("rbac");
   const [activeSub, setActiveSub] = useState("roles");
+
+  useEffect(() => {
+    const raw = (location.pathname || "").replace(/^\/admin\/?/, "").replace(/^\/+/, "");
+    const seg = raw || "overview";
+    if (raw === "") {
+      navigate("/admin/roles", { replace: true });
+      return;
+    }
+    const sec = PATH_TO_SECTION[seg] || PATH_TO_SECTION["overview"];
+    setOpenNav(sec.openNav);
+    setActiveSub(sec.activeSub);
+  }, [location.pathname, navigate]);
+
   const [rolesList, setRolesList] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [coursesList, setCoursesList] = useState([]);
@@ -215,6 +252,7 @@ export default function AdminDashboard() {
   const [psCourseSearch, setPsCourseSearch] = useState("");
   const [psCourseStatusFilter, setPsCourseStatusFilter] = useState("");
   const [psCourseSelectedIds, setPsCourseSelectedIds] = useState([]);
+  const [psCourseExpandedId, setPsCourseExpandedId] = useState(null);
   const [questionTemplatesList, setQuestionTemplatesList] = useState([]);
   const [templateIdToEditForBuilder, setTemplateIdToEditForBuilder] = useState(null);
   const [templatesForAssign, setTemplatesForAssign] = useState([]);
@@ -302,6 +340,13 @@ export default function AdminDashboard() {
     refetchQuestionTemplates();
   }, [activeSub, refetchQuestionTemplates]);
 
+  // Combined list for PS Courses page: all Admin (Course details) + all PS courses
+  const psCoursesCombinedList = useMemo(() => {
+    const adminRows = (coursesList || []).map((c) => ({ ...c, _source: "Admin", _rowId: `admin-${c.id}` }));
+    const psRows = (psCoursesList || []).map((c) => ({ ...c, _source: "PS", _rowId: `ps-${c.id}` }));
+    return [...adminRows, ...psRows];
+  }, [coursesList, psCoursesList]);
+
   const userRole = localStorage.getItem("role") || "admin";
   const userName = localStorage.getItem("userName") || "Admin";
 
@@ -323,6 +368,22 @@ export default function AdminDashboard() {
   };
   const setEditFieldRoles = (roles) => {
     setEditModal((prev) => ({ ...prev, item: { ...prev.item, roles } }));
+  };
+  const uploadAdminFile = async (file) => {
+    const token = localStorage.getItem("token");
+    const form = new FormData();
+    form.append("file", file);
+    const res = await fetch(`${API_BASE}/api/upload`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || !data?.url) throw new Error(data?.message || "File upload failed");
+    return {
+      url: data.url.startsWith("http") ? data.url : `${API_BASE}${data.url}`,
+      file_name: data.file_name || file.name,
+    };
   };
 
   const saveEdit = async () => {
@@ -367,7 +428,10 @@ export default function AdminDashboard() {
             rewardPoints: Number(item.rewardPoints || 0),
             faculty: item.faculty || "",
             prerequisites: Array.isArray(item.prerequisites) ? item.prerequisites : [],
-            levels: Array.isArray(item.levels) ? item.levels : [],
+            levels: Array.isArray(item.levels) ? item.levels.map((l) => ({
+              ...l,
+              studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials : [],
+            })) : [],
           }),
         });
         const data = await res.json();
@@ -580,21 +644,19 @@ export default function AdminDashboard() {
                     <ul className="sa-nav-sub">
                       {section.sub.map((sub) => {
                         const SubIcon = sub.icon;
+                        const path = sub.path || sub.id;
                         return (
                           <li key={sub.id}>
-                            <a
-                              href="#"
-                              className={activeSub === sub.id ? "active" : ""}
-                              onClick={(e) => {
-                                e.preventDefault();
-                                setActiveSub(sub.id);
-                              }}
+                            <NavLink
+                              to={`/admin/${path}`}
+                              className={({ isActive }) => (isActive ? "active" : "")}
+                              end={path === "overview"}
                             >
                               <span className="sa-nav-label">
                                 {SubIcon ? <SubIcon size={20} /> : null}
                                 <span className="sa-nav-label-text">{sub.label}</span>
                               </span>
-                            </a>
+                            </NavLink>
                           </li>
                         );
                       })}
@@ -609,9 +671,13 @@ export default function AdminDashboard() {
         <main className="sa-main">
           <div className="dashboard-container-inner">
             <div className="sa-welcome-banner">
-              <span className="highlight">Admin Dashboard</span>
-              {" — "}
-              {NAV.flatMap((s) => s.sub).find((s) => s.id === activeSub)?.label || "Overview"}
+              <span className="sa-breadcrumb">
+                <span className="highlight">Admin</span>
+                <span className="sa-breadcrumb-sep">/</span>
+                {NAV.find((s) => s.id === openNav)?.label}
+                <span className="sa-breadcrumb-sep">/</span>
+                <span className="sa-breadcrumb-current">{NAV.flatMap((s) => s.sub).find((s) => s.id === activeSub)?.label || "Overview"}</span>
+              </span>
             </div>
 
           {loading && <div className="sa-loading">Loading dashboard data…</div>}
@@ -621,32 +687,145 @@ export default function AdminDashboard() {
           {/* Nav 1: Role based access */}
           {activeSub === "roles" && (
             <>
-              <div className="dashboard-card">
-                <h3 className="card-title">Roles – create new and assign accesses</h3>
-                <p className="card-subtitle">Manage system roles and their permissions.</p>
-                <button type="button" className="sa-btn sa-btn-primary" onClick={() => openAdd("roles", { role: "", description: "", accesses: "" })}><Plus size={16} /> Create new role</button>
-                <hr style={{ margin: "20px 0", border: "none", borderTop: "1px solid #e2e8f0" }} />
-                <table className="sa-table">
-                  <thead>
-                    <tr>
-                      <th>Role</th>
-                      <th>Description</th>
-                      <th>Accesses</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {rolesList.map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.role}</td>
-                        <td>{row.description}</td>
-                        <td>{row.accesses}</td>
-                        <td><button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("roles", row)} title="Edit"><Pencil size={14} /></button></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {(() => {
+                const totalRoles = rolesList.length;
+                const totalPermissions = rolesList.reduce((sum, r) => {
+                  const parts = (r.accesses || "").split(",").map((s) => s.trim()).filter(Boolean);
+                  return sum + parts.length;
+                }, 0);
+                const totalUsers = usersList.length;
+                const activeRoles = rolesList.filter((r) => String(r.status || "").toLowerCase() !== "inactive").length || totalRoles;
+                return (
+                  <>
+                    <div className="dashboard-card sa-roles-hero">
+                      <div className="sa-roles-hero-header">
+                        <div>
+                          <h2 className="sa-roles-title">Admin Dashboard — Roles</h2>
+                          <p className="sa-roles-subtitle">
+                            Manage system roles and their permissions. Create roles, assign access levels, and control what each user can do.
+                          </p>
+                        </div>
+                      </div>
+                      <div className="sa-roles-metrics">
+                        <div className="sa-roles-metric-card sa-roles-metric-total">
+                          <div className="sa-roles-metric-label">Total Roles</div>
+                          <div className="sa-roles-metric-value">{totalRoles}</div>
+                        </div>
+                        <div className="sa-roles-metric-card sa-roles-metric-permissions">
+                          <div className="sa-roles-metric-label">Permissions</div>
+                          <div className="sa-roles-metric-value">{totalPermissions}</div>
+                        </div>
+                        <div className="sa-roles-metric-card sa-roles-metric-users">
+                          <div className="sa-roles-metric-label">Assigned Users</div>
+                          <div className="sa-roles-metric-value">{totalUsers}</div>
+                        </div>
+                        <div className="sa-roles-metric-card sa-roles-metric-active">
+                          <div className="sa-roles-metric-label">Active Roles</div>
+                          <div className="sa-roles-metric-value">{activeRoles}</div>
+                        </div>
+                      </div>
+                      <div className="sa-roles-actions-row">
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-primary"
+                          onClick={() => openAdd("roles", { role: "", description: "", accesses: "" })}
+                        >
+                          <Plus size={16} /> Create New Role
+                        </button>
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-ghost"
+                          onClick={() => navigate("/admin/roles")}
+                        >
+                          Manage Permissions
+                        </button>
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-ghost"
+                          onClick={() => navigate("/admin/create-user")}
+                        >
+                          Assign Users
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="dashboard-card sa-roles-table-card">
+                      <div className="sa-roles-table-header">
+                        <div>
+                          <h3 className="card-title">Roles — Create new and assign accesses</h3>
+                          <p className="card-subtitle">Search, filter and edit system roles.</p>
+                        </div>
+                        <div className="sa-roles-table-controls">
+                          <div className="sa-roles-search">
+                            <input
+                              type="text"
+                              className="sa-roles-search-input"
+                              placeholder="Search roles..."
+                              // (UI only for now)
+                            />
+                          </div>
+                          <button type="button" className="sa-btn sa-btn-secondary">
+                            Filter
+                          </button>
+                        </div>
+                      </div>
+                      <table className="sa-table">
+                        <thead>
+                          <tr>
+                            <th>Role</th>
+                            <th>Description</th>
+                            <th>Users</th>
+                            <th>Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {rolesList.map((row) => {
+                            const roleTagStyle = getRoleTagStyle(row.role);
+                            const usersForRole = usersList.filter((u) =>
+                              Array.isArray(u.roles) ? u.roles.includes(row.role) : false
+                            ).length;
+                            return (
+                              <tr key={row.id}>
+                                <td>
+                                  <div className="sa-roles-role-cell">
+                                    <div
+                                      className="sa-roles-role-icon"
+                                      aria-hidden
+                                      style={roleTagStyle}
+                                    >
+                                      {row.role?.[0]?.toUpperCase() || "R"}
+                                    </div>
+                                    <div className="sa-roles-role-text">
+                                      <div className="sa-roles-role-name">{row.role}</div>
+                                      <div className="sa-roles-role-chip">{row.status || "Active"}</div>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>{row.description}</td>
+                                <td>
+                                  <span className="sa-roles-users-count">
+                                    {usersForRole}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    className="sa-btn sa-btn-icon"
+                                    onClick={() => openEdit("roles", row)}
+                                    title="Edit"
+                                  >
+                                    <Pencil size={14} />
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                );
+              })()}
             </>
           )}
 
@@ -678,62 +857,160 @@ export default function AdminDashboard() {
           )}
 
           {activeSub === "create-user" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Create new users</h3>
-              <p className="card-subtitle">Add user with email and assign one or more roles (colour tagged).</p>
-              <div className="sa-form-group">
-                <label>Email</label>
-                <input type="email" placeholder="user@example.com" value={createUserForm.email} onChange={(e) => setCreateUserForm((p) => ({ ...p, email: e.target.value }))} />
-              </div>
-              <div className="sa-form-group">
-                <label>Name</label>
-                <input type="text" placeholder="Full name" value={createUserForm.name} onChange={(e) => setCreateUserForm((p) => ({ ...p, name: e.target.value }))} />
-              </div>
-              <div className="sa-form-group">
-                <label>Assign roles (pastel colour tagged)</label>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 8 }}>
-                  {rolesList.map((r) => {
-                    const roleName = r.role;
-                    const checked = createUserForm.roles.includes(roleName);
-                    return (
-                      <label key={r.id || roleName} style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(e) => setCreateUserForm((p) => ({ ...p, roles: e.target.checked ? [...p.roles, roleName] : p.roles.filter((x) => x !== roleName) }))}
-                        />
-                        <span className="sa-tag" style={getRoleTagStyle(roleName)}>{roleName}</span>
-                      </label>
-                    );
-                  })}
+            <div className="dashboard-card sa-create-user-card">
+              <div className="sa-create-user-hero">
+                <div>
+                  <h3 className="sa-create-user-title">Create New User</h3>
+                  <p className="sa-create-user-subtitle">
+                    Add user with email and assign one or more roles. Selected roles will be highlighted with colours.
+                  </p>
                 </div>
               </div>
-              <button
-                type="button"
-                className="sa-btn sa-btn-primary"
-                onClick={async () => {
-                  if (!createUserForm.email?.trim()) return;
-                  try {
-                    const res = await fetch(`${API_BASE}/api/superadmin/users`, {
-                      method: "POST",
-                      headers: { "Content-Type": "application/json" },
-                      body: JSON.stringify({
-                        email: createUserForm.email.trim(),
-                        name: createUserForm.name.trim() || "",
-                        roles: createUserForm.roles,
-                      }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) throw new Error(data.message || "Failed to create user");
-                    setUsersList((prev) => [...prev, data]);
-                    setCreateUserForm({ email: "", name: "", roles: [] });
-                  } catch (e) {
-                    alert(e.message || "Create failed");
-                  }
-                }}
-              >
-                <Plus size={16} /> Create user
-              </button>
+
+              <div className="sa-create-user-body">
+                <div className="sa-form-group">
+                  <label>Email Address *</label>
+                  <input
+                    type="email"
+                    placeholder="user@example.com"
+                    value={createUserForm.email}
+                    onChange={(e) => setCreateUserForm((p) => ({ ...p, email: e.target.value }))}
+                  />
+                </div>
+                <div className="sa-form-group">
+                  <label>Full Name *</label>
+                  <input
+                    type="text"
+                    placeholder="Enter full name"
+                    value={createUserForm.name}
+                    onChange={(e) => setCreateUserForm((p) => ({ ...p, name: e.target.value }))}
+                  />
+                </div>
+
+                <div className="sa-form-group sa-create-user-roles-group">
+                  <div className="sa-create-user-roles-header">
+                    <label>Assign Roles *</label>
+                    <span className="sa-create-user-roles-count">
+                      {createUserForm.roles.length} selected
+                    </span>
+                  </div>
+                  <div className="sa-create-user-roles-grid">
+                    {rolesList.map((r) => {
+                      const roleName = r.role;
+                      const checked = createUserForm.roles.includes(roleName);
+                      const tagStyle = getRoleTagStyle(roleName);
+                      const cardStyle = checked
+                        ? {
+                            borderColor: tagStyle.backgroundColor,
+                            backgroundColor: tagStyle.backgroundColor,
+                          }
+                        : {};
+                      return (
+                        <label
+                          key={r.id || roleName}
+                          className={`sa-create-role-card ${checked ? "sa-create-role-card--selected" : ""}`}
+                          style={cardStyle}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={(e) =>
+                              setCreateUserForm((p) => ({
+                                ...p,
+                                roles: e.target.checked
+                                  ? [...p.roles, roleName]
+                                  : p.roles.filter((x) => x !== roleName),
+                              }))
+                            }
+                          />
+                          <div className="sa-create-role-icon" aria-hidden style={tagStyle}>
+                            {roleName?.[0]?.toUpperCase() || "R"}
+                          </div>
+                          <div className="sa-create-role-text">
+                            <div className="sa-create-role-name">{roleName}</div>
+                            {r.description && (
+                              <div className="sa-create-role-desc">{r.description}</div>
+                            )}
+                          </div>
+                          {checked && <div className="sa-create-role-check" aria-hidden>✓</div>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="sa-create-user-tip">
+                    Tip: You can assign multiple roles to a user. Selected roles will be shown below.
+                  </p>
+                </div>
+
+                <div className="sa-create-user-selected">
+                  <div className="sa-create-user-selected-title">Selected Roles</div>
+                  <div className="sa-create-user-selected-tags">
+                    {createUserForm.roles.length === 0 && (
+                      <span className="sa-muted">No roles selected yet.</span>
+                    )}
+                    {createUserForm.roles.map((role) => {
+                      const tagStyle = getRoleTagStyle(role);
+                      return (
+                        <span key={role} className="sa-create-user-chip" style={tagStyle}>
+                          <span className="sa-create-user-chip-label">{role}</span>
+                          <button
+                            type="button"
+                            className="sa-create-user-chip-close"
+                            onClick={() =>
+                              setCreateUserForm((p) => ({
+                                ...p,
+                                roles: p.roles.filter((x) => x !== role),
+                              }))
+                            }
+                            aria-label={`Remove ${role}`}
+                          >
+                            ×
+                          </button>
+                        </span>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              <div className="sa-create-user-footer">
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-primary"
+                  onClick={async () => {
+                    if (!createUserForm.email?.trim() || !createUserForm.name?.trim()) return;
+                    try {
+                      const res = await fetch(`${API_BASE}/api/superadmin/users`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                          email: createUserForm.email.trim(),
+                          name: createUserForm.name.trim() || "",
+                          roles: createUserForm.roles,
+                        }),
+                      });
+                      const data = await res.json();
+                      if (!res.ok) throw new Error(data.message || "Failed to create user");
+                      setUsersList((prev) => [...prev, data]);
+                      setCreateUserForm({ email: "", name: "", roles: [] });
+                    } catch (e) {
+                      alert(e.message || "Create failed");
+                    }
+                  }}
+                >
+                  <Plus size={16} /> Create User
+                </button>
+                <button
+                  type="button"
+                  className="sa-btn sa-btn-ghost"
+                  onClick={() => setCreateUserForm({ email: "", name: "", roles: [] })}
+                >
+                  Clear Form
+                </button>
+                <span className="sa-create-user-footer-hint">
+                  Fill all required fields to continue
+                </span>
+              </div>
             </div>
           )}
 
@@ -908,6 +1185,7 @@ export default function AdminDashboard() {
                                         <div><strong>{lev.rewardPoints ?? 0} pts</strong></div>
                                         <div>Prereq: {prereqText}</div>
                                         <div>{lev.assessmentType || "MCQ"}</div>
+                                        <div>Materials: {Array.isArray(lev.studyMaterials) ? lev.studyMaterials.length : 0}</div>
                                       </div>
                                     </div>
                                   );
@@ -927,7 +1205,7 @@ export default function AdminDashboard() {
           {activeSub === "ps-courses" && (
             <div className="dashboard-card">
               <h3 className="card-title">PS Courses</h3>
-              <p className="card-subtitle">Courses from docx seed (Analog, Digital, C Programming, etc.). Edit status, add or remove.</p>
+              <p className="card-subtitle">All courses: Course details (Admin) + PS courses in one list. View levels, prerequisites, and full details. Edit via Course details or PS Edit/Delete.</p>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 16, alignItems: "center" }}>
                 <input
                   type="text"
@@ -989,60 +1267,143 @@ export default function AdminDashboard() {
                 <table className="sa-table">
                   <thead>
                     <tr>
-                      <th><input type="checkbox" checked={psCoursesList.length > 0 && psCourseSelectedIds.length === psCoursesList.filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase())).length} onChange={(e) => { const filtered = psCoursesList.filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase())); setPsCourseSelectedIds(e.target.checked ? filtered.map((c) => c.id) : []); }} /></th>
+                      <th><input type="checkbox" disabled={psCoursesCombinedList.filter((c) => c._source === "PS").length === 0} checked={psCoursesList.length > 0 && psCourseSelectedIds.length === psCoursesList.filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase())).length} onChange={(e) => { const filtered = psCoursesList.filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase())); setPsCourseSelectedIds(e.target.checked ? filtered.map((c) => c.id) : []); }} title="Select PS courses only" /></th>
+                      <th>Source</th>
                       <th>Name</th>
                       <th>Description</th>
-                      <th>Subject</th>
+                      <th>Subject / Type</th>
+                      <th>Prerequisites</th>
+                      <th>Levels</th>
                       <th>Status</th>
                       <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {psCoursesList
-                      .filter((c) => !psCourseSearch || (c.name || "").toLowerCase().includes(psCourseSearch.toLowerCase()) || (c.parentCourse || "").toLowerCase().includes(psCourseSearch.toLowerCase()))
-                      .map((row) => (
-                        <tr key={row.id}>
-                          <td><input type="checkbox" checked={psCourseSelectedIds.includes(row.id)} onChange={(e) => setPsCourseSelectedIds((prev) => (e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id)))} /></td>
-                          <td><strong>{row.name}</strong></td>
-                          <td style={{ maxWidth: 200 }}>{(row.description || "").slice(0, 60)}{(row.description || "").length > 60 ? "…" : ""}</td>
-                          <td>{row.parentCourse || "—"}</td>
-                          <td>
-                            <select
-                              value={row.status || "Active"}
-                              onChange={async (e) => {
-                                const token = localStorage.getItem("token");
-                                const status = e.target.value;
-                                const res = await fetch(`${API_BASE}/api/ps-courses/${row.id}`, {
-                                  method: "PUT",
-                                  headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-                                  body: JSON.stringify({ ...row, status }),
-                                });
-                                if (res.ok) setPsCoursesList((prev) => prev.map((c) => (c.id === row.id ? { ...c, status } : c)));
-                              }}
-                            >
-                              <option value="Active">Active</option>
-                              <option value="Inactive">Inactive</option>
-                              <option value="Draft">Draft</option>
-                            </select>
-                          </td>
-                          <td>
-                            <button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("ps-courses", row)}><Pencil size={14} /> Edit</button>
-                            <button
-                              type="button"
-                              className="sa-btn sa-btn-sm"
-                              style={{ marginLeft: 6, background: "#dc2626", color: "#fff" }}
-                              onClick={async () => {
-                                if (!window.confirm("Delete this course?")) return;
-                                const token = localStorage.getItem("token");
-                                const res = await fetch(`${API_BASE}/api/ps-courses/${row.id}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
-                                if (res.ok) setPsCoursesList((prev) => prev.filter((c) => c.id !== row.id));
-                              }}
-                            >
-                              <X size={14} /> Delete
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
+                    {psCoursesCombinedList
+                      .filter((row) => {
+                        const search = (psCourseSearch || "").toLowerCase();
+                        if (!search) return true;
+                        const name = (row.name || "").toLowerCase();
+                        const desc = (row.description || "").toLowerCase();
+                        const subject = (row._source === "Admin" ? (row.type || row.level || "") : (row.parentCourse || "")).toLowerCase();
+                        return name.includes(search) || desc.includes(search) || subject.includes(search);
+                      })
+                      .filter((row) => !psCourseStatusFilter || row.status === psCourseStatusFilter)
+                      .map((row) => {
+                        const levels = Array.isArray(row.levels) ? row.levels : [];
+                        const prereqList = row._source === "Admin"
+                          ? (Array.isArray(row.prerequisites) ? row.prerequisites.map((id) => coursesList.find((c) => c.id === id)?.name).filter(Boolean) : [])
+                          : (Array.isArray(row.prereq) ? row.prereq : []);
+                        const subjectDisplay = row._source === "Admin" ? (row.type || row.level || "—") : (row.parentCourse || "—");
+                        const expanded = psCourseExpandedId === row._rowId;
+                        const isPs = row._source === "PS";
+                        return (
+                          <React.Fragment key={row._rowId}>
+                            <tr>
+                              <td>
+                                {isPs ? (
+                                  <input type="checkbox" checked={psCourseSelectedIds.includes(row.id)} onChange={(e) => setPsCourseSelectedIds((prev) => (e.target.checked ? [...prev, row.id] : prev.filter((id) => id !== row.id)))} />
+                                ) : (
+                                  <span className="sa-muted">—</span>
+                                )}
+                              </td>
+                              <td><span className={`sa-badge ${row._source === "Admin" ? "sa-badge-success" : "sa-badge-warning"}`}>{row._source}</span></td>
+                              <td><strong>{row.name}</strong></td>
+                              <td style={{ maxWidth: 200 }}>{(row.description || "").slice(0, 60)}{(row.description || "").length > 60 ? "…" : ""}</td>
+                              <td>{subjectDisplay}</td>
+                              <td>{prereqList.length ? prereqList.join(", ") : "—"}</td>
+                              <td>
+                                {levels.length > 0 ? (
+                                  <button
+                                    type="button"
+                                    className="sa-details-levels-toggle"
+                                    onClick={() => setPsCourseExpandedId(expanded ? null : row._rowId)}
+                                  >
+                                    {expanded ? "Hide" : "View"} {levels.length} level{levels.length !== 1 ? "s" : ""}
+                                    <ChevronDown size={16} style={{ transform: expanded ? "rotate(180deg)" : "none" }} />
+                                  </button>
+                                ) : (
+                                  <span className="sa-muted">—</span>
+                                )}
+                              </td>
+                              <td>
+                                {isPs ? (
+                                  <select
+                                    value={row.status || "Active"}
+                                    onChange={async (e) => {
+                                      const token = localStorage.getItem("token");
+                                      const status = e.target.value;
+                                      const res = await fetch(`${API_BASE}/api/ps-courses/${row.id}`, {
+                                        method: "PUT",
+                                        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+                                        body: JSON.stringify({ ...row, status }),
+                                      });
+                                      if (res.ok) setPsCoursesList((prev) => prev.map((c) => (c.id === row.id ? { ...c, status } : c)));
+                                    }}
+                                  >
+                                    <option value="Active">Active</option>
+                                    <option value="Inactive">Inactive</option>
+                                    <option value="Draft">Draft</option>
+                                  </select>
+                                ) : (
+                                  <span className={`sa-badge ${row.status === "Active" ? "sa-badge-success" : "sa-badge-warning"}`}>{row.status || "—"}</span>
+                                )}
+                              </td>
+                              <td>
+                                {isPs ? (
+                                  <>
+                                    <button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("ps-courses", row)}><Pencil size={14} /> Edit</button>
+                                    <button
+                                      type="button"
+                                      className="sa-btn sa-btn-sm"
+                                      style={{ marginLeft: 6, background: "#dc2626", color: "#fff" }}
+                                      onClick={async () => {
+                                        if (!window.confirm("Delete this course?")) return;
+                                        const token = localStorage.getItem("token");
+                                        const res = await fetch(`${API_BASE}/api/ps-courses/${row.id}`, { method: "DELETE", headers: token ? { Authorization: `Bearer ${token}` } : {} });
+                                        if (res.ok) setPsCoursesList((prev) => prev.filter((c) => c.id !== row.id));
+                                      }}
+                                    >
+                                      <X size={14} /> Delete
+                                    </button>
+                                  </>
+                                ) : (
+                                  <button type="button" className="sa-btn sa-btn-sm" onClick={() => openEdit("courses", row)}><Pencil size={14} /> Edit (Course details)</button>
+                                )}
+                              </td>
+                            </tr>
+                            {levels.length > 0 && expanded && (
+                              <tr>
+                                <td colSpan={9} style={{ padding: "0 12px 12px 12px", verticalAlign: "top" }}>
+                                  <div className="sa-details-levels-body">
+                                    {levels.map((lev, idx) => {
+                                      const prereqIndices = Array.isArray(lev.prerequisiteLevelIndices) ? lev.prerequisiteLevelIndices : (lev.prerequisiteLevelIndex != null && lev.prerequisiteLevelIndex >= 0 ? [lev.prerequisiteLevelIndex] : []);
+                                      const prereqText = prereqIndices.length === 0 ? "No" : prereqIndices.map((i) => `Level ${i + 1}`).join(", ");
+                                      return (
+                                        <div key={idx} className="sa-details-level-card">
+                                          <div className="sa-details-level-info">
+                                            <h4>{idx + 1}. {lev.name || `Level ${idx}`}</h4>
+                                            {lev.description ? <p className="sa-muted" style={{ margin: "4px 0 0", fontSize: 13 }}>{lev.description}</p> : null}
+                                            <div className="sa-details-level-meta">
+                                              {Array.isArray(lev.topics) && lev.topics.length ? lev.topics.join(" · ") : "No topics"}
+                                            </div>
+                                          </div>
+                                          <div className="sa-details-level-meta" style={{ textAlign: "right" }}>
+                                            <div><strong>{lev.rewardPoints ?? 0} pts</strong></div>
+                                            <div>Prereq: {prereqText}</div>
+                                            <div>{lev.assessmentType || "MCQ"}</div>
+                                          <div>Materials: {Array.isArray(lev.studyMaterials) ? lev.studyMaterials.length : 0}</div>
+                                          </div>
+                                        </div>
+                                      );
+                                    })}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </React.Fragment>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>
@@ -1186,6 +1547,7 @@ export default function AdminDashboard() {
                         className="sa-btn sa-btn-primary sa-btn-sm"
                         onClick={() => {
                           setTemplateIdToEditForBuilder(t._id);
+                          navigate("/admin/question-template-builder");
                           setActiveSub("question-template-builder");
                         }}
                       >
@@ -1217,6 +1579,7 @@ export default function AdminDashboard() {
               <QuestionTemplateBuilder
                 initialTemplateId={templateIdToEditForBuilder}
                 onClose={() => {
+                  navigate("/admin/question-form-builder");
                   setActiveSub("question-form-builder");
                   refetchQuestionTemplates();
                 }}
@@ -1746,8 +2109,8 @@ export default function AdminDashboard() {
       {editModal.open && (
         <div className="sa-modal-overlay" onClick={closeEdit}>
           <div className={`sa-modal ${editModal.section === "courses" ? "sa-modal-courses" : ""}`} onClick={(e) => e.stopPropagation()}>
-            <div className="sa-modal-header">
-              <h3>{editModal.itemId ? "Edit" : "Add"}</h3>
+            <div className={`sa-modal-header ${editModal.section === "roles" ? "sa-modal-header-role" : ""}`}>
+              <h3>{editModal.section === "roles" ? (editModal.itemId ? "Edit Role" : "Add Role") : editModal.itemId ? "Edit" : "Add"}</h3>
               <button type="button" className="sa-modal-close" onClick={closeEdit} aria-label="Close"><X size={20} /></button>
             </div>
             <div className="sa-modal-body">
@@ -1758,24 +2121,62 @@ export default function AdminDashboard() {
                   <div className="sa-form-group">
                     <label>Accesses (what this role can see/do in user dashboard)</label>
                     <div className="sa-access-list">
-                      {["Mentor", "Warden", "Technical faculty"].map((group) => (
-                        <div key={group} className="sa-access-group">
-                          <span className="sa-access-group-title">{group}</span>
-                          {ACCESS_OPTIONS.filter((o) => o.group === group).map((opt) => {
-                            const accessList = (editModal.item.accesses || "").split(",").map((s) => s.trim()).filter(Boolean);
-                            const checked = accessList.includes(opt.id);
-                            return (
-                              <label key={opt.id} className="sa-access-option">
-                                <input type="checkbox" checked={checked} onChange={(e) => {
-                                  const next = e.target.checked ? [...accessList, opt.id] : accessList.filter((x) => x !== opt.id);
-                                  setEditField("accesses", next.join(", "));
-                                }} />
-                                <span>{opt.label}</span>
-                              </label>
-                            );
-                          })}
-                        </div>
-                      ))}
+                      {["Mentor", "Warden", "Technical faculty"].map((group) => {
+                        const groupOptions = ACCESS_OPTIONS.filter((o) => o.group === group);
+                        const accessList = (editModal.item.accesses || "").split(",").map((s) => s.trim()).filter(Boolean);
+                        const selectedCount = groupOptions.filter((opt) => accessList.includes(opt.id)).length;
+                        const allSelected = groupOptions.length > 0 && selectedCount === groupOptions.length;
+                        const toggleOption = (optId, on) => {
+                          const next = on
+                            ? [...new Set([...accessList, optId])]
+                            : accessList.filter((x) => x !== optId);
+                          setEditField("accesses", next.join(", "));
+                        };
+                        const toggleGroup = (on) => {
+                          let next = accessList;
+                          if (on) {
+                            next = [...new Set([...accessList, ...groupOptions.map((g) => g.id)])];
+                          } else {
+                            const ids = new Set(groupOptions.map((g) => g.id));
+                            next = accessList.filter((x) => !ids.has(x));
+                          }
+                          setEditField("accesses", next.join(", "));
+                        };
+                        return (
+                          <div key={group} className="sa-access-group-card">
+                            <div className="sa-access-group-header">
+                              <div className="sa-access-group-title">
+                                {group.toUpperCase()} <span>({selectedCount}/{groupOptions.length})</span>
+                              </div>
+                              <button
+                                type="button"
+                                className="sa-access-select-all"
+                                onClick={() => toggleGroup(!allSelected)}
+                              >
+                                {allSelected ? "Clear All" : "Select All"}
+                              </button>
+                            </div>
+                            {groupOptions.map((opt) => {
+                              const checked = accessList.includes(opt.id);
+                              return (
+                                <label key={opt.id} className="sa-access-option-card">
+                                  <button
+                                    type="button"
+                                    className={`sa-toggle ${checked ? "sa-toggle-on" : ""}`}
+                                    onClick={() => toggleOption(opt.id, !checked)}
+                                    aria-pressed={checked}
+                                  >
+                                    <span className="sa-toggle-knob" />
+                                  </button>
+                                  <div className="sa-access-option-text">
+                                    <div className="sa-access-option-label">{opt.label}</div>
+                                  </div>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </>
@@ -1883,10 +2284,140 @@ export default function AdminDashboard() {
                             <label>Topics (one per line)</label>
                             <textarea rows={2} placeholder="Topic 1&#10;Topic 2" value={(lev.topics || []).join("\n")} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], topics: e.target.value.split("\n").map((t) => t.trim()).filter(Boolean) }; setEditField("levels", l); }} />
                           </div>
+                          <div className="sa-form-group">
+                            <label>Study materials</label>
+                            <p className="sa-muted" style={{ fontSize: 12, marginBottom: 8 }}>Add links or upload files for this level.</p>
+                            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+                              {(lev.studyMaterials || []).map((mat, mIdx) => (
+                                <div key={`${idx}-${mIdx}`} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 10, background: "#f8fafc" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                                    <strong style={{ fontSize: 13 }}>Material {mIdx + 1}</strong>
+                                    <button
+                                      type="button"
+                                      className="sa-btn sa-btn-sm"
+                                      style={{ background: "#dc2626", color: "#fff" }}
+                                      onClick={() => {
+                                        const l = [...levelList];
+                                        const mats = [...(l[idx].studyMaterials || [])];
+                                        mats.splice(mIdx, 1);
+                                        l[idx] = { ...l[idx], studyMaterials: mats };
+                                        setEditField("levels", l);
+                                      }}
+                                    >
+                                      Remove
+                                    </button>
+                                  </div>
+                                  <div className="sa-form-group" style={{ marginTop: 8 }}>
+                                    <label>Name</label>
+                                    <input
+                                      type="text"
+                                      placeholder="e.g. Intro PDF / YouTube session"
+                                      value={mat.name || ""}
+                                      onChange={(e) => {
+                                        const l = [...levelList];
+                                        const mats = [...(l[idx].studyMaterials || [])];
+                                        mats[mIdx] = { ...mats[mIdx], name: e.target.value };
+                                        l[idx] = { ...l[idx], studyMaterials: mats };
+                                        setEditField("levels", l);
+                                      }}
+                                    />
+                                  </div>
+                                  <div className="sa-form-group">
+                                    <label>Type</label>
+                                    <select
+                                      value={mat.type || "link"}
+                                      onChange={(e) => {
+                                        const l = [...levelList];
+                                        const mats = [...(l[idx].studyMaterials || [])];
+                                        mats[mIdx] = { ...mats[mIdx], type: e.target.value };
+                                        l[idx] = { ...l[idx], studyMaterials: mats };
+                                        setEditField("levels", l);
+                                      }}
+                                    >
+                                      <option value="link">Link</option>
+                                      <option value="file">File</option>
+                                    </select>
+                                  </div>
+                                  {(mat.type || "link") === "link" ? (
+                                    <div className="sa-form-group">
+                                      <label>URL</label>
+                                      <input
+                                        type="url"
+                                        placeholder="https://..."
+                                        value={mat.url || ""}
+                                        onChange={(e) => {
+                                          const l = [...levelList];
+                                          const mats = [...(l[idx].studyMaterials || [])];
+                                          mats[mIdx] = { ...mats[mIdx], url: e.target.value };
+                                          l[idx] = { ...l[idx], studyMaterials: mats };
+                                          setEditField("levels", l);
+                                        }}
+                                      />
+                                    </div>
+                                  ) : (
+                                    <div className="sa-form-group">
+                                      <label>File URL</label>
+                                      <input
+                                        type="text"
+                                        readOnly
+                                        value={mat.content || mat.url || ""}
+                                        placeholder="Upload file to generate URL"
+                                      />
+                                      <div style={{ marginTop: 8 }}>
+                                        <input
+                                          type="file"
+                                          onChange={async (e) => {
+                                            const file = e.target.files?.[0];
+                                            if (!file) return;
+                                            try {
+                                              const out = await uploadAdminFile(file);
+                                              const l = [...levelList];
+                                              const mats = [...(l[idx].studyMaterials || [])];
+                                              mats[mIdx] = { ...mats[mIdx], type: "file", content: out.url, url: out.url, name: mats[mIdx].name || out.file_name };
+                                              l[idx] = { ...l[idx], studyMaterials: mats };
+                                              setEditField("levels", l);
+                                            } catch (err) {
+                                              alert(err.message || "File upload failed");
+                                            } finally {
+                                              e.target.value = "";
+                                            }
+                                          }}
+                                        />
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                            <div style={{ display: "flex", gap: 8, marginTop: 8 }}>
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-sm"
+                                onClick={() => {
+                                  const l = [...levelList];
+                                  l[idx] = { ...l[idx], studyMaterials: [...(l[idx].studyMaterials || []), { name: "", type: "link", url: "", content: "" }] };
+                                  setEditField("levels", l);
+                                }}
+                              >
+                                + Add link
+                              </button>
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-sm"
+                                onClick={() => {
+                                  const l = [...levelList];
+                                  l[idx] = { ...l[idx], studyMaterials: [...(l[idx].studyMaterials || []), { name: "", type: "file", url: "", content: "" }] };
+                                  setEditField("levels", l);
+                                }}
+                              >
+                                + Add file
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       );
                     })}
-                    <button type="button" className="sa-btn sa-btn-primary" onClick={() => setEditField("levels", [...(editModal.item.levels || []), { name: "", rewardPoints: 0, prerequisiteLevelIndex: -1, prerequisiteLevelIndices: [], assessmentType: "MCQ", topics: [] }])}>+ Add level</button>
+                    <button type="button" className="sa-btn sa-btn-primary" onClick={() => setEditField("levels", [...(editModal.item.levels || []), { name: "", rewardPoints: 0, prerequisiteLevelIndex: -1, prerequisiteLevelIndices: [], assessmentType: "MCQ", topics: [], studyMaterials: [] }])}>+ Add level</button>
                   </div>
 
                   <div className="sa-course-section">
@@ -2004,8 +2535,22 @@ export default function AdminDashboard() {
               )}
               {editModal.section === "time" && (
                 <>
-                  <div className="sa-form-group"><label>Start time (24h)</label><input type="text" value={editModal.item.startTime || ""} onChange={(e) => setEditField("startTime", e.target.value)} placeholder="e.g. 09:00" /></div>
-                  <div className="sa-form-group"><label>End time (24h)</label><input type="text" value={editModal.item.endTime || ""} onChange={(e) => setEditField("endTime", e.target.value)} placeholder="e.g. 10:30" /></div>
+                  <div className="sa-form-group">
+                    <label>Start time</label>
+                    <TimePicker12h
+                      value={editModal.item.startTime || "09:00"}
+                      onChange={(v) => setEditField("startTime", v)}
+                      id="time-slot-start"
+                    />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>End time</label>
+                    <TimePicker12h
+                      value={editModal.item.endTime || "10:30"}
+                      onChange={(v) => setEditField("endTime", v)}
+                      id="time-slot-end"
+                    />
+                  </div>
                 </>
               )}
               {editModal.section === "slots" && (

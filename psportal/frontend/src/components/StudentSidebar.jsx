@@ -7,7 +7,11 @@ import {
     Layers,
     CodeXml,
     ClipboardCheck,
-    LogOut
+    LogOut,
+    ListTodo,
+    FileCode,
+    Globe,
+    Trophy,
 } from "lucide-react";
 import "./StudentSidebar.css";
 
@@ -22,11 +26,16 @@ export default function StudentSidebar() {
 
     const navItems = [
         { name: "Dashboard", path: "/dashboard", icon: <LayoutDashboard size={22} /> },
+        { name: "Daily Tasks", path: "/daily-tasks", icon: <ListTodo size={22} /> },
+        // { name: "Practice", path: "/practice", icon: <FileCode size={22} /> },
+        { name: "Codeforces Practice", path: "/practice/codeforces", icon: <FileCode size={22} /> },
+        { name: "Web Practice", path: "/web-practice", icon: <Globe size={22} /> },
         { name: "Courses Available", path: "/courses-available", icon: <SquareLibrary size={22} /> },
         { name: "My Courses", path: "/my-courses", icon: <Youtube size={22} /> },
-        { name: "PS Activity", path: "/ps-activity", icon: <Layers size={22} /> },
+        { name: "Leaderboard", path: "/leaderboard", icon: <Trophy size={22} /> },
         { name: "Attendance", path: "/attendance", icon: <ClipboardCheck size={22} /> },
-        { name: "Code Review", path: "/code-review", icon: <CodeXml size={22} /> }
+        { name: "PS Activity", path: "/ps-activity", icon: <Layers size={22} /> },
+        { name: "Code Review", path: "/code-review", icon: <CodeXml size={22} /> },
     ];
 
     return (
@@ -34,7 +43,10 @@ export default function StudentSidebar() {
             <nav className="sidebar-nav-minimal">
                 <ul>
                     {navItems.map((item) => {
-                        const isActive = location.pathname === item.path || (location.pathname === '/' && item.path === '/dashboard');
+                        const isActive =
+                                    location.pathname === item.path ||
+                                    (location.pathname === "/" && item.path === "/dashboard") ||
+                                    (item.path === "/practice" && location.pathname.startsWith("/practice"));
                         return (
                             <li key={item.name} className="sidebar-li-minimal">
                                 <Link to={item.path} className={isActive ? "nav-item active" : "nav-item"}>

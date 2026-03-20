@@ -1,9 +1,17 @@
-import React, { useState, useEffect } from "react";
-import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, MessageCircle, X, Maximize2 } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, MessageCircle, X, Maximize2, Search, History, ListTodo } from "lucide-react";
 import ChatModal from "../components/ChatModal";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
 
 const API_BASE = "http://localhost:5000";
+
+const TASK_TAB_PENDING = "pending";
+const TASK_TAB_HISTORY = "history";
+
+const SORT_RECENT = "recent";
+const SORT_NAME_ASC = "name_asc";
+const SORT_NAME_DESC = "name_desc";
+const SORT_STATUS = "status";
 
 export default function FacultyDashboard({ data, has, authHeaders }) {
   const [questionBankTasks, setQuestionBankTasks] = useState([]);
@@ -20,6 +28,9 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
   const [fullScreenSubmitting, setFullScreenSubmitting] = useState(false);
   const [draftQuestionValuesByCourse, setDraftQuestionValuesByCourse] = useState({});
   const [fullScreenDraftStorageKey, setFullScreenDraftStorageKey] = useState("");
+  const [taskTab, setTaskTab] = useState(TASK_TAB_PENDING);
+  const [taskSearch, setTaskSearch] = useState("");
+  const [taskSort, setTaskSort] = useState(SORT_RECENT);
 
   const { user, assigned_courses } = data || {};
   const showFaculty = has("faculty.courses_assigned") || has("faculty.question_bank") || (assigned_courses?.length > 0);
@@ -74,7 +85,41 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
     }
   };
 
-  const tasks = questionBankTasks?.length ? questionBankTasks : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, status: "not_started" }));
+  const allTasks = questionBankTasks?.length ? questionBankTasks : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, status: "not_started" }));
+
+  const isCompleted = (task) => task.status === "approved" || task.status === "rejected";
+  const pendingTasks = useMemo(() => allTasks.filter((t) => !isCompleted(t)), [allTasks]);
+  const historyTasks = useMemo(() => allTasks.filter(isCompleted), [allTasks]);
+
+  const tasksForTab = taskTab === TASK_TAB_HISTORY ? historyTasks : pendingTasks;
+  const searchLower = (taskSearch || "").trim().toLowerCase();
+  const filteredTasks = useMemo(() => {
+    if (!searchLower) return tasksForTab;
+    return tasksForTab.filter(
+      (t) =>
+        (t.course_name || "").toLowerCase().includes(searchLower) ||
+        (t.template_name || "").toLowerCase().includes(searchLower)
+    );
+  }, [tasksForTab, searchLower]);
+
+  const getTaskDate = (task) => {
+    const d = task.updated_at || task.submitted_at || task.created_at;
+    return d ? new Date(d).getTime() : 0;
+  };
+
+  const sortedTasks = useMemo(() => {
+    const list = [...filteredTasks];
+    if (taskSort === SORT_RECENT) {
+      list.sort((a, b) => getTaskDate(b) - getTaskDate(a));
+    } else if (taskSort === SORT_NAME_ASC) {
+      list.sort((a, b) => (a.course_name || "").localeCompare(b.course_name || ""));
+    } else if (taskSort === SORT_NAME_DESC) {
+      list.sort((a, b) => (b.course_name || "").localeCompare(a.course_name || ""));
+    } else if (taskSort === SORT_STATUS) {
+      list.sort((a, b) => (a.status || "").localeCompare(b.status || ""));
+    }
+    return list;
+  }, [filteredTasks, taskSort]);
 
   if (!showFaculty) {
     return (
@@ -97,11 +142,100 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
           Question bank tasks
         </h3>
         <p className="ud-card-subtitle">Admin will review and approve or reject. Use the chat icon to see messages from admin.</p>
-        {!tasks.length ? (
+        {!allTasks.length ? (
           <p className="ud-empty">No courses assigned yet. Courses from Admin → Course details (Faculty) or Assign Faculty will appear here.</p>
         ) : (
-          <div className="ud-task-list">
-            {tasks.map((task) => {
+          <>
+            <div className="ud-task-toolbar" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 12, marginBottom: 16 }}>
+              <div className="ud-task-tabs" style={{ display: "flex", gap: 4 }}>
+                <button
+                  type="button"
+                  onClick={() => setTaskTab(TASK_TAB_PENDING)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    border: "1px solid #e2e8f0",
+                    background: taskTab === TASK_TAB_PENDING ? "#ede9fe" : "#fff",
+                    color: taskTab === TASK_TAB_PENDING ? "#5b21b6" : "#475569",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  <ListTodo size={16} />
+                  Pending ({pendingTasks.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTaskTab(TASK_TAB_HISTORY)}
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "8px 14px",
+                    borderRadius: 8,
+                    border: "1px solid #e2e8f0",
+                    background: taskTab === TASK_TAB_HISTORY ? "#ede9fe" : "#fff",
+                    color: taskTab === TASK_TAB_HISTORY ? "#5b21b6" : "#475569",
+                    fontWeight: 600,
+                    fontSize: 14,
+                    cursor: "pointer",
+                  }}
+                >
+                  <History size={16} />
+                  History ({historyTasks.length})
+                </button>
+              </div>
+              <div className="ud-task-search" style={{ flex: "1 1 200px", minWidth: 200, maxWidth: 320 }}>
+                <div style={{ position: "relative" }}>
+                  <Search size={16} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+                  <input
+                    type="text"
+                    placeholder="Search by course or template..."
+                    value={taskSearch}
+                    onChange={(e) => setTaskSearch(e.target.value)}
+                    style={{
+                      width: "100%",
+                      padding: "8px 12px 8px 36px",
+                      borderRadius: 8,
+                      border: "1px solid #e2e8f0",
+                      fontSize: 14,
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="ud-task-sort" style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <label htmlFor="ud-sort-select" style={{ fontSize: 14, color: "#64748b", fontWeight: 500 }}>Sort:</label>
+                <select
+                  id="ud-sort-select"
+                  value={taskSort}
+                  onChange={(e) => setTaskSort(e.target.value)}
+                  style={{
+                    padding: "8px 12px",
+                    borderRadius: 8,
+                    border: "1px solid #e2e8f0",
+                    fontSize: 14,
+                    background: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  <option value={SORT_RECENT}>Recently added (newest first)</option>
+                  <option value={SORT_NAME_ASC}>Course name (A–Z)</option>
+                  <option value={SORT_NAME_DESC}>Course name (Z–A)</option>
+                  <option value={SORT_STATUS}>Status</option>
+                </select>
+              </div>
+            </div>
+            <div className="ud-task-list">
+            {sortedTasks.length === 0 ? (
+              <p className="ud-empty">
+                {taskSearch.trim() ? "No tasks match your search." : taskTab === TASK_TAB_HISTORY ? "No completed or rejected tasks yet." : "No pending tasks."}
+              </p>
+            ) : (
+            sortedTasks.map((task) => {
               const statusLabel = task.status === "approved" ? "Completed" : task.status === "rejected" ? "Rejected" : task.status === "submitted" || task.status === "draft" ? "Pending" : "Not started";
               const statusClass = task.status === "approved" ? "ud-badge-success" : task.status === "rejected" ? "ud-badge-danger" : "ud-badge-warning";
               const isExpanded = expandTaskId === (task.id || task.course_id);
@@ -305,8 +439,9 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                   )}
                 </div>
               );
-            })}
+            }) )}
           </div>
+          </>
         )}
       </section>
 

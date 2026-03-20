@@ -1,42 +1,30 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import StudentSidebar from "../components/StudentSidebar";
+import StudentLayout from "../components/StudentLayout";
+import { Search, BookOpen, CheckCircle2, ArrowRight, Sparkles } from "lucide-react";
 
 import "./MyCourses.css";
 
 const API_BASE = "http://localhost:5000";
 
-const FALLBACK_PROFILE = {
-    register_no: "7376231CS323",
-    name: "SUGANTH R",
-    avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png"
+const inferLevelIndex = (levelName) => {
+    const s = (levelName || "").toString();
+    const m = s.match(/level\s*(\d+)/i);
+    if (!m) return null;
+    const n = parseInt(m[1], 10);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return n - 1;
 };
 
 export default function MyCourses() {
     const [activeTab, setActiveTab] = useState("Assessment");
     const [courses, setCourses] = useState([]);
     const [enrollments, setEnrollments] = useState([]);
-    const [profile, setProfile] = useState(FALLBACK_PROFILE);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [sortBy, setSortBy] = useState("name_asc");
 
     const registerNo = localStorage.getItem("register_no");
     const token = localStorage.getItem("token");
-
-    useEffect(() => {
-        if (registerNo) {
-            fetch(`${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`)
-                .then((r) => r.ok ? r.json() : null)
-                .then((data) => {
-                    if (data?.profile) {
-                        setProfile({
-                            register_no: data.profile.register_no,
-                            name: data.profile.name,
-                            avatarUrl: data.profile.avatarUrl || FALLBACK_PROFILE.avatarUrl,
-                        });
-                    }
-                })
-                .catch(() => {});
-        }
-    }, [registerNo]);
 
     useEffect(() => {
         if (!registerNo) return;
@@ -49,7 +37,8 @@ export default function MyCourses() {
                         title: c.title,
                         image: c.image || "",
                         completed: !!c.completed,
-                        levelName: c.levelName || ""
+                        levelName: c.levelName || "",
+                        levelIndex: c.levelIndex ?? null,
                     })));
                 } else {
                     setCourses([]);
@@ -61,115 +50,176 @@ export default function MyCourses() {
     }, [registerNo]);
 
     useEffect(() => {
-        if (!token) return;
-        fetch(`${API_BASE}/api/enrollments/my`, { headers: { Authorization: `Bearer ${token}` } })
+        if (!token || !registerNo) return;
+        const query = new URLSearchParams({ studentId: registerNo });
+        fetch(`${API_BASE}/api/enrollments/my?${query}`, { headers: { Authorization: `Bearer ${token}` } })
             .then((r) => r.ok ? r.json() : [])
             .then((data) => setEnrollments(Array.isArray(data) ? data : []))
             .catch(() => setEnrollments([]));
-    }, [token]);
+    }, [token, registerNo]);
 
     const enrolledNames = useMemo(() => new Set(enrollments.map((e) => e.name).filter(Boolean)), [enrollments]);
+    const completedCount = useMemo(() => (Array.isArray(courses) ? courses.filter((c) => c.completed).length : 0), [courses]);
 
-    const displayProfile = registerNo ? { ...FALLBACK_PROFILE, ...profile, register_no: profile.register_no || registerNo } : FALLBACK_PROFILE;
+    const filteredAndSortedCourses = useMemo(() => {
+        const term = (searchTerm || "").trim().toLowerCase();
+        const list = (Array.isArray(courses) ? courses : []).filter((c) => {
+            if (!term) return true;
+            return ((c.title || "").toLowerCase().includes(term) || (c.levelName || "").toLowerCase().includes(term));
+        });
+
+        if (sortBy === "name_asc") {
+            list.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
+        } else if (sortBy === "name_desc") {
+            list.sort((a, b) => (b.title || "").localeCompare(a.title || ""));
+        } else if (sortBy === "completed_first") {
+            list.sort((a, b) => Number(!!b.completed) - Number(!!a.completed) || (a.title || "").localeCompare(b.title || ""));
+        }
+        return list;
+    }, [courses, searchTerm, sortBy]);
 
     return (
-        <div className="dashboard-layout">
-            <header className="top-navbar">
-                <div className="top-nav-brand">
-                    <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-                    <span>PCDP Portal</span>
-                </div>
-
-                <div className="top-nav-profile">
-                    <img
-                        src={displayProfile.avatarUrl}
-                        alt="Profile"
-                        className="profile-avatar"
-                    />
-                    <div className="profile-info">
-                        <span className="profile-id">{displayProfile.register_no}</span>
-                        <span className="profile-name">{displayProfile.name}</span>
+        <StudentLayout>
+            <div className="mycourses-container">
+                {/* <div className="mycourses-hero">
+                    <div className="mycourses-hero-inner">
+                        <div className="mycourses-hero-titleRow">
+                            <h1 className="mycourses-title">My Courses</h1>
+                            <span className="mycourses-hero-chip">
+                                <Sparkles size={14} />
+                                Stay consistent
+                            </span>
+                        </div>
+                        <p className="mycourses-subtitle">
+                            {courses.length ? `You’re enrolled in ${courses.length} course${courses.length === 1 ? "" : "s"}.` : "All courses you’re enrolled in will appear here."}
+                        </p>
+                        <div className="mycourses-stats">
+                            <div className="mycourses-stat">
+                                <div className="mycourses-stat-label">Enrolled</div>
+                                <div className="mycourses-stat-value">{courses.length}</div>
+                            </div>
+                            <div className="mycourses-stat">
+                                <div className="mycourses-stat-label">Completed</div>
+                                <div className="mycourses-stat-value">{completedCount}</div>
+                            </div>
+                            <div className="mycourses-stat">
+                                <div className="mycourses-stat-label">Active</div>
+                                <div className="mycourses-stat-value">{Math.max(0, courses.length - completedCount)}</div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-            </header>
+                </div> */}
 
-            <StudentSidebar />
-
-            <main className="dashboard-main-area">
-                <div className="courses-container">
-
-                    <h1 className="page-title">My Courses</h1>
-
-                    <div className="my-courses-toggle">
+<div className="mycourses-toggle" role="tablist" aria-label="Course mode">
                         <button
-                            className={`toggle-btn ${activeTab === 'Assessment' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('Assessment')}
+                            type="button"
+                            className={`mycourses-toggle-btn ${activeTab === "Assessment" ? "active" : ""}`}
+                            onClick={() => setActiveTab("Assessment")}
+                            role="tab"
+                            aria-selected={activeTab === "Assessment"}
                         >
                             Assessment
                         </button>
                         <button
-                            className={`toggle-btn ${activeTab === 'Practice' ? 'active' : ''}`}
-                            onClick={() => setActiveTab('Practice')}
+                            type="button"
+                            className={`mycourses-toggle-btn ${activeTab === "Practice" ? "active" : ""}`}
+                            onClick={() => setActiveTab("Practice")}
+                            role="tab"
+                            aria-selected={activeTab === "Practice"}
                         >
                             Practice
                         </button>
                     </div>
 
-                    <div className="my-courses-grid">
-                        {courses.length === 0 ? (
-                            <p className="courses-empty">No enrolled courses yet. Browse Courses Available to register.</p>
-                        ) : (
-                            courses.map((course) => (
-                                <Link
-                                    to={`/course/${course.id}${course.levelName ? `?level=${encodeURIComponent(course.levelName)}` : ""}`}
-                                    className="my-course-card"
-                                    key={course.id}
-                                >
-                                    <div className="my-course-image">
-                                        <img src={course.image || "https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&q=80&w=400"} alt={course.title} />
-                                        {course.completed && <span className="my-course-badge completed">Completed</span>}
+                <div className="mycourses-grid">
+                    {filteredAndSortedCourses.length === 0 ? (
+                        <div className="mycourses-empty">
+                            <p>{courses.length === 0 ? "No enrolled courses yet." : "No courses match your search."}</p>
+                            <p className="mycourses-empty-hint">Go to Courses Available to register.</p>
+                        </div>
+                    ) : (
+                        filteredAndSortedCourses.map((course) => (
+                            (() => {
+                                const inferred = inferLevelIndex(course.levelName);
+                                const explicitLevelIndex = Number.isFinite(Number(course.levelIndex)) ? Number(course.levelIndex) : null;
+                                const to =
+                                    explicitLevelIndex != null
+                                        ? `/course/${course.id}/level/${explicitLevelIndex}`
+                                        : inferred != null
+                                        ? `/course/${course.id}/level/${inferred}`
+                                        : `/course/${course.id}${course.levelName ? `?level=${encodeURIComponent(course.levelName)}` : ""}`;
+                                return (
+                            <div className="mycourses-card" key={course.id} style={{ cursor: "default" }}>
+                                <Link to={to} style={{ textDecoration: "none", color: "inherit", display: "block", flex: 1, minHeight: 0 }}>
+                                    <div className="mycourses-card-media">
+                                        {course.image ? (
+                                            <img src={course.image} alt={course.title} />
+                                        ) : (
+                                            <div className="mycourses-card-placeholder" aria-hidden="true">
+                                                <BookOpen size={44} />
+                                            </div>
+                                        )}
+                                        <div className="mycourses-card-overlay" aria-hidden="true" />
+                                        {course.completed && (
+                                            <span className="mycourses-badge mycourses-badge-completed">
+                                                <CheckCircle2 size={14} />
+                                                Completed
+                                            </span>
+                                        )}
                                     </div>
-                                    <div className="my-course-content">
-                                        <h3 className="my-course-title">{course.title}</h3>
+                                    <div className="mycourses-card-body" style={{ paddingBottom: 8 }}>
+                                        <h3 className="mycourses-card-title">{course.title}</h3>
+                                        <div className="mycourses-card-meta">
+                                            {course.levelName ? <span className="mycourses-pill">Level: {course.levelName}</span> : <span className="mycourses-pill">Course</span>}
+                                            <span className={`mycourses-pill ${course.completed ? "is-done" : "is-open"}`}>{course.completed ? "Done" : "In progress"}</span>
+                                        </div>
+                                        <div className="mycourses-card-cta">
+                                            <span className="mycourses-cta-btn">
+                                                Open
+                                                <ArrowRight size={16} />
+                                            </span>
+                                        </div>
                                     </div>
                                 </Link>
-                            ))
-                        )}
-                    </div>
+                            </div>
+                                );
+                            })()
+                        ))
+                    )}
+                </div>
 
-                    <h2 className="my-enrollments-title">My Enrollments</h2>
-                    <p className="my-enrollments-subtitle">PS courses you registered for. Complete prerequisites to unlock.</p>
+                    {/* <h2 className="my-enrollments-title">My Enrollments</h2> */}
+                    {/* <p className="my-enrollments-subtitle">PS courses you registered for. Complete prerequisites to unlock.</p> */}
                     {enrollments.length === 0 ? (
-                        <p className="courses-empty">No PS enrollments yet. Go to Courses Available to register.</p>
+                        <p className="mycourses-muted">No PS enrollments yet. Go to Courses Available to register.</p>
                     ) : (
                         <div className="my-enrollments-grid">
                             {enrollments.map((e) => {
                                 const prereq = e.prereq || [];
                                 const unmet = prereq.filter((p) => !enrolledNames.has(p));
                                 const locked = unmet.length > 0;
-                                return (
-                                    <div className={`my-enrollment-card ${locked ? "locked" : ""}`} key={e.id}>
-                                        <div className="my-enrollment-content">
-                                            <h3 className="my-enrollment-name">{e.name}</h3>
-                                            <p className="my-enrollment-desc">{(e.description || "").slice(0, 80)}{(e.description || "").length > 80 ? "…" : ""}</p>
-                                            <div className="my-enrollment-progress-wrap">
-                                                <div className="my-enrollment-progress-bar">
-                                                    <div className="my-enrollment-progress-fill" style={{ width: `${e.progress || 0}%` }} />
-                                                </div>
-                                                <span className="my-enrollment-progress-text">{e.progress || 0}%</span>
-                                            </div>
-                                            {locked && (
-                                                <p className="my-enrollment-prereq">Complete prerequisites: {unmet.join(", ")}</p>
-                                            )}
-                                        </div>
-                                    </div>
-                                );
+                                // return (
+                                //     <div className={`my-enrollment-card ${locked ? "locked" : ""}`} key={e.id}>
+                                //         <div className="my-enrollment-content">
+                                //             <h3 className="my-enrollment-name">{e.name}</h3>
+                                //             <p className="my-enrollment-desc">{(e.description || "").slice(0, 80)}{(e.description || "").length > 80 ? "…" : ""}</p>
+                                //             <div className="my-enrollment-progress-wrap">
+                                //                 <div className="my-enrollment-progress-bar">
+                                //                     <div className="my-enrollment-progress-fill" style={{ width: `${e.progress || 0}%` }} />
+                                //                 </div>
+                                //                 <span className="my-enrollment-progress-text">{e.progress || 0}%</span>
+                                //             </div>
+                                //             {locked && (
+                                //                 <p className="my-enrollment-prereq">Complete prerequisites: {unmet.join(", ")}</p>
+                                //             )}
+                                //         </div>
+                                //     </div>
+                                // );
                             })}
                         </div>
                     )}
 
-                </div>
-            </main>
-        </div>
+            </div>
+        </StudentLayout>
     );
 }

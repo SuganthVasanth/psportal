@@ -1,6 +1,13 @@
 const mongoose = require("mongoose");
 
 // Dashboard course list (name, description, status) - separate from main Course model
+const studyMaterialSchema = new mongoose.Schema({
+  name: { type: String, default: "" },
+  type: { type: String, enum: ["link", "file"], default: "link" },
+  url: { type: String, default: "" },
+  content: { type: String, default: "" },
+}, { _id: false });
+
 const levelSchema = new mongoose.Schema({
   name: { type: String, required: true },
   rewardPoints: { type: Number, default: 0 },
@@ -8,6 +15,7 @@ const levelSchema = new mongoose.Schema({
   prerequisiteLevelIndices: [{ type: Number }],
   assessmentType: { type: String, default: "MCQ" },
   topics: [{ type: String }],
+  studyMaterials: [studyMaterialSchema],
 }, { _id: false });
 
 const adminCourseSchema = new mongoose.Schema({

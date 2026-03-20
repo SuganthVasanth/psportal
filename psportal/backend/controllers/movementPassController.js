@@ -3,22 +3,26 @@ const Student = require('../models/Student');
 
 // Helper to convert time string (e.g., "10:30" or "14:45") to minutes since midnight
 const timeToMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return 0;
     // If it's a simple HH:MM format
     if (timeStr.includes(':')) {
         let [hours, minutes] = timeStr.split(':');
+        if (minutes === undefined) minutes = '0';
 
         // Handle AM/PM if present
-        if (minutes.toLowerCase().includes('pm')) {
-            hours = parseInt(hours);
+        if (minutes.toLowerCase && minutes.toLowerCase().includes('pm')) {
+            hours = parseInt(hours, 10) || 0;
             if (hours !== 12) hours += 12;
             minutes = minutes.toLowerCase().replace('pm', '').trim();
-        } else if (minutes.toLowerCase().includes('am')) {
-            hours = parseInt(hours);
+        } else if (minutes.toLowerCase && minutes.toLowerCase().includes('am')) {
+            hours = parseInt(hours, 10) || 0;
             if (hours === 12) hours = 0;
             minutes = minutes.toLowerCase().replace('am', '').trim();
         }
 
-        return parseInt(hours) * 60 + parseInt(minutes);
+        const h = parseInt(hours, 10) || 0;
+        const m = parseInt(minutes, 10) || 0;
+        return h * 60 + m;
     }
     return 0;
 };
@@ -119,37 +123,31 @@ exports.getPasses = async (req, res) => {
             return res.status(400).json({ message: "Student ID required" });
         }
 
-        // Fetch all passes, sorted descending by creation time
-        const passes = await MovementPass.find({ student_id }).sort({ createdAt: -1 });
-
-        // Optionally, we could map over properties and dynamically update "Expired" 
-        // status for older passes depending on the current time right on read, 
-        // to simplify the backend cron requirements.
+        // Fetch all passes, sorted descending by creation time (lean to avoid save() issues)
+        const passes = await MovementPass.find({ student_id }).sort({ createdAt: -1 }).lean();
 
         const now = new Date();
         const todayStr = now.toDateString();
         const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-        const updatedPasses = await Promise.all(passes.map(async (pass) => {
-            // If it's already expired, do nothing
-            if (pass.status === 'Expired') return pass;
+        // Compute status in memory only (no DB writes on read) to avoid 500s from save()
+        const updatedPasses = passes.map((pass) => {
+            const status = pass.status || 'Active';
+            if (status === 'Expired') return { ...pass, status: 'Expired' };
 
-            // If the pass date is older than today, it's definitively expired
-            if (pass.date.toDateString() !== todayStr) {
-                pass.status = 'Expired';
-                await pass.save();
-                return pass;
+            const passDate = pass.date ? new Date(pass.date) : null;
+            if (!passDate || passDate.toDateString() !== todayStr) {
+                return { ...pass, status: 'Expired' };
             }
 
-            // If it's today, check the time
-            const expireMinutes = timeToMinutes(pass.endTime);
+            const endTimeStr = pass.endTime || '';
+            const expireMinutes = timeToMinutes(endTimeStr);
             if (currentTotalMinutes >= expireMinutes) {
-                pass.status = 'Expired';
-                await pass.save();
+                return { ...pass, status: 'Expired' };
             }
 
-            return pass;
-        }));
+            return { ...pass, status: 'Active' };
+        });
 
         res.status(200).json(updatedPasses);
 

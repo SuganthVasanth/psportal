@@ -1,97 +1,109 @@
+/* Student sidebar – pastel SaaS style, icon + label, smooth hover */
 .student-sidebar-minimal {
-    width: 80px;
-    background-color: #ffffff;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    height: calc(100vh - 70px);
-    position: fixed;
-    left: 0;
-    top: 70px;
-    z-index: 100;
-    border-right: 1px solid #edf2f7;
+  width: 72px;
+  min-width: 72px;
+  background: #f5f6fa;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: calc(100vh - 64px);
+  position: fixed;
+  left: 0;
+  top: 70px;
+  z-index: 100;
+  border-right: 1px solid var(--pastel-border-soft, #e2e8f0);
+  transition: width var(--transition-normal, 0.25s ease), background 0.2s ease;
 }
 
 .sidebar-nav-minimal {
-    flex: 1;
-    width: 100%;
-    padding-top: 30px;
+  flex: 1;
+  width: 100%;
+  padding-top: var(--space-6, 24px);
 }
 
 .sidebar-nav-minimal ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 20px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2, 8px);
 }
 
 .sidebar-li-minimal {
-    position: relative;
-    width: 100%;
-    display: flex;
-    justify-content: center;
+  position: relative;
+  width: 100%;
+  display: flex;
+  justify-content: center;
 }
 
 .nav-item {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 44px;
-    height: 44px;
-    border-radius: 10px;
-    color: #718096;
-    transition: all 0.2s ease;
-    cursor: pointer;
-    /* important for tooltip positioning if not on li */
-    position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: var(--space-3, 12px);
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: #9ca3af;
+  transition: all var(--transition-fast, 0.2s ease);
+  cursor: pointer;
+  position: relative;
+  text-decoration: none;
 }
 
-.nav-item:hover,
-.nav-item.active {
-    background-color: #8b5cf6;
-    color: white;
+.nav-item:hover {
+  background: rgba(109, 93, 246, 0.08);
+  color: #6d5df6;
+  transform: translateY(-1px);
 }
 
 .nav-item.active {
-    box-shadow: 0 4px 10px rgba(139, 92, 246, 0.4);
+  background: linear-gradient(135deg, #6d5df6, #8f7cff);
+  color: #fff;
+  box-shadow: 0 8px 20px rgba(109, 93, 246, 0.35);
+}
+
+.nav-item.active:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 18px rgba(139, 92, 246, 0.4);
 }
 
 .nav-tooltip {
-    display: none;
-    position: fixed;
-    /* Using fixed so it pops out of any stacking context */
-    left: 80px;
-    /* Sidebar width */
-    margin-left: 10px;
-    margin-bottom: 4px;
-    padding: 8px 12px 8px 12px;
-    border-radius: 8px;
-    background-color: #8b5cf6;
-    color: white;
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-    z-index: 50;
-    /* Center it vertically relative to the hovered item, handled by flex or top/bottom if we calculate it */
+  display: none;
+  position: fixed;
+  left: 76px;
+  margin-left: 8px;
+  padding: var(--space-2, 8px) var(--space-3, 12px);
+  border-radius: var(--radius-sm, 8px);
+  background: #111827;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  z-index: 50;
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(0,0,0,0.08));
 }
 
-/* On hover of the nav-item, show the tooltip */
 .nav-item:hover .nav-tooltip {
-    display: block;
+  display: block;
 }
 
 .sidebar-footer-minimal {
-    padding: 30px 0;
-    width: 100%;
-    display: flex;
-    justify-content: center;
-    position: relative;
+  padding: var(--space-6, 24px) 0;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  position: relative;
 }
 
 .logout-btn-minimal {
-    background: transparent;
-    border: none;
+  background: transparent;
+  border: none;
+}
+
+.logout-btn-minimal:hover {
+  color: #dc2626;
+  background: #fee2e2;
 }

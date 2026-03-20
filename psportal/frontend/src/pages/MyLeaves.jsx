@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import StudentSidebar from "../components/StudentSidebar";
+import StudentLayout from "../components/StudentLayout";
 import { Filter, Trash2 } from "lucide-react";
 import "./MyLeaves.css";
 
@@ -220,25 +220,8 @@ export default function MyLeaves() {
     };
 
     return (
-        <div className="dashboard-layout leaves-layout">
-            <header className="top-navbar">
-                <div className="top-nav-brand">
-                    <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-                    <span>PCDP Portal</span>
-                </div>
-                <div className="top-nav-profile">
-                    <img src={profile.avatarUrl} alt="Profile" className="profile-avatar" />
-                    <div className="profile-info">
-                        <span className="profile-id">{profile.register_no}</span>
-                        <span className="profile-name">{profile.name}</span>
-                    </div>
-                </div>
-            </header>
-
-            <StudentSidebar />
-
-            <main className="dashboard-main-area leaves-main">
-                <div className="leaves-container">
+        <StudentLayout>
+            <div className="leaves-container leaves-main">
                     <div className="leaves-header-row">
                         <h1 className="leaves-page-title">My Leaves</h1>
                         <button type="button" className="apply-leave-btn" onClick={openApplyModal}>Apply Leave</button>
@@ -345,8 +328,7 @@ export default function MyLeaves() {
 
                     </div>
                     )}
-                </div>
-            </main>
+            </div>
 
             {selectedLeave && (
                 <div className="leave-modal-overlay" onClick={closeDetailsModal}>
@@ -509,6 +491,6 @@ export default function MyLeaves() {
                     </div>
                 </div>
             )}
-        </div>
+        </StudentLayout>
     );
 }

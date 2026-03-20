@@ -48,6 +48,17 @@ export default function StaffWardenLeaveApprovals({ data, has, onRefresh }) {
     }
   };
 
+  const handleGuardedActionClick = (leave, action) => {
+    const canAct = leave?.canAct !== false;
+    const blockReason =
+      leave?.blockReason || "Previous approver in the flow must approve this leave before you can take action.";
+    if (!canAct) {
+      alert(blockReason);
+      return;
+    }
+    handleAction(leave.id || leave._id, action);
+  };
+
   const show = has("ward_students.leave_approve");
   if (!show) return <p className="ud-empty">You don&apos;t have leave approval access as warden.</p>;
 
@@ -185,7 +196,7 @@ export default function StaffWardenLeaveApprovals({ data, has, onRefresh }) {
                   <button
                     type="button"
                     className="sa-btn sa-btn-approve"
-                    onClick={() => handleAction(selectedLeave.id || selectedLeave._id, "Approved")}
+                    onClick={() => handleGuardedActionClick(selectedLeave, "Approved")}
                     disabled={!!actingId}
                   >
                     {actingId === (selectedLeave.id || selectedLeave._id) ? "..." : "Approve"}
@@ -193,7 +204,7 @@ export default function StaffWardenLeaveApprovals({ data, has, onRefresh }) {
                   <button
                     type="button"
                     className="sa-btn sa-btn-reject"
-                    onClick={() => handleAction(selectedLeave.id || selectedLeave._id, "Rejected")}
+                    onClick={() => handleGuardedActionClick(selectedLeave, "Rejected")}
                     disabled={!!actingId}
                   >
                     Reject

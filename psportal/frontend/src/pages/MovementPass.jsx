@@ -1,14 +1,12 @@
 import React, { useState, useEffect } from "react";
-import StudentSidebar from "../components/StudentSidebar";
+import StudentLayout from "../components/StudentLayout";
 import { Clock, X } from "lucide-react";
 import "./MovementPass.css";
 
-const MOCK_PROFILE = {
-    _id: "S_7376231CS323", // Matches backend format usually for tests
-    register_no: "7376231CS323",
-    name: "SUGANTH R",
-    dept: "Computer Science and Engineering",
-    avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png"
+// Backend expects student_id like "S_7376231CS323" (Student model _id)
+const getStudentId = () => {
+    const reg = localStorage.getItem("register_no");
+    return reg ? `S_${reg}` : "S_7376231CS323";
 };
 
 const MovementPass = () => {
@@ -21,6 +19,7 @@ const MovementPass = () => {
     });
     const [error, setError] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [fetchError, setFetchError] = useState(null);
 
     useEffect(() => {
         fetchPasses();
@@ -28,14 +27,22 @@ const MovementPass = () => {
 
     const fetchPasses = async () => {
         setLoading(true);
+        setFetchError(null);
         try {
-            const res = await fetch(`http://localhost:5000/api/movement-pass/student/${MOCK_PROFILE._id}`);
+            const studentId = getStudentId();
+            const res = await fetch(`http://localhost:5000/api/movement-pass/student/${encodeURIComponent(studentId)}`);
             if (res.ok) {
                 const data = await res.json();
-                setPasses(data);
+                setPasses(Array.isArray(data) ? data : []);
+            } else {
+                const errData = await res.json().catch(() => ({}));
+                setFetchError(errData.message || "Failed to load passes");
+                setPasses([]);
             }
-        } catch (error) {
-            console.error("Failed to fetch passes:", error);
+        } catch (err) {
+            console.error("Failed to fetch passes:", err);
+            setFetchError("Network error. Please try again.");
+            setPasses([]);
         } finally {
             setLoading(false);
         }
@@ -104,7 +111,7 @@ const MovementPass = () => {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    student_id: MOCK_PROFILE._id,
+                    student_id: getStudentId(),
                     startTime: newPassForm.startTime,
                     purpose: newPassForm.purpose
                 })
@@ -146,25 +153,8 @@ const MovementPass = () => {
     };
 
     return (
-        <div className="dashboard-layout">
-            <header className="top-navbar">
-                <div className="top-nav-brand">
-                    <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-                    <span>PCDP Portal</span>
-                </div>
-                <div className="top-nav-profile">
-                    <img src={MOCK_PROFILE.avatarUrl} alt="Profile" className="profile-avatar" />
-                    <div className="profile-info">
-                        <span className="profile-id">{MOCK_PROFILE.register_no}</span>
-                        <span className="profile-name">{MOCK_PROFILE.name}</span>
-                    </div>
-                </div>
-            </header>
-
-            <StudentSidebar />
-
-            <main className="dashboard-main-area">
-                <div className="courses-container mp-container">
+        <StudentLayout>
+            <div className="courses-container mp-container">
 
                     <div className="mp-header-row">
                         <h1 className="mp-page-title">Movement Pass</h1>
@@ -176,6 +166,8 @@ const MovementPass = () => {
                     <div className="mp-passes-grid">
                         {loading ? (
                             <p>Loading passes...</p>
+                        ) : fetchError ? (
+                            <p className="no-passes-text" style={{ color: "#b91c1c" }}>{fetchError}</p>
                         ) : passes.length === 0 ? (
                             <p className="no-passes-text">No movement passes found.</p>
                         ) : (
@@ -199,7 +191,6 @@ const MovementPass = () => {
                     </div>
 
                 </div>
-            </main>
 
             {/* Modal */}
             {isModalOpen && (
@@ -268,15 +259,15 @@ const MovementPass = () => {
                         <div className="modal-body details-body">
                             <div className="detail-row">
                                 <span className="detail-label">User Id:</span>
-                                <span className="detail-value">{MOCK_PROFILE.register_no}</span>
+                                <span className="detail-value">{localStorage.getItem("register_no") || "—"}</span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Name:</span>
-                                <span className="detail-value">{MOCK_PROFILE.name}</span>
+                                <span className="detail-value">{localStorage.getItem("userName") || "Student"}</span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Dept:</span>
-                                <span className="detail-value">{MOCK_PROFILE.dept}</span>
+                                <span className="detail-value">—</span>
                             </div>
                             <div className="detail-row">
                                 <span className="detail-label">Date:</span>
@@ -294,10 +285,10 @@ const MovementPass = () => {
                                 <p className="detail-purpose">{selectedPass.purpose}</p>
                             </div>
                         </div>
-                    </div>
                 </div>
+            </div>
             )}
-        </div>
+        </StudentLayout>
     );
 };
 

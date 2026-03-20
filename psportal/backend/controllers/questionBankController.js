@@ -2,6 +2,7 @@ const QuestionBankSubmission = require("../models/QuestionBankSubmission");
 const FacultyCourseAssignment = require("../models/FacultyCourseAssignment");
 const AdminCourse = require("../models/AdminCourse");
 const User = require("../models/User");
+const StudentExamAttempt = require("../models/StudentExamAttempt");
 
 const API_BASE = process.env.API_BASE || "";
 
@@ -147,6 +148,64 @@ exports.upsertSubmission = async (req, res) => {
   } catch (err) {
     console.error("upsertSubmission error:", err);
     res.status(500).json({ message: "Failed to save" });
+  }
+};
+
+// ——— Student: get approved question bank for a course (for exam portal) ———
+exports.getApprovedQuestionsForCourse = async (req, res) => {
+  try {
+    const { courseId } = req.params;
+    if (!courseId) return res.status(400).json({ message: "courseId required" });
+    const doc = await QuestionBankSubmission.findOne({
+      course_id: courseId,
+      status: "approved",
+    })
+      .populate("course_id", "name")
+      .populate("questions.template_id", "name key layout")
+      .lean();
+    if (!doc) return res.status(404).json({ message: "No approved question bank for this course" });
+    const questions = (doc.questions || []).map((q) => ({
+      questionNumber: q.questionNumber,
+      template_id: q.template_id?._id?.toString(),
+      template_name: q.template_id?.name,
+      value: q.value || {},
+    }));
+    res.json({
+      course_id: doc.course_id?._id?.toString() || doc.course_id?.toString(),
+      course_name: doc.course_id?.name || "",
+      questions,
+    });
+  } catch (err) {
+    console.error("getApprovedQuestionsForCourse error:", err);
+    res.status(500).json({ message: err.message || "Failed to load" });
+  }
+};
+
+// ——— Student: submit exam attempt (answers) ———
+exports.submitStudentAttempt = async (req, res) => {
+  try {
+    const { register_no, course_id, booking_id, questions } = req.body;
+    if (!register_no || !course_id) return res.status(400).json({ message: "register_no and course_id required" });
+
+    const existingCount = await StudentExamAttempt.countDocuments({ register_no, course_id });
+    if (existingCount >= 1) {
+      return res.status(403).json({ message: "You have already attempted this test once. Only one attempt is allowed." });
+    }
+
+    const doc = await StudentExamAttempt.create({
+      register_no,
+      course_id,
+      booking_id: booking_id || "",
+      questions: Array.isArray(questions) ? questions : [],
+    });
+    res.status(201).json({
+      id: doc._id.toString(),
+      message: "Attempt submitted",
+      submitted_at: doc.submitted_at,
+    });
+  } catch (err) {
+    console.error("submitStudentAttempt error:", err);
+    res.status(500).json({ message: err.message || "Failed to submit" });
   }
 };
 

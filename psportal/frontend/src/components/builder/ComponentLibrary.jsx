@@ -11,6 +11,13 @@ import {
   GitCompare,
   Minus,
   LayoutGrid,
+  ListOrdered,
+  AlignLeft,
+  Table,
+  Upload,
+  Code2,
+  Bug,
+  Terminal,
 } from "lucide-react";
 import { TEMPLATE_COMPONENT_TYPES } from "./templateComponentTypes";
 
@@ -25,6 +32,16 @@ const ICONS = {
   match_pairs: GitCompare,
   blank_space: Minus,
   drag_drop_area: LayoutGrid,
+  numeric_answer: Hash,
+  arrange_order: ListOrdered,
+  cloze_passage: AlignLeft,
+  matrix_mcq: Table,
+  image_question: Image,
+  file_upload_question: Upload,
+  code_output_question: Code2,
+  debugging_question: Bug,
+  programming_question: Terminal,
+  fill_blank: AlignLeft,
 };
 
 function DraggableLibraryItem({ type }) {
@@ -53,15 +70,19 @@ function DraggableLibraryItem({ type }) {
 const COMPONENT_GROUPS = [
   {
     title: "Content",
-    types: ["question_text", "paragraph", "input_field", "blank_space"],
+    types: ["question_text", "paragraph", "input_field", "blank_space", "fill_blank", "cloze_passage"],
   },
   {
     title: "Choices",
-    types: ["multiple_choice", "checkbox_options", "dropdown"],
+    types: ["multiple_choice", "checkbox_options", "dropdown", "matrix_mcq"],
   },
   {
     title: "Interactive",
-    types: ["match_pairs", "drag_drop_area", "image"],
+    types: ["match_pairs", "drag_drop_area", "arrange_order", "image", "image_question"],
+  },
+  {
+    title: "Special",
+    types: ["numeric_answer", "file_upload_question", "code_output_question", "debugging_question", "programming_question"],
   },
 ];
 

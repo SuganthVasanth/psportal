@@ -73,6 +73,15 @@ function ComponentPreview({ component }) {
       </div>
     );
   }
+  if (["numeric_answer", "arrange_order", "cloze_passage", "matrix_mcq", "image_question", "file_upload_question", "code_output_question", "debugging_question", "programming_question", "fill_blank"].includes(type)) {
+    const sub = type === "numeric_answer" ? "Number" : type === "arrange_order" ? `${props.numberOfItems ?? 4} items` : type === "cloze_passage" || type === "fill_blank" ? `${props.numberOfBlanks ?? 2} blanks` : type === "matrix_mcq" ? `${props.rows ?? 3}×${props.columns ?? 3}` : type === "image_question" ? "Image + options" : type === "file_upload_question" ? "Upload" : type === "code_output_question" ? "Code → output" : type === "debugging_question" ? "Debug" : "Code + tests";
+    return (
+      <div className="flex h-full w-full flex-col justify-center p-2">
+        <span className="text-xs font-medium text-slate-500">{label || TEMPLATE_COMPONENT_TYPES[type]}</span>
+        <span className="text-xs text-slate-400">{sub}</span>
+      </div>
+    );
+  }
   // question_text, input_field
   return (
     <div className="flex h-full w-full flex-col justify-center p-2 text-left">

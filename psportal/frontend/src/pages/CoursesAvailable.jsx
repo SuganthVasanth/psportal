@@ -1,19 +1,15 @@
 import React, { useState, useEffect, useMemo } from "react";
-import StudentSidebar from "../components/StudentSidebar";
+import { useNavigate } from "react-router-dom";
+import StudentLayout from "../components/StudentLayout";
 import { Search, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
 import "./CoursesAvailable.css";
 
 const API_BASE = "http://localhost:5000";
 
-const MOCK_PROFILE = {
-  register_no: "7376231CS323",
-  name: "SUGANTH R",
-  avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
-};
-
 export default function CoursesAvailable() {
   const [searchTerm, setSearchTerm] = useState("");
   const [psCourses, setPsCourses] = useState([]);
+  const [levelCourses, setLevelCourses] = useState([]);
   const [enrolledIds, setEnrolledIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -23,6 +19,7 @@ export default function CoursesAvailable() {
 
   const registerNo = localStorage.getItem("register_no") || MOCK_PROFILE.register_no;
   const token = localStorage.getItem("token");
+  const navigate = useNavigate();
 
   const fetchPsCourses = () => {
     fetch(`${API_BASE}/api/ps-courses?status=Active`)
@@ -50,16 +47,21 @@ export default function CoursesAvailable() {
     setError(null);
     fetchPsCourses();
     fetchEnrollments();
-    setLoading(false);
+    fetch(`${API_BASE}/api/courses`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setLevelCourses(Array.isArray(data) ? data : []))
+      .catch(() => setLevelCourses([]))
+      .finally(() => setLoading(false));
   }, [token]);
 
   const grouped = useMemo(() => {
+    const term = (searchTerm || "").toLowerCase();
     const filtered = psCourses.filter(
       (c) =>
-        !searchTerm ||
-        (c.name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.parentCourse || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (c.description || "").toLowerCase().includes(searchTerm.toLowerCase())
+        !term ||
+        (c.name || "").toLowerCase().includes(term) ||
+        (c.parentCourse || "").toLowerCase().includes(term) ||
+        (c.description || "").toLowerCase().includes(term)
     );
     const bySubject = {};
     filtered.forEach((c) => {
@@ -93,26 +95,19 @@ export default function CoursesAvailable() {
 
   const subjectKeys = Object.keys(grouped).sort();
 
+  const filteredLevelCourses = useMemo(() => {
+    const term = (searchTerm || "").toLowerCase();
+    if (!term) return levelCourses;
+    return levelCourses.filter((c) => {
+      const name = (c.name || "").toLowerCase();
+      const type = (c.type || "").toLowerCase();
+      return name.includes(term) || type.includes(term);
+    });
+  }, [levelCourses, searchTerm]);
+
   return (
-    <div className="dashboard-layout">
-      <header className="top-navbar">
-        <div className="top-nav-brand">
-          <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-          <span>PCDP Portal</span>
-        </div>
-        <div className="top-nav-profile">
-          <img src={MOCK_PROFILE.avatarUrl} alt="Profile" className="profile-avatar" />
-          <div className="profile-info">
-            <span className="profile-id">{registerNo}</span>
-            <span className="profile-name">{MOCK_PROFILE.name}</span>
-          </div>
-        </div>
-      </header>
-
-      <StudentSidebar />
-
-      <main className="dashboard-main-area">
-        <div className="courses-container">
+    <StudentLayout>
+      <div className="courses-container">
           <div className="page-header">
             <h1 className="page-title">Courses Available</h1>
             <p className="page-subtitle">
@@ -143,10 +138,43 @@ export default function CoursesAvailable() {
 
           {loading ? (
             <div className="courses-loading">Loading courses…</div>
-          ) : subjectKeys.length === 0 ? (
+          ) : filteredLevelCourses.length === 0 && subjectKeys.length === 0 ? (
             <div className="courses-empty">No active courses. Admins can add courses in the dashboard.</div>
           ) : (
-            <div className="ps-courses-accordion">
+            <>
+            {filteredLevelCourses.length > 0 && (
+              <section className="courses-section">
+                <h2 className="page-title" style={{ fontSize: 18, marginBottom: 8 }}>Level-based courses</h2>
+                <p className="page-subtitle" style={{ marginBottom: 16 }}>Click a course to view levels and register.</p>
+                <div className="courses-grid">
+                  {filteredLevelCourses.map((course) => (
+                    <div className="course-card ps-course-card" key={course.id}>
+                      <div className="course-image-placeholder" style={{ minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <BookOpen size={40} style={{ color: "#cbd5e0" }} />
+                      </div>
+                      <div className="course-content">
+                        <h3 className="course-title">{course.name}</h3>
+                        <p className="course-desc-snippet">
+                          {course.type ? `${course.type} • ` : ""}{course.levelsCount != null ? `${course.levelsCount} level${course.levelsCount === 1 ? "" : "s"}` : ""}
+                        </p>
+                        <div className="course-progress-container">
+                          <button
+                            type="button"
+                            className="action-button"
+                            onClick={() => navigate(`/course/${course.id}`)}
+                          >
+                            View levels &amp; register
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {subjectKeys.length > 0 && (
+            <div className="ps-courses-accordion" style={{ marginTop: 32 }}>
               {subjectKeys.map((subject) => {
                 const courses = grouped[subject];
                 const isOpen = openAccordion[subject] !== false;
@@ -200,9 +228,10 @@ export default function CoursesAvailable() {
                 );
               })}
             </div>
+            )}
+            </>
           )}
-        </div>
-      </main>
-    </div>
+      </div>
+    </StudentLayout>
   );
 }

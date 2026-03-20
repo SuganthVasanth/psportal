@@ -1,0 +1,107 @@
+[
+    {
+    "courseId":"C_PROGRAMMING_ID",
+    "level":1,
+    "questionNumber":1,
+    "title":"Print Integer",
+    "description":"Write a program to read a single integer from input and print the same value as output.",
+    "difficulty":"Easy",
+    "topic":"Variables",
+    "inputFormat":"Single integer",
+    "outputFormat":"Same integer",
+    "sampleCases":[
+    {"input":"5","output":"5"},
+    {"input":"-10","output":"-10"}
+    ],
+    "testCases":[
+    {"input":"10","output":"10"}
+    ],
+    "hiddenTestCases":[
+    {"input":"-5","output":"-5"},
+    {"input":"0","output":"0"},
+    {"input":"999","output":"999"},
+    {"input":"1","output":"1"}
+    ],
+    "createdAt":"AUTO"
+    },
+    
+    {
+    "courseId":"C_PROGRAMMING_ID",
+    "level":1,
+    "questionNumber":2,
+    "title":"Addition of Two Numbers",
+    "description":"Write a program to read two integers and print their sum.",
+    "difficulty":"Easy",
+    "topic":"Variables",
+    "inputFormat":"Two integers",
+    "outputFormat":"Sum",
+    "sampleCases":[
+    {"input":"2 3","output":"5"},
+    {"input":"-5 10","output":"5"}
+    ],
+    "testCases":[
+    {"input":"4 6","output":"10"}
+    ],
+    "hiddenTestCases":[
+    {"input":"10 20","output":"30"},
+    {"input":"-5 5","output":"0"},
+    {"input":"7 8","output":"15"},
+    {"input":"100 200","output":"300"}
+    ],
+    "createdAt":"AUTO"
+    },
+    
+    {
+    "courseId":"C_PROGRAMMING_ID",
+    "level":1,
+    "questionNumber":3,
+    "title":"Multiplication",
+    "description":"Write a program to multiply two integers.",
+    "difficulty":"Easy",
+    "topic":"Operators",
+    "inputFormat":"Two integers",
+    "outputFormat":"Product",
+    "sampleCases":[
+    {"input":"3 4","output":"12"},
+    {"input":"-2 5","output":"-10"}
+    ],
+    "testCases":[
+    {"input":"5 6","output":"30"}
+    ],
+    "hiddenTestCases":[
+    {"input":"2 8","output":"16"},
+    {"input":"-2 3","output":"-6"},
+    {"input":"10 10","output":"100"},
+    {"input":"7 9","output":"63"}
+    ],
+    "createdAt":"AUTO"
+    },
+    
+    {
+    "courseId":"C_PROGRAMMING_ID",
+    "level":1,
+    "questionNumber":4,
+    "title":"Division",
+    "description":"Write a program to perform integer division.",
+    "difficulty":"Easy",
+    "topic":"Operators",
+    "inputFormat":"Two integers",
+    "outputFormat":"Quotient",
+    "sampleCases":[
+    {"input":"10 2","output":"5"},
+    {"input":"9 4","output":"2"}
+    ],
+    "testCases":[
+    {"input":"9 3","output":"3"}
+    ],
+    "hiddenTestCases":[
+    {"input":"20 4","output":"5"},
+    {"input":"15 5","output":"3"},
+    {"input":"8 2","output":"4"},
+    {"input":"100 10","output":"10"}
+    ],
+    "createdAt":"AUTO"
+    }
+    
+    ]
+    

@@ -17,6 +17,7 @@ export default function TemplateQuestionForm({
   onChange,
   readOnly = false,
   componentPrefix = "",
+  studentMode = false,
 }) {
   const [template, setTemplate] = useState(null);
   const [loading, setLoading] = useState(!!templateId);
@@ -71,6 +72,7 @@ export default function TemplateQuestionForm({
       onChange={onChange}
       readOnly={readOnly}
       componentPrefix={componentPrefix}
+      studentMode={studentMode}
     />
   );
 }

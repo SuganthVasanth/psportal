@@ -1,14 +1,8 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import StudentSidebar from "../components/StudentSidebar";
+import StudentLayout from "../components/StudentLayout";
 import { Search, ChevronRight } from "lucide-react";
 import "./PSActivity.css";
-
-const MOCK_PROFILE = {
-    register_no: "7376231CS323",
-    name: "SUGANTH R",
-    avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png"
-};
 
 const ACTIVITY_SECTIONS = [
     {
@@ -33,30 +27,8 @@ const ACTIVITY_SECTIONS = [
 
 export default function PSActivity() {
     return (
-        <div className="dashboard-layout">
-            <header className="top-navbar">
-                <div className="top-nav-brand">
-                    <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-                    <span>PCDP Portal</span>
-                </div>
-
-                <div className="top-nav-profile">
-                    <img
-                        src={MOCK_PROFILE.avatarUrl}
-                        alt="Profile"
-                        className="profile-avatar"
-                    />
-                    <div className="profile-info">
-                        <span className="profile-id">{MOCK_PROFILE.register_no}</span>
-                        <span className="profile-name">{MOCK_PROFILE.name}</span>
-                    </div>
-                </div>
-            </header>
-
-            <StudentSidebar />
-
-            <main className="dashboard-main-area">
-                <div className="courses-container ps-activity-container">
+        <StudentLayout>
+            <div className="courses-container ps-activity-container">
 
                     <div className="ps-activity-header">
                         <div className="ps-title-section">
@@ -111,8 +83,7 @@ export default function PSActivity() {
                         ))}
                     </div>
 
-                </div>
-            </main>
-        </div>
+            </div>
+        </StudentLayout>
     );
 }

@@ -1,10 +1,19 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom";
-import StudentSidebar from "../components/StudentSidebar";
-import { BookOpen, Award, ChevronDown, X } from "lucide-react";
+import StudentLayout from "../components/StudentLayout";
+import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
+import { BookOpen, Award, ChevronDown, X, Play, ArrowLeft } from "lucide-react";
 import "./CourseDetails.css";
 
 const API_BASE = "http://localhost:5000";
+
+/** True if current local time (HH:mm) is within [slot_start_time, slot_end_time). */
+function isSlotActiveNow(slot_start_time, slot_end_time) {
+  if (!slot_start_time || !slot_end_time) return false;
+  const now = new Date();
+  const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  return nowStr >= slot_start_time && nowStr < slot_end_time;
+}
 
 const MOCK_PROFILE = {
   register_no: "7376231CS323",
@@ -22,6 +31,7 @@ export default function CourseDetails() {
   const { id } = useParams();
   const [course, setCourse] = useState(null);
   const [progress, setProgress] = useState([]);
+  const [courseAttempts, setCourseAttempts] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [registeringLevel, setRegisteringLevel] = useState(null);
@@ -36,6 +46,13 @@ export default function CourseDetails() {
   const [bookingError, setBookingError] = useState("");
   const [bookedSlot, setBookedSlot] = useState(null);
   const [myBookings, setMyBookings] = useState([]);
+  const [examView, setExamView] = useState(false);
+  const [examQuestions, setExamQuestions] = useState([]);
+  const [examAnswers, setExamAnswers] = useState({});
+  const [examLoading, setExamLoading] = useState(false);
+  const [examError, setExamError] = useState("");
+  const [examSubmitting, setExamSubmitting] = useState(false);
+  const [examSubmitted, setExamSubmitted] = useState(false);
 
   const registerNo = localStorage.getItem("register_no") || MOCK_PROFILE.register_no;
   const studentName = localStorage.getItem("userName") || MOCK_PROFILE.name;
@@ -53,17 +70,21 @@ export default function CourseDetails() {
     Promise.all([
       fetch(`${API_BASE}/api/courses/${id}`).then((r) => (r.ok ? r.json() : Promise.reject(new Error("Course not found")))),
       fetch(`${API_BASE}/api/courses/${id}/progress?register_no=${encodeURIComponent(registerNo)}`).then((r) =>
-        r.ok ? r.json() : []
+        r.ok ? r.json() : { progress: [], courseAttempts: 0 }
       ),
     ])
       .then(([courseData, progressData]) => {
         setCourse(courseData);
-        setProgress(Array.isArray(progressData) ? progressData : []);
+        const list = Array.isArray(progressData) ? progressData : (progressData?.progress ?? []);
+        const attempts = Array.isArray(progressData) ? 0 : (progressData?.courseAttempts ?? 0);
+        setProgress(list);
+        setCourseAttempts(attempts);
       })
       .catch((e) => {
         setError(e.message || "Failed to load course");
         setCourse(null);
         setProgress([]);
+        setCourseAttempts(0);
       })
       .finally(() => setLoading(false));
   }, [id, registerNo]);
@@ -154,8 +175,11 @@ export default function CourseDetails() {
 
   const courseId = id;
   const bookingForThisCourse =
-    myBookings.find((b) => b.course_id === courseId) ||
-    (bookedSlot && bookedSlot.course_id === courseId ? bookedSlot : null);
+    myBookings.find((b) => String(b.course_id) === String(courseId)) ||
+    (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
+  const activeBookingForCourse =
+    bookingForThisCourse &&
+    isSlotActiveNow(bookingForThisCourse.slot_start_time, bookingForThisCourse.slot_end_time);
 
   const handleBookNow = async () => {
     if (!selectedSlotId) {
@@ -194,78 +218,135 @@ export default function CourseDetails() {
     }
   };
 
+  const handleLaunchPortal = () => {
+    setExamError("");
+    setExamSubmitted(false);
+    setExamLoading(true);
+    setExamView(true);
+    fetch(`${API_BASE}/api/question-banks/approved-for-course/${courseId}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("No approved questions for this course.");
+        return r.json();
+      })
+      .then((data) => {
+        setExamQuestions(Array.isArray(data.questions) ? data.questions : []);
+        setExamAnswers({});
+        setExamLoading(false);
+      })
+      .catch((e) => {
+        setExamError(e.message || "Failed to load exam");
+        setExamQuestions([]);
+        setExamLoading(false);
+      });
+  };
+
+  const handleExamAnswerChange = (questionNumber, value) => {
+    setExamAnswers((prev) => ({ ...prev, [questionNumber]: value }));
+  };
+
+  const handleSubmitAttempt = async () => {
+    setExamSubmitting(true);
+    setExamError("");
+    try {
+      const questions = examQuestions.map((q) => ({
+        questionNumber: q.questionNumber,
+        template_id: q.template_id,
+        value: examAnswers[q.questionNumber] ?? q.value ?? {},
+      }));
+      const res = await fetch(`${API_BASE}/api/question-banks/submit-attempt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          register_no: registerNo,
+          course_id: courseId,
+          booking_id: bookingForThisCourse?.id || undefined,
+          questions,
+        }),
+      });
+      const data = await res.json();
+      if (res.status === 403) {
+        setCourseAttempts(1);
+        throw new Error(data.message || "You have already attempted this test once.");
+      }
+      if (!res.ok) throw new Error(data.message || "Submit failed");
+      setExamSubmitted(true);
+      setCourseAttempts((prev) => prev + 1);
+    } catch (e) {
+      setExamError(e.message || "Submit failed");
+    } finally {
+      setExamSubmitting(false);
+    }
+  };
+
   if (loading) {
     return (
-      <div className="dashboard-layout cd-layout">
-        <header className="top-navbar">
-          <div className="top-nav-brand">
-            <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-            <span>PCDP Portal</span>
-          </div>
-          <div className="top-nav-profile">
-            <img src={MOCK_PROFILE.avatarUrl} alt="Profile" className="profile-avatar" />
-            <div className="profile-info">
-              <span className="profile-id">{registerNo}</span>
-              <span className="profile-name">{MOCK_PROFILE.name}</span>
+      <StudentLayout>
+        <div className="cd-container cd-main">
+          <p className="cd-content-placeholder">Loading course…</p>
+        </div>
+      </StudentLayout>
+    );
+  }
+
+  // Exam / Portal view (when slot is active and user launched)
+  if (examView) {
+    return (
+      <StudentLayout>
+        <div className="cd-container cd-main">
+            <div className="cd-exam-header">
+              <button type="button" className="cd-back-btn" onClick={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}>
+                <ArrowLeft size={18} /> Back to course
+              </button>
+              <h1 className="cd-exam-title">Portal – {course?.name || courseName}</h1>
             </div>
-          </div>
-        </header>
-        <StudentSidebar />
-        <main className="dashboard-main-area cd-main">
-          <div className="cd-container">
-            <p className="cd-content-placeholder">Loading course…</p>
-          </div>
-        </main>
-      </div>
+            {examLoading && <p className="cd-content-placeholder">Loading questions…</p>}
+            {examError && <p className="cd-modal-error">{examError}</p>}
+            {examSubmitted && <p className="cd-success-msg">Your attempt has been submitted successfully.</p>}
+            {!examLoading && !examError && examQuestions.length > 0 && !examSubmitted && (
+              <>
+                <div className="cd-questions-list">
+                  {examQuestions.map((q) => (
+                    <div key={q.questionNumber} className="cd-question-block">
+                      <h3 className="cd-question-heading">Question {q.questionNumber}</h3>
+                      <TemplateQuestionForm
+                        templateId={q.template_id}
+                        value={{ ...(q.value || {}), ...(examAnswers[q.questionNumber] || {}) }}
+                        onChange={(value) => handleExamAnswerChange(q.questionNumber, value)}
+                        studentMode={true}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div className="cd-exam-footer">
+                  <button
+                    type="button"
+                    className="cd-btn-primary"
+                    onClick={handleSubmitAttempt}
+                    disabled={examSubmitting}
+                  >
+                    {examSubmitting ? "Submitting…" : "Submit attempt"}
+                  </button>
+                </div>
+              </>
+            )}
+        </div>
+      </StudentLayout>
     );
   }
 
   if (error || !course) {
     return (
-      <div className="dashboard-layout cd-layout">
-        <header className="top-navbar">
-          <div className="top-nav-brand">
-            <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-            <span>PCDP Portal</span>
-          </div>
-          <div className="top-nav-profile">
-            <img src={MOCK_PROFILE.avatarUrl} alt="Profile" className="profile-avatar" />
-            <div className="profile-info">
-              <span className="profile-id">{registerNo}</span>
-              <span className="profile-name">{MOCK_PROFILE.name}</span>
-            </div>
-          </div>
-        </header>
-        <StudentSidebar />
-        <main className="dashboard-main-area cd-main">
-          <div className="cd-container">
-            <p className="cd-modal-error">{error || "Course not found"}</p>
-          </div>
-        </main>
-      </div>
+      <StudentLayout>
+        <div className="cd-container cd-main">
+          <p className="cd-modal-error">{error || "Course not found"}</p>
+        </div>
+      </StudentLayout>
     );
   }
 
   return (
-    <div className="dashboard-layout cd-layout">
-      <header className="top-navbar">
-        <div className="top-nav-brand">
-          <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-          <span>PCDP Portal</span>
-        </div>
-        <div className="top-nav-profile">
-          <img src={MOCK_PROFILE.avatarUrl} alt="Profile" className="profile-avatar" />
-          <div className="profile-info">
-            <span className="profile-id">{registerNo}</span>
-            <span className="profile-name">{MOCK_PROFILE.name}</span>
-          </div>
-        </div>
-      </header>
-
-      <StudentSidebar />
-
-      <main className="dashboard-main-area cd-main">
-        <div className="cd-container">
+    <StudentLayout>
+      <div className="cd-container cd-main">
           <div className="cd-header-card">
             <div className="cd-header-info">
               <h1 className="cd-title">{courseName}</h1>
@@ -289,6 +370,21 @@ export default function CourseDetails() {
           </div>
 
           {registerError && <p className="cd-modal-error" style={{ marginBottom: 16 }}>{registerError}</p>}
+
+          {activeBookingForCourse && (
+            <div className="cd-portal-banner">
+              {courseAttempts >= 1 ? (
+                <span className="cd-already-attempted">You have already attempted this test. Only one attempt is allowed.</span>
+              ) : (
+                <>
+                  <span>Your slot is active. You can attempt the assessment now.</span>
+                  <button type="button" className="cd-launch-portal-btn" onClick={handleLaunchPortal}>
+                    <Play size={18} /> Launch Portal
+                  </button>
+                </>
+              )}
+            </div>
+          )}
 
           <div className={levelFilterName ? "cd-two-col" : ""}>
             <div className="cd-left">
@@ -315,7 +411,7 @@ export default function CourseDetails() {
                         <span className="cd-level-title">{courseName} – {level.name || `Level ${index}`}</span>
                       </div>
                       <div className="cd-level-badges">
-                        <span className="cd-badge attempt-badge">Attempts: {progress.find((p) => p.level_index === index)?.attempts ?? 0}</span>
+                        <span className="cd-badge attempt-badge">Attempts: {courseAttempts}</span>
                         {isCompleted && <span className="cd-badge completed-badge">Completed</span>}
                         {isEnrolled && !isCompleted && <span className="cd-badge">Enrolled</span>}
                       </div>
@@ -399,6 +495,14 @@ export default function CourseDetails() {
                     {bookingForThisCourse.booked_at && (
                       <p><strong>Booked at:</strong> {new Date(bookingForThisCourse.booked_at).toLocaleString()}</p>
                     )}
+                    {activeBookingForCourse && courseAttempts < 1 && (
+                      <button type="button" className="cd-launch-portal-btn" onClick={handleLaunchPortal}>
+                        <Play size={18} /> Launch Portal
+                      </button>
+                    )}
+                    {activeBookingForCourse && courseAttempts >= 1 && (
+                      <p className="cd-already-attempted-small">Already attempted (1 attempt allowed).</p>
+                    )}
                   </div>
                 )}
 
@@ -414,7 +518,6 @@ export default function CourseDetails() {
             )}
           </div>
         </div>
-      </main>
 
       {bookSlotOpen && (
         <div className="cd-modal-overlay" onClick={() => !bookingLoading && setBookSlotOpen(false)}>
@@ -505,6 +608,6 @@ export default function CourseDetails() {
           </div>
         </div>
       )}
-    </div>
+    </StudentLayout>
   );
 }

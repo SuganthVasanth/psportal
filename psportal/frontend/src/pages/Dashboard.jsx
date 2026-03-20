@@ -62,7 +62,7 @@ export default function Dashboard() {
   }
 
   if (roles.includes("super_admin")) return <SuperAdminDashboard />;
-  if (roles.includes("admin")) return <AdminDashboard />;
+  if (roles.includes("admin")) return <Navigate to="/admin/roles" replace />;
   if (roles.includes("student")) return <StudentDashboard />;
   if (roles.includes("intern") && !isStaff) return <InternDashboard />;
   if (isStaff) return <StaffDashboardLayout />;

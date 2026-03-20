@@ -117,6 +117,12 @@ exports.getCourses = async (req, res) => {
           prerequisiteLevelIndices: Array.isArray(l.prerequisiteLevelIndices) ? l.prerequisiteLevelIndices : (l.prerequisiteLevelIndex != null && l.prerequisiteLevelIndex >= 0 ? [l.prerequisiteLevelIndex] : []),
           assessmentType: l.assessmentType || "MCQ",
           topics: Array.isArray(l.topics) ? l.topics : [],
+          studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials.map((m) => ({
+            name: m.name || "",
+            type: m.type === "file" ? "file" : "link",
+            url: m.url || "",
+            content: m.content || "",
+          })) : [],
         })) : [],
       }))
     );

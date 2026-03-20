@@ -9,6 +9,7 @@
     "seed:superadmin": "node scripts/seedSuperAdmin.js",
     "seed:initial": "node scripts/seedInitialData.js",
     "seed:students": "node scripts/seedFakeStudents.js",
+    "import:c1-questions": "node scripts/importC1Questions.js",
     "generate:role-json": "node scripts/generateSuperAdminRoleJson.js",
     "generate:role-json:file": "node scripts/generateSuperAdminRoleJson.js --file"
   },
