@@ -13,8 +13,8 @@
     border-radius: 16px;
     border: 1px solid var(--pastel-border-soft, #e2e8f0);
     background:
-        radial-gradient(900px 320px at 20% 0%, rgba(167, 139, 250, 0.20), transparent 55%),
-        radial-gradient(800px 280px at 90% 10%, rgba(99, 102, 241, 0.12), transparent 60%),
+        radial-gradient(900px 320px at 20% 0%, rgba(59, 130, 246, 0.20), transparent 55%),
+        radial-gradient(800px 280px at 90% 10%, rgba(37, 99, 235, 0.12), transparent 60%),
         linear-gradient(180deg, rgba(255,255,255,0.92), rgba(255,255,255,0.78));
     box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.04));
     margin-bottom: 16px;
@@ -83,14 +83,14 @@
 }
 
 .clc-btn-primary {
-    background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+    background: linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%);
     color: #fff;
-    box-shadow: 0 8px 20px rgba(139, 92, 246, 0.22);
+    box-shadow: 0 8px 20px rgba(59, 130, 246, 0.22);
 }
 
 .clc-btn-primary:hover {
     transform: translateY(-1px);
-    box-shadow: 0 12px 26px rgba(139, 92, 246, 0.28);
+    box-shadow: 0 12px 26px rgba(59, 130, 246, 0.28);
 }
 
 .clc-btn-secondary {
@@ -214,7 +214,6 @@
     margin: 0;
     padding: 18px;
     color: #f8fafc;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     font-size: 14px;
     line-height: 1.6;
 }
@@ -348,14 +347,14 @@
 }
 
 .clc-mat-item.is-active {
-    background: #ede9fe;
-    border-color: #8b5cf6;
+    background: #eff6ff;
+    border-color: #3b82f6;
 }
 
 .clc-mat-check {
     width: 16px;
     height: 16px;
-    accent-color: #8b5cf6;
+    accent-color: #3b82f6;
     flex-shrink: 0;
 }
 
@@ -519,8 +518,8 @@
 }
 
 .clc-material-item--active {
-    background: #ede9fe;
-    border-color: #7c3aed;
+    background: #eff6ff;
+    border-color: #3b82f6;
 }
 
 .clc-material-icon {
@@ -565,7 +564,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    background: #7c3aed;
+    background: #3b82f6;
     color: white;
     border: none;
     border-radius: 6px;
@@ -574,7 +573,7 @@
 }
 
 .clc-material-open-btn:hover {
-    background: #6d28d9;
+    background: #2563eb;
     transform: scale(1.08);
 }
 
@@ -641,7 +640,7 @@
 
 .clc-mat-acc-meta {
     font-size: 0.85rem;
-    color: #7c3aed;
+    color: #3b82f6;
     font-weight: 500;
 }
 
@@ -667,7 +666,7 @@
 }
 
 .clc-mat-row--active {
-    background: #f5f3ff;
+    background: #eff6ff;
 }
 
 /* Checkbox */
@@ -675,7 +674,7 @@
     width: 16px;
     height: 16px;
     flex-shrink: 0;
-    accent-color: #7c3aed;
+    accent-color: #3b82f6;
     cursor: pointer;
     border-radius: 3px;
 }

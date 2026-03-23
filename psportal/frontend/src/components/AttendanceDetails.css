@@ -33,9 +33,9 @@
     margin-bottom: 8px;
 }
 
-.stat-value.highlight-purple {
-    color: #6b46c1;
-    /* Purple match from screenshot */
+.stat-value.highlight-blue {
+    color: #3b82f6;
+    /* Blue match from sidebar theme */
 }
 
 .percent-sign {

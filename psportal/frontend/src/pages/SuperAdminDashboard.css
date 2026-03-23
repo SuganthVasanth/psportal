@@ -4,7 +4,6 @@
   flex-direction: column;
   min-height: 100vh;
   background-color: #f4f7fe;
-  font-family: "Inter", sans-serif;
 }
 
 /* Reuse PS Portal top navbar (same as StudentDashboard) */
@@ -624,7 +623,7 @@
 
 .sa-create-user-hero {
   padding: 20px 24px;
-  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #fff;
 }
 
@@ -690,15 +689,15 @@
 }
 
 .sa-create-role-card:hover {
-  border-color: var(--pastel-primary, #a78bfa);
+  border-color: #3b82f6;
   box-shadow: 0 4px 16px rgba(148, 163, 184, 0.25);
   transform: translateY(-1px);
 }
 
 .sa-create-role-card--selected {
-  background: #f5f3ff;
-  border-color: var(--pastel-primary, #a78bfa);
-  box-shadow: 0 0 0 2px rgba(167, 139, 250, 0.35);
+  background: #eff6ff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
 }
 
 .sa-create-role-icon {
@@ -888,7 +887,7 @@
 }
 
 .sa-btn-primary {
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
   color: #fff;
   border: none;
   transition: transform 0.2s ease, box-shadow 0.2s ease;
@@ -896,7 +895,7 @@
 
 .sa-btn-primary:hover {
   transform: scale(1.02);
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
+  box-shadow: 0 4px 14px rgba(59, 130, 246, 0.35);
 }
 
 .sa-btn-sm {
@@ -1081,7 +1080,7 @@
   height: 32px;
   padding: 0;
   border-radius: 8px;
-  background: #8b5cf6;
+  background: #3b82f6;
   color: #fff;
   border: none;
   cursor: pointer;
@@ -1089,7 +1088,7 @@
 }
 
 .sa-btn-icon:hover {
-  background: #7c3aed;
+  background: #2563eb;
 }
 
 .sa-btn-ghost {
@@ -1211,8 +1210,8 @@
 }
 
 .sa-toggle-on {
-  background: #a78bfa;
-  border-color: #8b5cf6;
+  background: #3b82f6;
+  border-color: #2563eb;
 }
 
 .sa-toggle-on .sa-toggle-knob {

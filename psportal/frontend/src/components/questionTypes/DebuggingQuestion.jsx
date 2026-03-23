@@ -1,7 +1,7 @@
 import React from "react";
 
 const cardClass = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
-const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-mono";
+const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm";
 
 export default function DebuggingQuestion({ config = {}, value = {}, onChange, readOnly = false }) {
   const props = config.properties || {};

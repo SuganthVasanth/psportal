@@ -208,7 +208,7 @@ export default function DynamicQuestionRenderer({ layout = [], value = {}, onCha
             <div key={idx} className={cardClass} style={commonStyle}>
               {item.label && <label className="mb-1 block text-sm font-medium text-gray-700">{item.label}</label>}
               <textarea
-                className={`${inputClass} font-mono text-sm`}
+                className={`${inputClass} text-sm`}
                 rows={10}
                 placeholder="Code here"
                 value={val?.value ?? ""}

@@ -1,0 +1,109 @@
+COLLECTION: studentexamattempts (0 docs)
+
+COLLECTION: buslocations (1 docs)
+ - ID: 69b3c84f528a275a21792ed4, Name/Title: unnamed
+
+COLLECTION: courses (0 docs)
+
+COLLECTION: studentprogresses (0 docs)
+
+COLLECTION: students (2 docs)
+ - ID: S_7376231CS323, Name/Title: SUGANTH R
+ - ID: S_STUA9FA8C8B, Name/Title: SUGANTH R
+
+COLLECTION: studentslotregistrations (0 docs)
+
+COLLECTION: leavetypes (2 docs)
+ - ID: 69aa59f173c8af5fcd4b41fe, Name/Title: unnamed
+ - ID: 69aa98a2cf9347466d34d9c9, Name/Title: unnamed
+
+COLLECTION: practice_levels (0 docs)
+
+COLLECTION: questiontemplates (4 docs)
+ - ID: 69b3ac32528a275a21792ed0, Name/Title: Match the Following
+ - ID: 69b3ac32528a275a21792ed1, Name/Title: Fill in the Blank
+ - ID: 69b3ac32528a275a21792ed2, Name/Title: Multiple Choice Question
+ - ID: 69b3ac32528a275a21792ed3, Name/Title: Programming Question
+
+COLLECTION: pointtransactions (3 docs)
+ - ID: 69a6aa9486e5a4093ef887da, Name/Title: unnamed
+ - ID: 69a6aa9486e5a4093ef887db, Name/Title: unnamed
+ - ID: 69a6aa9486e5a4093ef887dc, Name/Title: unnamed
+
+COLLECTION: practice_courses (0 docs)
+
+COLLECTION: web_coding_submissions (0 docs)
+
+COLLECTION: buses (2 docs)
+ - ID: 69b3c72fd17313b3db565e13, Name/Title: unnamed
+ - ID: 69b3c77ad17313b3db565e32, Name/Title: unnamed
+
+COLLECTION: questionbanksubmissions (0 docs)
+
+COLLECTION: attendances (1 docs)
+ - ID: 69a6585b0d5719c697bc5a13, Name/Title: unnamed
+
+COLLECTION: enrollments (0 docs)
+
+COLLECTION: roles (9 docs)
+ - ID: 699e7596b74cc758f201ac33, Name/Title: unnamed
+ - ID: 699e7cd3b0032041cb42566a, Name/Title: unnamed
+ - ID: 699e7cd3b0032041cb42566b, Name/Title: unnamed
+ - ID: 699ec409191febe386bbf27b, Name/Title: unnamed
+ - ID: 699ec409191febe386bbf27c, Name/Title: unnamed
+
+COLLECTION: admincourses (2 docs)
+ - ID: 69a5814e345cf9e7503e4044, Name/Title: C Programming
+ - ID: 69be294a8362b700e32761c6, Name/Title: Java Programming
+
+COLLECTION: timeslots (0 docs)
+
+COLLECTION: leaveworkflows (2 docs)
+ - ID: 69aa9867cf9347466d34d9a8, Name/Title: unnamed
+ - ID: 69aa98a2cf9347466d34d9cb, Name/Title: unnamed
+
+COLLECTION: venues (0 docs)
+
+COLLECTION: coding_problems (0 docs)
+
+COLLECTION: questiontypelayouts (0 docs)
+
+COLLECTION: coding_streaks (0 docs)
+
+COLLECTION: coding_submissions (0 docs)
+
+COLLECTION: leaves (3 docs)
+ - ID: 69aa9917cf9347466d34d9e1, Name/Title: unnamed
+ - ID: 69aa9ab8e356ef6ea9fa8c49, Name/Title: unnamed
+ - ID: 69b3c9f9d17313b3db565e95, Name/Title: unnamed
+
+COLLECTION: movementpasses (1 docs)
+ - ID: 699e7cc09c49e99292b4f0b4, Name/Title: unnamed
+
+COLLECTION: weekly_coding_sets (1 docs)
+ - ID: 69be221b5290f53b9a0c0e97, Name/Title: unnamed
+
+COLLECTION: studentcourses (0 docs)
+
+COLLECTION: users (4 docs)
+ - ID: 699e7c2a9c49e99292b4f099, Name/Title: Admin User
+ - ID: 699e7c979c49e99292b4f0a8, Name/Title: Student User
+ - ID: 699e98c73a610d82cbb0bb3a, Name/Title: Suganth R
+ - ID: 69aa9c2fe356ef6ea9fa8c8b, Name/Title: SUGANTH R
+
+COLLECTION: courseslotbookings (0 docs)
+
+COLLECTION: studentlevelprogresses (2 docs)
+ - ID: 69be294a8362b700e32761c3, Name/Title: unnamed
+ - ID: 69be294a8362b700e32761c8, Name/Title: unnamed
+
+COLLECTION: facultycourseassignments (0 docs)
+
+COLLECTION: adminsettings (0 docs)
+
+COLLECTION: slottemplates (0 docs)
+
+COLLECTION: messages (0 docs)
+
+COLLECTION: daily_coding_tasks (0 docs)
+

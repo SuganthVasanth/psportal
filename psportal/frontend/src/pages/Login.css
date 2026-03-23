@@ -4,7 +4,6 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  font-family: "Inter", system-ui, sans-serif;
   background: var(--pastel-bg, #f8fafc);
   padding: var(--space-4, 16px);
 }

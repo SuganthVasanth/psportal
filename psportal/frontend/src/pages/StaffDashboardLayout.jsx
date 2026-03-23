@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate, NavLink } from "react-router-dom";
-import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound, Bus, MapPin } from "lucide-react";
+import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound, Bus, MapPin, ChevronRight, Search, Bell } from "lucide-react";
 import "./SuperAdminDashboard.css";
 import "./UserDashboard.css";
+import "../components/SidebarPremium.css";
 import StaffMentorMentees from "./StaffMentorMentees";
 import StaffMentorLeaveApprovals from "./StaffMentorLeaveApprovals";
 import StaffWardenWards from "./StaffWardenWards";
@@ -179,9 +180,12 @@ export default function StaffDashboardLayout() {
     window.location.href = "/";
   };
 
+  const userName = data?.user?.name || data?.user?.email || "User";
+  const userAvatar = userName.split(' ').map(n => n[0]).join('');
+
   if (loading) {
     return (
-      <div className="dashboard-layout sa-dashboard-layout" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
+      <div className="dashboard-layout premium-layout" style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
         <h2>Loading your dashboard...</h2>
       </div>
     );
@@ -189,96 +193,104 @@ export default function StaffDashboardLayout() {
 
   if (error || !data) {
     return (
-      <div className="dashboard-layout sa-dashboard-layout" style={{ padding: 40 }}>
+      <div className="dashboard-layout premium-layout" style={{ padding: 40 }}>
         <p style={{ color: "#b91c1c" }}>{error || "Failed to load dashboard"}</p>
-        <button type="button" className="sa-btn sa-btn-primary" onClick={() => window.location.reload()}>Retry</button>
+        <button type="button" className="portal-btn-primary" onClick={() => window.location.reload()}>Retry</button>
       </div>
     );
   }
 
   return (
-    <div className="dashboard-layout sa-dashboard-layout staff-dashboard-layout">
-      <header className="top-navbar">
-        <div className="top-nav-brand">
-          <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PCDP Portal" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-          <span>PCDP Portal</span>
-        </div>
-        <div className="top-nav-profile">
+    <div className="dashboard-layout premium-layout staff-dashboard-layout">
+      <aside className="student-sidebar-premium">
+        <div className="sidebar-header-premium">
           <img
-            src="https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png"
-            alt="Profile"
-            className="profile-avatar"
+            src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png"
+            alt="Logo"
+            className="sidebar-logo-premium"
           />
-          <div className="profile-info">
-            <span className="profile-id">Staff</span>
-            <span className="profile-name">{data.user.name || data.user.email || "User"}</span>
+          <span className="sidebar-brand-premium">PCDP Portal</span>
+        </div>
+
+        <nav className="sidebar-nav-premium">
+          {staffNavSections.map((section) => {
+            const Icon = section.icon;
+            return (
+              <div key={section.id} className="nav-section-premium">
+                <h3 className="section-title-premium">{section.label}</h3>
+                <ul>
+                  {(section.sub || []).map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isActive = location.pathname === sub.path;
+                    return (
+                      <li key={sub.id}>
+                        <NavLink
+                          to={sub.path}
+                          className={`nav-item-premium ${isActive ? "active" : ""}`}
+                        >
+                          <span className="icon-wrapper-premium">
+                            {SubIcon ? <SubIcon size={20} /> : <Icon size={20} />}
+                          </span>
+                          <span className="item-name-premium">{sub.label}</span>
+                          {isActive && <ChevronRight size={14} className="active-indicator-premium" />}
+                        </NavLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-footer-premium">
+          <div className="user-profile-summary-premium">
+            <div className="user-avatar-premium">
+              {userAvatar}
+            </div>
+            <div className="user-info-premium">
+              <span className="user-name-premium">{userName}</span>
+              <span className="user-role-premium">Staff</span>
+            </div>
           </div>
-          {/* {(data.user.roles || []).map((r) => (
-            <span key={r} className="ud-role-tag" style={{ marginLeft: 4 }}>{r}</span>
-          ))} */}
-          <button type="button" className="sa-logout-btn" onClick={handleLogout} title="Logout">
-            <LogOut size={18} /> Logout
+
+          <button onClick={handleLogout} className="logout-btn-premium">
+            <LogOut size={18} />
+            <span>Logout</span>
           </button>
         </div>
-      </header>
+      </aside>
 
-      <div className="sa-body">
-        <aside className="sa-sidebar">
-          {showNav &&
-            staffNavSections.map((section) => {
-              const Icon = section.icon;
-              const isOpen = openNav === section.id || pathSection === section.id;
-              return (
-                <div
-                  key={section.id}
-                  className={`sa-nav-section ${isOpen ? "open" : ""}`}
-                >
-                  <div
-                    className={`sa-nav-main ${isOpen ? "active" : ""}`}
-                    onClick={() => setOpenNav(isOpen ? null : section.id)}
-                  >
-                    <span className="sa-nav-label">
-                      <Icon size={24} />
-                      <span className="sa-nav-label-text">{section.label}</span>
-                    </span>
-                    <ChevronDown size={18} className="sa-chevon" />
-                  </div>
-                  {isOpen && (
-                    <ul className="sa-nav-sub">
-                      {(section.sub || []).map((sub) => {
-                        const SubIcon = sub.icon;
-                        return (
-                          <li key={sub.id}>
-                            <NavLink
-                              to={sub.path}
-                              className={({ isActive }) => (isActive ? "active" : "")}
-                            >
-                              <span className="sa-nav-label">
-                                {SubIcon ? <SubIcon size={20} /> : null}
-                                <span className="sa-nav-label-text">{sub.label}</span>
-                              </span>
-                            </NavLink>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
-        </aside>
+      <div className="main-container-premium">
+        <header className="top-navbar-premium">
+          <div className="search-bar-premium">
+            <Search size={18} className="search-icon" />
+            <input type="text" placeholder="Search for courses, mentees, etc." />
+          </div>
 
-        <main className="sa-main">
-          <div className="dashboard-container-inner">
-            <div className="sa-welcome-banner">
+          <div className="top-nav-actions-premium">
+            <button className="nav-btn-premium" title="Notifications">
+              <Bell size={20} />
+              <span className="badge-premium"></span>
+            </button>
+            <div className="header-profile-premium">
+              <div className="avatar-minimal-premium">
+                {userAvatar}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="content-area-premium">
+          <div className="dashboard-container-inner" style={{ padding: '24px' }}>
+            {staffNavSections.length === 0 && (
+              <p className="ud-empty">No role-specific view available. Ask admin to assign you Mentor, Warden, Hostel manager, Security or Faculty role.</p>
+            )}
+            <div className="sa-welcome-banner" style={{ marginBottom: '24px' }}>
               <span className="highlight">Staff Dashboard</span>
               {" — "}
               {showNav ? `${activeSectionLabel} / ${activeSubLabel}` : "Overview"}
             </div>
-
-            {staffNavSections.length === 0 && (
-              <p className="ud-empty">No role-specific view available. Ask admin to assign you Mentor, Warden, Hostel manager, Security or Faculty role.</p>
-            )}
             {showNav && pathSection === "mentor" && pathSub === "mentees" && <StaffMentorMentees data={data} has={has} />}
             {showNav && pathSection === "mentor" && pathSub === "leave-approvals" && <StaffMentorLeaveApprovals data={data} has={has} onRefresh={loadData} />}
             {showNav && pathSection === "warden" && pathSub === "wards" && <StaffWardenWards data={data} has={has} />}

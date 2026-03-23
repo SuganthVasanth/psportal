@@ -60,4 +60,9 @@ router.get("/question-bank-submissions", ctrl.getQuestionBankSubmissions);
 router.get("/question-bank-submissions/:id", ctrl.getQuestionBankSubmissionById);
 router.patch("/question-bank-submissions/:id/review", ctrl.reviewQuestionBankSubmission);
 
+// Assessment Slots
+router.get("/assessment-slots", ctrl.getAssessmentSlots);
+router.post("/assessment-slots", ctrl.openAssessmentSlots);
+router.delete("/assessment-slots/:id", ctrl.deleteAssessmentSlot);
+
 module.exports = router;

@@ -3,7 +3,7 @@ import TestCaseEditor from "./subcomponents/TestCaseEditor";
 import ReferenceSolutionEditor from "./subcomponents/ReferenceSolutionEditor";
 
 const cardClass = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
-const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-mono";
+const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm";
 
 export default function ProgrammingQuestion({
   config = {},
@@ -46,7 +46,7 @@ export default function ProgrammingQuestion({
             <span className="text-sm font-medium text-slate-700">Sample test cases</span>
             <div className="mt-2 space-y-2">
               {testCases.filter((tc) => !tc.hidden).map((tc, i) => (
-                <div key={i} className="rounded border border-slate-200 p-2 text-xs font-mono">
+                <div key={i} className="rounded border border-slate-200 p-2 text-xs">
                   <div>Input: {tc.input || "—"}</div>
                   <div>Expected: {tc.expectedOutput || "—"}</div>
                 </div>

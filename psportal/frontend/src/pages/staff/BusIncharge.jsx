@@ -179,8 +179,8 @@ export default function BusIncharge() {
                         <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100">
                             <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider mb-3">Current Location</h3>
                             <div className="space-y-2 text-sm">
-                                <p className="text-slate-600">Lat: <span className="font-mono text-slate-900">{location[0].toFixed(6)}</span></p>
-                                <p className="text-slate-600">Lon: <span className="font-mono text-slate-900">{location[1].toFixed(6)}</span></p>
+                                <p className="text-slate-600">Lat: <span className="text-slate-900">{location[0].toFixed(6)}</span></p>
+                                <p className="text-slate-600">Lon: <span className="text-slate-900">{location[1].toFixed(6)}</span></p>
                             </div>
                         </div>
                     )}

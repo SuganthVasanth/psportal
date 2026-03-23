@@ -66,12 +66,30 @@ exports.getTestCases = async (req, res) => {
   try {
     const { level, problemId } = req.params || {};
     const levelNum = String(level || "1");
+    
+    // Try to get real examples from Codeforces first
+    try {
+      const details = await codeforcesService.getProblemStatement(problemId);
+      if (details && Array.isArray(details.examples) && details.examples.length > 0) {
+        return res.json(
+          details.examples.map((tc, idx) => ({
+            index: idx + 1,
+            input: tc.input,
+            expectedOutput: tc.output,
+          }))
+        );
+      }
+    } catch (e) {
+      console.error("Failed to fetch real examples, falling back to generator:", e.message);
+    }
+
+    // Fallback to synthetic cases if real ones can't be fetched
     const cases = testCaseGenerator.generateTestCases(levelNum, problemId);
     res.json(
       (cases || []).map((tc, idx) => ({
         index: idx + 1,
         input: tc.input,
-        expectedOutput: tc.expected,
+        expectedOutput: tc.expectedOutput || tc.expected,
       }))
     );
   } catch (err) {
@@ -126,7 +144,25 @@ exports.submit = async (req, res) => {
       return res.status(400).json({ success: false, error: "Missing or invalid 'source_code'" });
     }
     const levelNum = String(level || "1");
-    const cases = testCaseGenerator.generateTestCases(levelNum, problemId);
+    
+    // Use real examples for submission if possible
+    let cases = [];
+    try {
+      const details = await codeforcesService.getProblemStatement(problemId);
+      if (details && Array.isArray(details.examples) && details.examples.length > 0) {
+        cases = details.examples.map((ex) => ({
+          input: ex.input,
+          expected: ex.output,
+        }));
+      }
+    } catch (e) {
+      console.error("Submission: Failed to fetch real examples, falling back:", e.message);
+    }
+
+    if (!cases.length) {
+      cases = testCaseGenerator.generateTestCases(levelNum, problemId);
+    }
+
     const results = [];
     let passed = 0;
     for (let i = 0; i < cases.length; i++) {

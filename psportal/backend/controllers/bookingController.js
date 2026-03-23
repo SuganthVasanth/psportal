@@ -1,27 +1,43 @@
 const CourseSlotBooking = require("../models/CourseSlotBooking");
 const SlotTemplate = require("../models/SlotTemplate");
+const Slot = require("../models/Slot");
 
 exports.getActiveSlots = async (req, res) => {
   try {
-    // Show slots that are not explicitly "Inactive" (include "Active", undefined, or any other value)
-    const list = await SlotTemplate.find({ status: { $ne: "Inactive" } })
+    const { course_id } = req.query;
+    const filter = {};
+    if (course_id) filter.course_id = course_id;
+
+    // Fetch slots that are scheduled for the future (or today) and have capacity
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    filter.date = { $gte: today };
+
+    const list = await Slot.find(filter)
       .populate("venue_id")
       .populate("time_slot_id")
       .lean();
+
     const mapped = list.map((s) => ({
-      id: s._id.toString(),
-      slot_template_id: s._id.toString(),
+      id: s._id.toString(), // Assessment Slot ID
+      slot_template_id: s.slot_template_id?.toString(),
       venueLabel: s.venue_id?.name || "",
       timeLabel: s.time_slot_id ? `${s.time_slot_id.startTime} – ${s.time_slot_id.endTime}` : "",
       startTime: s.time_slot_id?.startTime || "",
+      date: s.date,
+      capacity: s.capacity,
+      bookedCount: s.booked_count || 0,
+      available: (s.capacity || 30) > (s.booked_count || 0)
     }));
-    // Order by time first, then by venue name
+
+    // Order by date first, then time
     mapped.sort((a, b) => {
-      const t = (a.startTime || "").localeCompare(b.startTime || "");
-      if (t !== 0) return t;
-      return (a.venueLabel || "").localeCompare(b.venueLabel || "");
+      const d = new Date(a.date) - new Date(b.date);
+      if (d !== 0) return d;
+      return (a.startTime || "").localeCompare(b.startTime || "");
     });
-    res.json(mapped.map(({ startTime, ...rest }) => rest));
+
+    res.json(mapped);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -29,24 +45,42 @@ exports.getActiveSlots = async (req, res) => {
 
 exports.bookSlot = async (req, res) => {
   try {
-    const { register_no, student_name, course_id, course_name, slot_template_id, venue_label, time_label } = req.body;
-    if (!register_no || !course_id || !course_name || !slot_template_id || !venue_label || !time_label) {
-      return res.status(400).json({ message: "register_no, course_id, course_name, slot_template_id, venue_label, time_label required" });
+    const { register_no, student_name, course_id, course_name, slot_id, venue_label, time_label } = req.body;
+    
+    if (!register_no || !course_id || !slot_id) {
+      return res.status(400).json({ message: "register_no, course_id, and slot_id are required" });
     }
-    const slot = await SlotTemplate.findById(slot_template_id).lean();
-    if (!slot) return res.status(404).json({ message: "Slot not found" });
-    if ((slot.status || "Active") !== "Active") {
-      return res.status(400).json({ message: "Selected slot is not available (inactive)" });
+
+    // 1. Check if student already has a booking for this course
+    const existing = await CourseSlotBooking.findOne({ register_no, course_id });
+    if (existing) {
+      return res.status(400).json({ message: "You have already booked a slot for this course." });
     }
+
+    // 2. Check slot existence and capacity
+    const slot = await Slot.findById(slot_id);
+    if (!slot) return res.status(404).json({ message: "Assessment slot not found" });
+    
+    if (slot.booked_count >= slot.capacity) {
+      return res.status(400).json({ message: "Selected slot is full. Please choose another one." });
+    }
+
+    // 3. Create booking
     const doc = await CourseSlotBooking.create({
       register_no,
       student_name: student_name || "",
       course_id,
       course_name,
-      slot_template_id,
-      venue_label,
-      time_label,
+      slot_id,
+      slot_template_id: slot.slot_template_id, // Keep for backward compatibility if needed
+      venue_label: venue_label || "",
+      time_label: time_label || "",
     });
+
+    // 4. Increment booked count
+    slot.booked_count = (slot.booked_count || 0) + 1;
+    await slot.save();
+
     res.status(201).json({
       id: doc._id.toString(),
       register_no: doc.register_no,
@@ -64,24 +98,30 @@ exports.getMyBookings = async (req, res) => {
   try {
     const { register_no } = req.query;
     if (!register_no) return res.status(400).json({ message: "register_no required" });
+    
     const list = await CourseSlotBooking.find({ register_no })
-      .populate({ path: "slot_template_id", populate: { path: "time_slot_id" } })
+      .populate({ 
+        path: "slot_id", 
+        populate: [
+          { path: "venue_id" },
+          { path: "time_slot_id" }
+        ] 
+      })
       .sort({ booked_at: -1 })
       .lean();
+
     res.json(
       list.map((b) => {
-        const timeSlot = b.slot_template_id?.time_slot_id;
-        const slot_start_time = timeSlot?.startTime || null;
-        const slot_end_time = timeSlot?.endTime || null;
+        const slot = b.slot_id;
+        const timeSlot = slot?.time_slot_id;
         return {
           id: b._id.toString(),
           course_id: b.course_id,
           course_name: b.course_name,
-          venue_label: b.venue_label,
-          time_label: b.time_label,
+          venue_label: slot?.venue_id?.name || b.venue_label,
+          time_label: timeSlot ? `${timeSlot.startTime} – ${timeSlot.endTime}` : b.time_label,
+          date: slot?.date,
           booked_at: b.booked_at,
-          slot_start_time: slot_start_time || undefined,
-          slot_end_time: slot_end_time || undefined,
         };
       })
     );

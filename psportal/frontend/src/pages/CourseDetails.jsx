@@ -7,10 +7,16 @@ import "./CourseDetails.css";
 
 const API_BASE = "http://localhost:5000";
 
-/** True if current local time (HH:mm) is within [slot_start_time, slot_end_time). */
-function isSlotActiveNow(slot_start_time, slot_end_time) {
-  if (!slot_start_time || !slot_end_time) return false;
+/** True if current local time (HH:mm) is within [slot_start_time, slot_end_time) on the correct date. */
+function isSlotActiveNow(slot_start_time, slot_end_time, slot_date) {
+  if (!slot_start_time || !slot_end_time || !slot_date) return false;
+  
   const now = new Date();
+  const slotDate = new Date(slot_date);
+  
+  // Check date
+  if (now.toDateString() !== slotDate.toDateString()) return false;
+
   const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
   return nowStr >= slot_start_time && nowStr < slot_end_time;
 }
@@ -93,7 +99,7 @@ export default function CourseDetails() {
   useEffect(() => {
     if (!bookSlotOpen) return;
     setSlotsLoadError("");
-    fetch(`${API_BASE}/api/active-slots`)
+    fetch(`${API_BASE}/api/active-slots?course_id=${id}`) // id is courseId from useParams
       .then((r) => {
         if (!r.ok) throw new Error("Could not load slots");
         return r.json();
@@ -173,22 +179,25 @@ export default function CourseDetails() {
       : allLevels;
   const courseName = course?.name || "Course";
 
-  const courseId = id;
   const bookingForThisCourse =
     myBookings.find((b) => String(b.course_id) === String(courseId)) ||
     (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
   const activeBookingForCourse =
     bookingForThisCourse &&
-    isSlotActiveNow(bookingForThisCourse.slot_start_time, bookingForThisCourse.slot_end_time);
+    isSlotActiveNow(bookingForThisCourse.slot_start_time, bookingForThisCourse.slot_end_time, bookingForThisCourse.date);
 
   const handleBookNow = async () => {
     if (!selectedSlotId) {
       setBookingError("Please select a slot.");
       return;
     }
-    const slot = activeSlots.find((s) => (s.id || s.slot_template_id) === selectedSlotId);
+    const slot = activeSlots.find((s) => s.id === selectedSlotId);
     if (!slot) {
       setBookingError("Invalid slot.");
+      return;
+    }
+    if (!slot.available) {
+      setBookingError("Slot is full. Please select another one.");
       return;
     }
     setBookingLoading(true);
@@ -202,7 +211,7 @@ export default function CourseDetails() {
           student_name: studentName,
           course_id: courseId,
           course_name: courseName,
-          slot_template_id: slot.id || slot.slot_template_id,
+          slot_id: slot.id,
           venue_label: slot.venueLabel || "",
           time_label: slot.timeLabel || "",
         }),
@@ -538,12 +547,14 @@ export default function CourseDetails() {
                   <span className="cd-slot-dropdown-content">
                     {(() => {
                       const selected =
-                        activeSlots.find((s) => (s.id || s.slot_template_id) === selectedSlotId) || null;
+                        activeSlots.find((s) => s.id === selectedSlotId) || null;
                       if (!selected) return <span className="cd-slot-placeholder">Select...</span>;
                       return (
                         <>
                           <span className="cd-slot-venue">{selected.venueLabel}</span>
-                          <span className="cd-slot-time">{selected.timeLabel}</span>
+                          <span className="cd-slot-time">
+                            {new Date(selected.date).toLocaleDateString()} | {selected.timeLabel}
+                          </span>
                         </>
                       );
                     })()}
@@ -563,19 +574,26 @@ export default function CourseDetails() {
                       <span className="cd-slot-venue">Select...</span>
                     </button>
                     {activeSlots.map((s) => {
-                      const idVal = s.id || s.slot_template_id;
+                      const idVal = s.id;
                       return (
                         <button
                           type="button"
                           key={idVal}
-                          className={`cd-slot-option ${selectedSlotId === idVal ? "cd-slot-option-selected" : ""}`}
+                          className={`cd-slot-option ${selectedSlotId === idVal ? "cd-slot-option-selected" : ""} ${!s.available ? "cd-slot-option-disabled" : ""}`}
+                          disabled={!s.available}
                           onClick={() => {
                             setSelectedSlotId(idVal);
                             setSlotDropdownOpen(false);
                           }}
                         >
-                          <span className="cd-slot-venue">{s.venueLabel}</span>
-                          <span className="cd-slot-time">{s.timeLabel}</span>
+                          <div style={{ display: "flex", justifyContent: "space-between", width: "100%" }}>
+                            <span className="cd-slot-venue">{s.venueLabel}</span>
+                            {!s.available && <span style={{ fontSize: "11px", color: "#ef4444" }}>FULL</span>}
+                          </div>
+                          <span className="cd-slot-time">
+                            {new Date(s.date).toLocaleDateString()} | {s.timeLabel}
+                            {s.available && <span style={{ marginLeft: "8px", color: "#10b981", fontSize: "11px" }}>({s.capacity - s.bookedCount} left)</span>}
+                          </span>
                         </button>
                       );
                     })}

@@ -9,6 +9,7 @@ const SlotTemplate = require("../models/SlotTemplate");
 const LeaveType = require("../models/LeaveType");
 const LeaveWorkflow = require("../models/LeaveWorkflow");
 const AdminSettings = require("../models/AdminSettings");
+const Slot = require("../models/Slot");
 const bcrypt = require("bcryptjs");
 
 const DEFAULT_PASSWORD = "Password@123";
@@ -603,6 +604,72 @@ exports.reviewQuestionBankSubmission = async (req, res) => {
       status: doc.status,
       reviewed_at: doc.reviewed_at,
     });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// ——— Assessment Slots (Instances of SlotTemplate for a specific course/date) ———
+exports.getAssessmentSlots = async (req, res) => {
+  try {
+    const list = await Slot.find()
+      .populate("course_id", "name")
+      .populate("venue_id", "name")
+      .populate("time_slot_id", "startTime endTime")
+      .lean();
+    res.json(
+      list.map((s) => ({
+        id: s._id.toString(),
+        courseId: s.course_id?._id?.toString(),
+        courseName: s.course_id?.name || "",
+        venueId: s.venue_id?._id?.toString(),
+        venueLabel: s.venue_id?.name || "",
+        timeId: s.time_slot_id?._id?.toString(),
+        timeLabel: s.time_slot_id ? `${s.time_slot_id.startTime} – ${s.time_slot_id.endTime}` : "",
+        date: s.date,
+        capacity: s.capacity,
+        bookedCount: s.booked_count || 0,
+      }))
+    );
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.openAssessmentSlots = async (req, res) => {
+  try {
+    const { course_id, date, slot_template_ids, capacity } = req.body;
+    if (!course_id || !date || !slot_template_ids || !Array.isArray(slot_template_ids)) {
+      return res.status(400).json({ message: "course_id, date, and slot_template_ids (array) required" });
+    }
+
+    const templates = await SlotTemplate.find({ _id: { $in: slot_template_ids } }).lean();
+    const newSlots = templates.map((t) => ({
+      course_id,
+      venue_id: t.venue_id,
+      time_slot_id: t.time_slot_id,
+      date: new Date(date),
+      capacity: capacity || 30,
+      booked_count: 0,
+    }));
+
+    const docs = await Slot.insertMany(newSlots);
+    res.status(201).json({ message: `${docs.length} slots opened successfully` });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+exports.deleteAssessmentSlot = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const slot = await Slot.findById(id);
+    if (!slot) return res.status(404).json({ message: "Slot not found" });
+    if (slot.booked_count > 0) {
+      return res.status(400).json({ message: "Cannot delete slot with existing bookings" });
+    }
+    await Slot.findByIdAndDelete(id);
+    res.json({ message: "Slot deleted successfully" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

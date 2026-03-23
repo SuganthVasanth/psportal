@@ -1,11 +1,12 @@
 const mongoose = require('mongoose');
 
 const slotSchema = new mongoose.Schema({
-    assessment_id: { type: mongoose.Schema.Types.ObjectId, required: true }, // Assuming it maps to an Assessment model later
-    venue_id: { type: mongoose.Schema.Types.ObjectId },
-    start_time: { type: Date, required: true },
-    end_time: { type: Date, required: true },
-    capacity: { type: Number, default: 30 }
+    course_id: { type: mongoose.Schema.Types.ObjectId, ref: 'AdminCourse', required: true },
+    venue_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Venue', required: true },
+    time_slot_id: { type: mongoose.Schema.Types.ObjectId, ref: 'TimeSlot', required: true },
+    date: { type: Date, required: true },
+    capacity: { type: Number, default: 30 },
+    booked_count: { type: Number, default: 0 }
 }, {
     timestamps: true
 });

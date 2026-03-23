@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Editor from "@monaco-editor/react";
-import { Play, Send, Loader2, CheckCircle2, XCircle } from "lucide-react";
+import { Play, Send, Loader2, CheckCircle2, XCircle, Terminal } from "lucide-react";
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
 
@@ -297,10 +297,10 @@ export default function CodeCompiler({
   };
 
   return (
-    <div className="dashboard-card" style={{ height: "100%" }}>
-      <div className="flex items-center justify-between gap-3 flex-wrap">
-        <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-slate-700">Language</label>
+    <div className="flex flex-col h-full bg-white rounded-3xl overflow-hidden min-w-0 flex-1">
+      <div className="flex items-center justify-between gap-4 px-5 py-3 border-b border-slate-100 bg-slate-50/50 flex-none flex-wrap">
+        <div className="flex items-center gap-3">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Environment</label>
           <select
             value={language}
             onChange={(e) => {
@@ -310,8 +310,7 @@ export default function CodeCompiler({
                 setCode(DEFAULT_SNIPPETS[next] || "");
               }
             }}
-            className="sa-input"
-            style={{ minWidth: 140 }}
+            className="bg-white border border-slate-200 rounded-md px-3 py-1.5 text-[11px] font-bold text-slate-700 focus:ring-2 focus:ring-indigo-500/10 focus:border-indigo-500 outline-none transition-all cursor-pointer shadow-sm min-w-[120px]"
           >
             {LANGUAGE_OPTIONS.map((opt) => (
               <option key={opt.value} value={opt.value}>
@@ -322,18 +321,12 @@ export default function CodeCompiler({
         </div>
         <div className="flex items-center gap-2">
           {resizable && (
-            <button type="button" className="sa-btn" onClick={resetEditorSize}>
-              Reset size
-            </button>
-          )}
-          <button type="button" className="sa-btn" onClick={handleRun} disabled={running}>
-            {running ? <Loader2 size={15} className="animate-spin" /> : <Play size={15} />}
-            {running ? "Running..." : "Run"}
-          </button>
-          {showSubmit && (
-            <button type="button" className="sa-btn sa-btn-primary" onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-              {submitting ? "Submitting..." : "Submit"}
+            <button 
+              type="button" 
+              className="px-3 py-1.5 text-[10px] font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-tight" 
+              onClick={resetEditorSize}
+            >
+              Reset Size
             </button>
           )}
         </div>
@@ -342,31 +335,31 @@ export default function CodeCompiler({
       <div
         ref={editorWrapRef}
         style={{
-          marginTop: 12,
-          border: "1px solid #e2e8f0",
-          borderRadius: 10,
-          overflow: "hidden",
-          height: editorHeightPx,
+          borderBottom: "1px solid #f1f5f9",
+          height: resizable ? editorHeightPx : undefined,
+          flex: resizable ? "none" : 1,
           width: editorWidthPx == null ? "100%" : editorWidthPx,
           maxWidth: "100%",
-          minHeight: EDITOR_MIN_HEIGHT,
-          maxHeight: EDITOR_MAX_HEIGHT,
+          minHeight: resizable ? EDITOR_MIN_HEIGHT : undefined,
+          maxHeight: resizable ? EDITOR_MAX_HEIGHT : undefined,
           position: "relative",
-          background: "#0b1220",
+          background: "#1e1e1e", // Standard Monaco background
         }}
       >
         <Editor
-          height={`${editorHeightPx}px`}
+          height={resizable ? `${editorHeightPx}px` : "100%"}
           theme="vs-dark"
           defaultLanguage={language === "cpp" ? "cpp" : language}
           language={language === "cpp" ? "cpp" : language}
           value={code}
           onChange={(value) => setCode(value || "")}
           options={{
-            fontSize: 13,
+            fontSize: 14,
             minimap: { enabled: false },
             automaticLayout: true,
             scrollBeyondLastLine: false,
+            padding: { top: 20 },
+            fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
           }}
         />
 
@@ -406,147 +399,127 @@ export default function CodeCompiler({
               bottom: 0,
               height: 10,
               cursor: "ns-resize",
-              background:
-                "linear-gradient(to bottom, rgba(148,163,184,0), rgba(148,163,184,0.28))",
-              borderTop: "1px solid rgba(226,232,240,0.12)",
+              background: "linear-gradient(to bottom, transparent, rgba(99,102,241,0.05))",
+              zIndex: 10,
             }}
           >
-            <div
-              style={{
-                position: "absolute",
-                left: "50%",
-                top: 3,
-                transform: "translateX(-50%)",
-                width: 34,
-                height: 4,
-                borderRadius: 999,
-                background: "rgba(226,232,240,0.35)",
-              }}
-            />
-          </div>
-        )}
-        {resizable && (
-          <div
-            role="separator"
-            aria-label="Resize editor width"
-            title="Drag left edge to resize width"
-            onPointerDown={(e) => {
-              if (!editorWrapRef.current) return;
-              e.preventDefault();
-              e.currentTarget.setPointerCapture?.(e.pointerId);
-              dragStateRef.current = {
-                mode: "width",
-                startX: e.clientX,
-                startW: editorWrapRef.current.getBoundingClientRect().width,
-              };
-            }}
-            onPointerMove={(e) => {
-              const st = dragStateRef.current;
-              if (!st || st.mode !== "width" || !editorWrapRef.current?.parentElement) return;
-              const parentW = editorWrapRef.current.parentElement.clientWidth;
-              const maxW = Math.max(EDITOR_MIN_WIDTH, parentW);
-              const next = st.startW - (e.clientX - st.startX);
-              const clamped = Math.max(EDITOR_MIN_WIDTH, Math.min(maxW, next));
-              hasStoredWidthRef.current = true;
-              setEditorWidthPx(Math.round(clamped));
-            }}
-            onPointerUp={() => {
-              dragStateRef.current = null;
-            }}
-            onPointerCancel={() => {
-              dragStateRef.current = null;
-            }}
-            style={{
-              position: "absolute",
-              top: 0,
-              left: 0,
-              bottom: 0,
-              width: 10,
-              cursor: "ew-resize",
-              background:
-                "linear-gradient(to left, rgba(148,163,184,0), rgba(148,163,184,0.22))",
-              borderRight: "1px solid rgba(226,232,240,0.12)",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: "50%",
-                left: 3,
-                transform: "translateY(-50%)",
-                width: 4,
-                height: 34,
-                borderRadius: 999,
-                background: "rgba(226,232,240,0.35)",
-              }}
-            />
+            <div className="absolute left-1/2 bottom-1.5 -translate-x-1/2 w-10 h-1 bg-slate-700/50 rounded-full" />
           </div>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3" style={{ marginTop: 12 }}>
-        <div>
-          <label className="text-sm font-medium text-slate-700">Input</label>
+      <div className="px-4 py-2 border-b border-slate-100 bg-slate-50 flex items-center justify-end gap-2 flex-none">
+        <button 
+          type="button" 
+          className="flex items-center gap-1.5 px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-[8px] font-black transition-all active:scale-95 shadow-sm" 
+          onClick={handleRun} 
+          disabled={running}
+        >
+          {running ? <Loader2 size={12} className="animate-spin" /> : <Play size={12} className="fill-current" />}
+          {running ? "PROCESSING" : "RUN"}
+        </button>
+        {showSubmit && (
+          <button 
+            type="button" 
+            className="flex items-center gap-1.5 px-4 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[8px] font-black transition-all active:scale-95 shadow-md shadow-indigo-100" 
+            onClick={handleSubmit} 
+            disabled={submitting}
+          >
+            {submitting ? <Loader2 size={12} className="animate-spin" /> : <Send size={12} className="fill-current" />}
+            {submitting ? "UPLOADING" : "SUBMIT"}
+          </button>
+        )}
+      </div>
+
+      {submitResult && showSubmit && (
+        <div className="mx-4 my-2 p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center gap-3 animate-in slide-in-from-top-2 shadow-sm flex-none">
+          <div className={`p-1.5 rounded-lg ${submitResult.success ? "bg-emerald-100 text-emerald-600" : "bg-red-100 text-red-600"}`}>
+            {submitResult.success ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+          </div>
+          <div className="flex-1">
+            <div className="text-[10px] font-black text-slate-800 uppercase tracking-tight">
+              {submitResult.success ? "System Verified" : "Verification Failed"}
+            </div>
+            <div className="text-[11px] font-bold text-slate-500">
+              {submitResult.success
+                ? "Your solution passed the core registry checks."
+                : `Passed ${submitResult.passed || 0}/${submitResult.total || 0} registry case entries.`}
+            </div>
+          </div>
+          {submitResult.error && (
+            <div className="text-[10px] font-bold text-red-400 bg-red-50 px-2 py-0.5 rounded-md border border-red-100">
+              {submitResult.error}
+            </div>
+          )}
+          <button 
+            onClick={() => setSubmitResult(null)}
+            className="p-1 hover:bg-slate-200 rounded-md transition-colors text-slate-400"
+          >
+            <XCircle size={14} />
+          </button>
+        </div>
+      )}
+
+      <div className="flex-none h-32 grid grid-cols-1 md:grid-cols-2 bg-white min-w-0 border-t border-slate-100">
+        <div className="flex flex-col border-r border-slate-100 min-w-0">
+          <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Standard Input</label>
+          </div>
           <textarea
             value={stdin}
             onChange={(e) => setStdin(e.target.value)}
-            className="sa-input"
-            rows={5}
-            style={{ width: "100%", marginTop: 6, fontFamily: "ui-monospace,monospace", resize: "none" }}
-            placeholder="Enter stdin..."
+            className="flex-1 p-4 text-[13px] text-slate-600 bg-white focus:outline-none placeholder:text-slate-300 resize-none transition-all leading-relaxed w-full min-w-0"
+            placeholder="Type input parameters here..."
           />
         </div>
-        <div>
-          <label className="text-sm font-medium text-slate-700">Output</label>
-          <div
-            style={{
-              marginTop: 6,
-              minHeight: 124,
-              whiteSpace: "pre-wrap",
-              fontFamily: "ui-monospace,monospace",
-              background: "#0f172a",
-              color: "#e2e8f0",
-              borderRadius: 8,
-              padding: 10,
-              fontSize: 13,
-            }}
-          >
-            {runResult == null && <span style={{ color: "#94a3b8" }}>Run your code to see output.</span>}
-            {runResult?.stdout && <div>{toPreviewText(runResult.stdout)}</div>}
+        <div className="flex flex-col bg-slate-50/30 min-w-0">
+          <div className="px-6 py-3 bg-slate-50/50 border-b border-slate-100 flex items-center justify-between">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Console Output</label>
+            {runResult && (
+              <span className={`text-[9px] font-black px-2 py-0.5 rounded-md uppercase tracking-tighter ${
+                runResult.success === false ? "bg-red-100 text-red-600" : "bg-emerald-100 text-emerald-600"
+              }`}>
+                {runResult.success === false ? "Execution Error" : "Completed"}
+              </span>
+            )}
+          </div>
+          <div className="flex-1 p-4 overflow-y-auto text-[13px] leading-relaxed">
+            {runResult == null && (
+              <div className="h-full flex flex-col items-center justify-center opacity-30 select-none">
+                 <Terminal className="w-8 h-8 mb-3" />
+                 <span className="text-[10px] font-black uppercase tracking-widest">Output Pipeline Empty</span>
+              </div>
+            )}
+            {runResult?.stdout && (
+              <div className="text-slate-700 whitespace-pre-wrap animate-in fade-in slide-in-from-bottom-2">
+                {toPreviewText(runResult.stdout)}
+              </div>
+            )}
             {(runResult?.stderr || runResult?.compile_output || runResult?.error) && (
-              <div style={{ color: "#fca5a5", marginTop: 6 }}>
+              <div className="text-red-500 whitespace-pre-wrap mt-2 p-4 bg-red-50 rounded-2xl border border-red-100/50 animate-in zoom-in-95">
                 {toPreviewText(runResult.stderr || runResult.compile_output || runResult.error)}
               </div>
             )}
             {(runResult?.time != null || runResult?.memory != null) && (
-              <div style={{ color: "#94a3b8", marginTop: 8, fontSize: 12 }}>
-                {runResult.time != null ? `Time: ${runResult.time}s` : ""}
-                {runResult.memory != null ? `  Memory: ${runResult.memory} KB` : ""}
+              <div className="mt-6 flex items-center gap-4 border-t border-slate-100 pt-4">
+                {runResult.time != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Runtime</span>
+                    <span className="text-xs font-bold text-slate-500">{runResult.time}s</span>
+                  </div>
+                )}
+                {runResult.memory != null && (
+                  <div className="flex flex-col">
+                    <span className="text-[9px] font-black text-slate-300 uppercase tracking-tighter">Memory</span>
+                    <span className="text-xs font-bold text-slate-500">{runResult.memory} KB</span>
+                  </div>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
 
-      {submitResult && showSubmit && (
-        <div style={{ marginTop: 12, padding: 12, borderRadius: 8, background: "#f8fafc", border: "1px solid #e2e8f0" }}>
-          <div className="flex items-center gap-2 text-sm font-medium">
-            {submitResult.success ? (
-              <CheckCircle2 size={16} color="#16a34a" />
-            ) : (
-              <XCircle size={16} color="#dc2626" />
-            )}
-            <span>
-              {submitResult.success
-                ? "All test cases passed"
-                : `Passed ${submitResult.passed || 0}/${submitResult.total || 0} test cases`}
-            </span>
-          </div>
-          {submitResult.error && (
-            <p style={{ marginTop: 6, color: "#dc2626", fontSize: 13 }}>{submitResult.error}</p>
-          )}
-        </div>
-      )}
     </div>
   );
 }

@@ -30,6 +30,7 @@ import {
   BarChart2,
   Bus,
   Trash2,
+  PlusCircle,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -45,6 +46,8 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import "./SuperAdminDashboard.css";
+import "../components/SidebarPremium.css";
+import { ChevronRight, Search, Bell } from "lucide-react";
 import ChatModal from "../components/ChatModal";
 import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
 import TimePicker12h from "../components/TimePicker12h";
@@ -86,6 +89,7 @@ const NAV = [
       { id: "venue", label: "Venue", icon: MapPin, path: "venues" },
       { id: "time", label: "Time", icon: Clock, path: "time-slots" },
       { id: "slots-list", label: "Slots (venue, time)", icon: CalendarDays, path: "slots" },
+      { id: "assessment-slots", label: "Assessment Slots", icon: CalendarCheck, path: "assessment-slots" },
     ],
   },
   {
@@ -246,6 +250,7 @@ export default function AdminDashboard() {
   const [venuesList, setVenuesList] = useState([]);
   const [timeSlotsList, setTimeSlotsList] = useState([]);
   const [slotsList, setSlotsList] = useState([]);
+  const [assessmentSlots, setAssessmentSlots] = useState([]);
   const [leaveTypesList, setLeaveTypesList] = useState([]);
   const [leaveWorkflowList, setLeaveWorkflowList] = useState([]);
   const [leaveApprovalSteps, setLeaveApprovalSteps] = useState("mentor, warden, hostel_manager");
@@ -270,6 +275,11 @@ export default function AdminDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
+  const [openSlotCourseId, setOpenSlotCourseId] = useState("");
+  const [openSlotDate, setOpenSlotDate] = useState("");
+  const [openSlotTemplateIds, setOpenSlotTemplateIds] = useState([]);
+  const [openSlotCapacity, setOpenSlotCapacity] = useState(30);
+  const [isOpeningSlots, setIsOpeningSlots] = useState(false);
 
   // Bus management (Admin -> Buses)
   const [busesList, setBusesList] = useState([]);
@@ -327,13 +337,14 @@ export default function AdminDashboard() {
       setLoading(true);
       setLoadError(null);
       try {
-        const [roles, users, courses, venues, timeSlots, slotTemplates, leaveTypes, leaveWorkflows, settings, assignments, qbSubmissions, templates] = await Promise.all([
+        const [roles, users, courses, venues, timeSlots, slotTemplates, assessmentSlotsData, leaveTypes, leaveWorkflows, settings, assignments, qbSubmissions, templates] = await Promise.all([
           fetch(`${API_BASE}/api/superadmin/roles`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/users`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/courses`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/venues`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/time-slots`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/slot-templates`).then((r) => r.json()),
+          fetch(`${API_BASE}/api/superadmin/assessment-slots`).then((r) => r.json()).catch(() => []),
           fetch(`${API_BASE}/api/superadmin/leave-types`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/leave-workflows`).then((r) => r.json()),
           fetch(`${API_BASE}/api/superadmin/settings`).then((r) => r.json()),
@@ -347,6 +358,7 @@ export default function AdminDashboard() {
         setVenuesList(Array.isArray(venues) ? venues : []);
         setTimeSlotsList(Array.isArray(timeSlots) ? timeSlots : []);
         setSlotsList(Array.isArray(slotTemplates) ? slotTemplates : []);
+        setAssessmentSlots(Array.isArray(assessmentSlotsData) ? assessmentSlotsData : []);
         setLeaveTypesList(Array.isArray(leaveTypes) ? leaveTypes : []);
         setLeaveWorkflowList(Array.isArray(leaveWorkflows) ? leaveWorkflows : []);
         setFacultyAssignments(Array.isArray(assignments) ? assignments : []);
@@ -693,81 +705,93 @@ export default function AdminDashboard() {
     plugins: { legend: { position: "top" }, title: { display: !!title, text: title } },
   });
 
+  const userInitials = userName.split(' ').map(n => n[0]).join('');
+
   return (
-    <div className="dashboard-layout sa-dashboard-layout">
-      <header className="top-navbar">
-        <div className="top-nav-brand">
-          <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-          <span>PCDP Portal</span>
-        </div>
-        <div className="top-nav-profile">
+    <div className="dashboard-layout premium-layout admin-dashboard-layout">
+      <aside className="student-sidebar-premium">
+        <div className="sidebar-header-premium">
           <img
-            src={`https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png`}
-            alt="Profile"
-            className="profile-avatar"
+            src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png"
+            alt="Logo"
+            className="sidebar-logo-premium"
           />
-          <div className="profile-info">
-            <span className="profile-id">Admin</span>
-            <span className="profile-name">{userName}</span>
+          <span className="sidebar-brand-premium">PCDP Portal</span>
+        </div>
+
+        <nav className="sidebar-nav-premium">
+          {NAV.map((section) => {
+            return (
+              <div key={section.id} className="nav-section-premium">
+                <h3 className="section-title-premium">{section.label}</h3>
+                <ul>
+                  {section.sub.map((sub) => {
+                    const SubIcon = sub.icon;
+                    const path = sub.path || sub.id;
+                    const isActive = activeSub === sub.id;
+                    return (
+                      <li key={sub.id}>
+                        <NavLink
+                          to={`/admin/${path}`}
+                          className={`nav-item-premium ${isActive ? "active" : ""}`}
+                          end={path === "overview"}
+                        >
+                          <span className="icon-wrapper-premium">
+                            {SubIcon ? <SubIcon size={20} /> : <section.icon size={20} />}
+                          </span>
+                          <span className="item-name-premium">{sub.label}</span>
+                          {isActive && <ChevronRight size={14} className="active-indicator-premium" />}
+                        </NavLink>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            );
+          })}
+        </nav>
+
+        <div className="sidebar-footer-premium">
+          <div className="user-profile-summary-premium">
+            <div className="user-avatar-premium">
+              {userInitials}
+            </div>
+            <div className="user-info-premium">
+              <span className="user-name-premium">{userName}</span>
+              <span className="user-role-premium">Admin</span>
+            </div>
           </div>
-          <button type="button" className="sa-logout-btn" onClick={handleLogout} title="Logout">
-            <LogOut size={18} /> Logout
+
+          <button onClick={handleLogout} className="logout-btn-premium">
+            <LogOut size={18} />
+            <span>Logout</span>
           </button>
         </div>
-      </header>
+      </aside>
 
-      <div className="sa-body">
-        <aside className="sa-sidebar" aria-label="Navigation - hover to open">
-          <div className="sa-sidebar-inner">
-            {NAV.map((section) => {
-              const isOpen = openNav === section.id;
-              const Icon = section.icon;
-              return (
-                <div
-                  key={section.id}
-                  className={`sa-nav-section ${isOpen ? "open" : ""}`}
-                >
-                  <div
-                    className={`sa-nav-main ${isOpen ? "active" : ""}`}
-                    onClick={() => setOpenNav(isOpen ? "" : section.id)}
-                  >
-                  <span className="sa-nav-label">
-                    <Icon size={24} />
-                    <span className="sa-nav-label-text">{section.label}</span>
-                  </span>
-                    <ChevronDown size={18} className="sa-chevon" />
-                  </div>
-                  {isOpen && (
-                    <ul className="sa-nav-sub">
-                      {section.sub.map((sub) => {
-                        const SubIcon = sub.icon;
-                        const path = sub.path || sub.id;
-                        return (
-                          <li key={sub.id}>
-                            <NavLink
-                              to={`/admin/${path}`}
-                              className={({ isActive }) => (isActive ? "active" : "")}
-                              end={path === "overview"}
-                            >
-                              <span className="sa-nav-label">
-                                {SubIcon ? <SubIcon size={20} /> : null}
-                                <span className="sa-nav-label-text">{sub.label}</span>
-                              </span>
-                            </NavLink>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  )}
-                </div>
-              );
-            })}
+      <div className="main-container-premium">
+        <header className="top-navbar-premium">
+          <div className="search-bar-premium">
+            <Search size={18} className="search-icon" />
+            <input type="text" placeholder="Search for courses, slots, etc." />
           </div>
-        </aside>
 
-        <main className="sa-main">
-          <div className="dashboard-container-inner">
-            <div className="sa-welcome-banner">
+          <div className="top-nav-actions-premium">
+            <button className="nav-btn-premium" title="Notifications">
+              <Bell size={20} />
+              <span className="badge-premium"></span>
+            </button>
+            <div className="header-profile-premium">
+              <div className="avatar-minimal-premium">
+                {userInitials}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="content-area-premium">
+          <div className="dashboard-container-inner" style={{ padding: '24px' }}>
+            <div className="sa-welcome-banner" style={{ marginBottom: '24px' }}>
               <span className="sa-breadcrumb">
                 <span className="highlight">Admin</span>
                 <span className="sa-breadcrumb-sep">/</span>
@@ -1750,6 +1774,181 @@ export default function AdminDashboard() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {activeSub === "assessment-slots" && (
+            <div className="dashboard-card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                <div>
+                  <h3 className="card-title">Assessment Slots</h3>
+                  <p className="card-subtitle">Open specific slots for assessments by linking courses to venues and time slots on a specific date.</p>
+                </div>
+                <CalendarCheck size={32} style={{ color: "#3b82f6", opacity: 0.8 }} />
+              </div>
+              
+              <div className="sa-open-slots-form" style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0", marginBottom: "32px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
+                  <PlusCircle size={20} style={{ color: "#3b82f6" }} />
+                  <h4 style={{ fontSize: "18px", fontWeight: "600", color: "#1e293b", margin: 0 }}>Open New Assessment Slots</h4>
+                </div>
+                
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
+                  <div className="sa-form-group">
+                    <label style={{ fontWeight: "600", color: "#475569" }}>Target Course</label>
+                    <select value={openSlotCourseId} onChange={(e) => setOpenSlotCourseId(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
+                      <option value="">-- Select Course --</option>
+                      {coursesList.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sa-form-group">
+                    <label style={{ fontWeight: "600", color: "#475569" }}>Assessment Date</label>
+                    <input type="date" value={openSlotDate} onChange={(e) => setOpenSlotDate(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
+                  </div>
+                  <div className="sa-form-group">
+                    <label style={{ fontWeight: "600", color: "#475569" }}>Capacity per Slot</label>
+                    <input type="number" min="1" value={openSlotCapacity} onChange={(e) => setOpenSlotCapacity(parseInt(e.target.value) || 30)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "24px" }}>
+                  <label style={{ display: "block", marginBottom: "12px", fontSize: "14px", fontWeight: "600", color: "#475569" }}>Select Available Slot Templates (Venue - Time)</label>
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px", maxHeight: "250px", overflowY: "auto", padding: "8px", backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
+                    {slotsList.filter(s => (s.status || "Active") === "Active").map((t) => (
+                      <label key={t.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", backgroundColor: openSlotTemplateIds.includes(t.id) ? "#eff6ff" : "#f8fafc", border: "2px solid", borderColor: openSlotTemplateIds.includes(t.id) ? "#3b82f6" : "transparent", borderRadius: "10px", cursor: "pointer", transition: "all 0.2s" }}>
+                        <input 
+                          type="checkbox" 
+                          checked={openSlotTemplateIds.includes(t.id)} 
+                          style={{ width: "18px", height: "18px", cursor: "pointer" }}
+                          onChange={(e) => {
+                            if (e.target.checked) setOpenSlotTemplateIds(prev => [...prev, t.id]);
+                            else setOpenSlotTemplateIds(prev => prev.filter(id => id !== t.id));
+                          }} 
+                        />
+                        <div style={{ fontSize: "13px" }}>
+                          <div style={{ fontWeight: "600", color: "#1e293b" }}>{t.venueLabel}</div>
+                          <div style={{ color: "#64748b" }}>{t.timeLabel}</div>
+                        </div>
+                      </label>
+                    ))}
+                    {slotsList.filter(s => (s.status || "Active") === "Active").length === 0 && (
+                      <div className="sa-muted" style={{ gridColumn: "1/-1", textAlign: "center", padding: "20px" }}>No active slot templates found. Create them in "Slots (venue, time)" first.</div>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
+                  <button 
+                    className="sa-btn sa-btn-primary" 
+                    style={{ padding: "12px 32px", fontSize: "15px", borderRadius: "10px" }}
+                    disabled={!openSlotCourseId || !openSlotDate || openSlotTemplateIds.length === 0 || isOpeningSlots}
+                    onClick={async () => {
+                      setIsOpeningSlots(true);
+                      try {
+                        const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots`, {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            course_id: openSlotCourseId,
+                            date: openSlotDate,
+                            slot_template_ids: openSlotTemplateIds,
+                            capacity: openSlotCapacity
+                          })
+                        });
+                        const data = await res.json();
+                        if (!res.ok) throw new Error(data.message || "Failed to open slots");
+                        alert(data.message);
+                        setOpenSlotTemplateIds([]);
+                        const updatedRes = await fetch(`${API_BASE}/api/superadmin/assessment-slots`);
+                        const updatedData = await updatedRes.json();
+                        setAssessmentSlots(updatedData);
+                      } catch (err) {
+                        alert(err.message);
+                      } finally {
+                        setIsOpeningSlots(false);
+                      }
+                    }}
+                  >
+                    {isOpeningSlots ? "Opening..." : "Confirm & Open Slots"}
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
+                <CalendarDays size={20} style={{ color: "#64748b" }} />
+                <h4 style={{ fontSize: "18px", fontWeight: "600", color: "#1e293b", margin: 0 }}>Existing Assessment Slots</h4>
+              </div>
+
+              <div className="sa-table-wrap" style={{ borderRadius: "12px", border: "1px solid #e2e8f0", overflow: "hidden" }}>
+                <table className="sa-table">
+                  <thead style={{ backgroundColor: "#f8fafc" }}>
+                    <tr>
+                      <th style={{ padding: "16px" }}>Course</th>
+                      <th>Date</th>
+                      <th>Venue</th>
+                      <th>Time</th>
+                      <th>Booked / Capacity</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assessmentSlots.map((row) => (
+                      <tr key={row.id}>
+                        <td style={{ padding: "16px" }}><strong>{row.courseName}</strong></td>
+                        <td>{new Date(row.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
+                        <td>{row.venueLabel}</td>
+                        <td>{row.timeLabel}</td>
+                        <td>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "600" }}>
+                              <span style={{ color: row.bookedCount >= row.capacity ? "#ef4444" : "#3b82f6" }}>{row.bookedCount} booked</span>
+                              <span style={{ color: "#64748b" }}>{row.capacity} total</span>
+                            </div>
+                            <div style={{ width: "100%", height: "8px", backgroundColor: "#f1f5f9", borderRadius: "4px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
+                              <div style={{ width: `${Math.min(100, (row.bookedCount / row.capacity) * 100)}%`, height: "100%", backgroundColor: row.bookedCount >= row.capacity ? "#ef4444" : "#3b82f6", borderRadius: "4px", transition: "width 0.3s ease" }}></div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <button 
+                            type="button" 
+                            className="sa-btn sa-btn-sm sa-btn-ghost" 
+                            style={{ color: "#ef4444", padding: "8px" }}
+                            title="Delete Slot"
+                            onClick={async () => {
+                              if (!window.confirm("Are you sure you want to delete this slot?")) return;
+                              try {
+                                const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${row.id}`, {
+                                  method: "DELETE"
+                                });
+                                const data = await res.json();
+                                if (!res.ok) throw new Error(data.message || "Delete failed");
+                                setAssessmentSlots(prev => prev.filter(s => s.id !== row.id));
+                              } catch (err) {
+                                alert(err.message);
+                              }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                    {assessmentSlots.length === 0 && (
+                      <tr>
+                        <td colSpan="6" style={{ textAlign: "center", padding: "60px", color: "#64748b" }}>
+                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
+                            <CalendarCheck size={48} style={{ opacity: 0.2 }} />
+                            <p>No assessment slots opened yet. Use the form above to open slots for students.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
 

@@ -102,6 +102,7 @@ async function getProblemStatement(problemId) {
   const res = await fetch(mirrorUrl);
   if (!res.ok) throw new Error("Failed to fetch problem statement");
   let text = await res.text();
+
   if (!text || text.length < 50) throw new Error("Failed to fetch problem statement");
 
   const markdownMarker = "Markdown Content:";
@@ -110,45 +111,66 @@ async function getProblemStatement(problemId) {
     text = text.slice(markerPos + markdownMarker.length).trim();
   }
 
-  const normalized = text.replace(/\r/g, "").trim();
-  const idxInput = normalized.search(/\nInput\b/i);
-  const idxOutput = normalized.search(/\nOutput\b/i);
-  const idxNote = normalized.search(/\nNote\b/i);
+  // 1. Clean up known navigation junk and find the real start
+  let normalized = text.replace(/\r/g, "").trim();
+  
+  // Find "standard output" which is the end of the problem header
+  const headerEndMarker = "standard output";
+  const headerEndIdx = normalized.toLowerCase().indexOf(headerEndMarker);
+  
+  let contentArea = normalized;
+  if (headerEndIdx !== -1) {
+    contentArea = normalized.slice(headerEndIdx + headerEndMarker.length).trim();
+  }
 
-  const cut = (from, to) => {
+  // 2. Locate major sections in the content area
+  const idxInput = contentArea.search(/\nInput\b/i);
+  const idxOutput = contentArea.search(/\nOutput\b/i);
+  const idxExamples = contentArea.search(/\nExamples?\b/i);
+  const idxNote = contentArea.search(/\nNote\b/i);
+
+  const cut = (str, from, to) => {
     if (from < 0) return "";
-    const start = from;
-    const end = to > from ? to : normalized.length;
-    return normalized.slice(start, end).trim();
+    const end = to > from ? to : str.length;
+    return str.slice(from, end).trim();
   };
 
-  const description = idxInput > 0 ? normalized.slice(0, idxInput).trim() : normalized;
-  const input = cut(idxInput, idxOutput > 0 ? idxOutput : idxNote);
-  const output = cut(idxOutput, idxNote);
-  const note = cut(idxNote, -1);
+  const description = idxInput > 0 ? contentArea.slice(0, idxInput).trim() : contentArea;
+  const input = cut(contentArea, idxInput, idxOutput > 0 ? idxOutput : (idxExamples > 0 ? idxExamples : idxNote));
+  const output = cut(contentArea, idxOutput, idxExamples > 0 ? idxExamples : idxNote);
+  const note = idxNote > 0 ? contentArea.slice(idxNote).trim() : "";
 
-  const blocks = normalized.split(/\nExamples?\b/i);
-  const examplesRaw = blocks.length > 1 ? blocks[1] : "";
+  // 3. Parse Examples carefully
   const examplePairs = [];
-  if (examplesRaw) {
-    const lines = examplesRaw.split("\n");
+  if (idxExamples !== -1) {
+    const examplesPart = contentArea.slice(idxExamples).split(/\n[\[\(]?Codeforces[\]\)]?/i)[0]; // stop at footer
+    const lines = examplesPart.split("\n");
     let currentIn = "";
     let currentOut = "";
     let mode = "";
-    for (const ln of lines) {
-      if (/^\s*Input\s*$/i.test(ln)) { mode = "in"; continue; }
-      if (/^\s*Output\s*$/i.test(ln)) { mode = "out"; continue; }
-      if (/^\s*Note\s*$/i.test(ln)) break;
-      if (mode === "in") currentIn += `${ln}\n`;
-      if (mode === "out") currentOut += `${ln}\n`;
-      if (mode === "out" && ln.trim() === "") {
-        if (currentIn.trim() || currentOut.trim()) {
+
+    for (let ln of lines) {
+      const trimmed = ln.trim();
+      if (!trimmed) continue;
+      if (trimmed.toLowerCase() === "copy") continue;
+      
+      if (/^Input\b/i.test(trimmed)) {
+        if (currentOut) {
           examplePairs.push({ input: currentIn.trim(), output: currentOut.trim() });
+          currentIn = ""; currentOut = "";
         }
-        currentIn = "";
-        currentOut = "";
-        mode = "";
+        mode = "in";
+        continue;
       }
+      if (/^Output\b/i.test(trimmed)) {
+        mode = "out";
+        continue;
+      }
+      if (/^Note\b/i.test(trimmed)) break;
+      if (/^Examples?\b/i.test(trimmed) && mode === "") continue;
+
+      if (mode === "in") currentIn += trimmed + "\n";
+      if (mode === "out") currentOut += trimmed + "\n";
     }
     if (currentIn.trim() || currentOut.trim()) {
       examplePairs.push({ input: currentIn.trim(), output: currentOut.trim() });
@@ -156,11 +178,11 @@ async function getProblemStatement(problemId) {
   }
 
   return {
-    description,
-    input,
-    output,
-    note,
-    examples: examplePairs.slice(0, 3),
+    description: description.replace(/^Input\b/i, "").trim(),
+    input: input.replace(/^Input\b/i, "").trim(),
+    output: output.replace(/^Output\b/i, "").trim(),
+    note: note.replace(/^Note\b/i, "").trim(),
+    examples: examplePairs.slice(0, 3)
   };
 }
 

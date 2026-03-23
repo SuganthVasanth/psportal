@@ -6,27 +6,20 @@ import "./CoursesAvailable.css";
 
 const API_BASE = "http://localhost:5000";
 
+const MOCK_PROFILE = { register_no: "Unknown" };
+
 export default function CoursesAvailable() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [psCourses, setPsCourses] = useState([]);
   const [levelCourses, setLevelCourses] = useState([]);
   const [enrolledIds, setEnrolledIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
   const [registeringId, setRegisteringId] = useState(null);
-  const [openAccordion, setOpenAccordion] = useState({});
 
   const registerNo = localStorage.getItem("register_no") || MOCK_PROFILE.register_no;
   const token = localStorage.getItem("token");
   const navigate = useNavigate();
-
-  const fetchPsCourses = () => {
-    fetch(`${API_BASE}/api/ps-courses?status=Active`)
-      .then((r) => (r.ok ? r.json() : []))
-      .then((data) => setPsCourses(Array.isArray(data) ? data : []))
-      .catch(() => setPsCourses([]));
-  };
 
   const fetchEnrollments = () => {
     if (!token) return;
@@ -45,7 +38,6 @@ export default function CoursesAvailable() {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetchPsCourses();
     fetchEnrollments();
     fetch(`${API_BASE}/api/courses`)
       .then((r) => (r.ok ? r.json() : []))
@@ -53,25 +45,6 @@ export default function CoursesAvailable() {
       .catch(() => setLevelCourses([]))
       .finally(() => setLoading(false));
   }, [token]);
-
-  const grouped = useMemo(() => {
-    const term = (searchTerm || "").toLowerCase();
-    const filtered = psCourses.filter(
-      (c) =>
-        !term ||
-        (c.name || "").toLowerCase().includes(term) ||
-        (c.parentCourse || "").toLowerCase().includes(term) ||
-        (c.description || "").toLowerCase().includes(term)
-    );
-    const bySubject = {};
-    filtered.forEach((c) => {
-      const key = c.parentCourse || "Other";
-      if (!bySubject[key]) bySubject[key] = [];
-      bySubject[key].push(c);
-    });
-    Object.keys(bySubject).forEach((k) => bySubject[k].sort((a, b) => (a.name || "").localeCompare(b.name || "")));
-    return bySubject;
-  }, [psCourses, searchTerm]);
 
   const handleRegister = async (courseId) => {
     setRegisteringId(courseId);
@@ -93,8 +66,6 @@ export default function CoursesAvailable() {
     setTimeout(() => setToast(null), 3000);
   };
 
-  const subjectKeys = Object.keys(grouped).sort();
-
   const filteredLevelCourses = useMemo(() => {
     const term = (searchTerm || "").toLowerCase();
     if (!term) return levelCourses;
@@ -105,132 +76,125 @@ export default function CoursesAvailable() {
     });
   }, [levelCourses, searchTerm]);
 
+  const CourseSkeleton = () => (
+    <div className="skeleton-card">
+      <div className="skeleton-img"></div>
+      <div className="skeleton-text"></div>
+      <div className="skeleton-text short"></div>
+      <div className="skeleton-text"></div>
+      <div className="shimmer"></div>
+    </div>
+  );
+
   return (
     <StudentLayout>
       <div className="courses-container">
-          <div className="page-header">
-            <h1 className="page-title">Courses Available</h1>
-            <p className="page-subtitle">
-              {loading ? "Loading…" : error ? error : `Active courses by subject (${psCourses.length} total)`}
-            </p>
+        <div className="page-header">
+          <h1 className="page-title">Explore Courses</h1>
+          <p className="page-subtitle">
+            {error ? error : "Master new skills with our premium learning paths."}
+          </p>
+        </div>
+
+        <div className="filters-card">
+          <div className="search-bar-wrapper">
+            <Search size={20} className="search-icon" />
+            <input
+              type="text"
+              placeholder="Search for courses, skills, or levels..."
+              className="courses-search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
-
-          <div className="filters-card">
-            <div className="courses-filters-section">
-              <div className="search-bar-wrapper">
-                <Search size={18} className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Search by name or subject..."
-                  className="courses-search-input"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-            </div>
+          <div className="course-stats-overview">
+             <span className="stat-badge">{filteredLevelCourses.length} Courses Available</span>
           </div>
+        </div>
 
-          {toast && (
-            <div className={`courses-toast courses-toast-${toast.type}`} role="alert">
-              {toast.text}
+        {toast && (
+          <div className={`courses-toast courses-toast-${toast.type}`} role="alert">
+            {toast.type === "success" ? <BookOpen size={18} /> : <Search size={18} />}
+            {toast.text}
+          </div>
+        )}
+
+        {loading ? (
+          <div className="courses-grid">
+            {[1, 2, 3, 4, 5, 6].map((i) => <CourseSkeleton key={i} />)}
+          </div>
+        ) : filteredLevelCourses.length === 0 ? (
+          <div className="courses-empty">
+            <div className="empty-icon-wrapper">
+               <Search size={48} strokeWidth={1} />
             </div>
-          )}
-
-          {loading ? (
-            <div className="courses-loading">Loading courses…</div>
-          ) : filteredLevelCourses.length === 0 && subjectKeys.length === 0 ? (
-            <div className="courses-empty">No active courses. Admins can add courses in the dashboard.</div>
-          ) : (
-            <>
-            {filteredLevelCourses.length > 0 && (
-              <section className="courses-section">
-                <h2 className="page-title" style={{ fontSize: 18, marginBottom: 8 }}>Level-based courses</h2>
-                <p className="page-subtitle" style={{ marginBottom: 16 }}>Click a course to view levels and register.</p>
-                <div className="courses-grid">
-                  {filteredLevelCourses.map((course) => (
-                    <div className="course-card ps-course-card" key={course.id}>
-                      <div className="course-image-placeholder" style={{ minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                        <BookOpen size={40} style={{ color: "#cbd5e0" }} />
-                      </div>
-                      <div className="course-content">
-                        <h3 className="course-title">{course.name}</h3>
-                        <p className="course-desc-snippet">
-                          {course.type ? `${course.type} • ` : ""}{course.levelsCount != null ? `${course.levelsCount} level${course.levelsCount === 1 ? "" : "s"}` : ""}
-                        </p>
-                        <div className="course-progress-container">
-                          <button
-                            type="button"
-                            className="action-button"
-                            onClick={() => navigate(`/course/${course.id}`)}
-                          >
-                            View levels &amp; register
-                          </button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {subjectKeys.length > 0 && (
-            <div className="ps-courses-accordion" style={{ marginTop: 32 }}>
-              {subjectKeys.map((subject) => {
-                const courses = grouped[subject];
-                const isOpen = openAccordion[subject] !== false;
+            <h3>No courses found</h3>
+            <p>Try adjusting your search or check back later for new content.</p>
+          </div>
+        ) : (
+          <section className="courses-section">
+            <div className="courses-grid">
+              {filteredLevelCourses.map((course) => {
+                const isEnrolled = enrolledIds.has(course.id);
                 return (
-                  <div key={subject} className="ps-accordion-group">
-                    <button
-                      type="button"
-                      className="ps-accordion-head"
-                      onClick={() => setOpenAccordion((prev) => ({ ...prev, [subject]: !prev[subject] }))}
-                    >
-                      {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} />}
-                      <span>{subject}</span>
-                      <span className="ps-accordion-count">({courses.length})</span>
-                    </button>
-                    {isOpen && (
-                      <div className="ps-accordion-body">
-                        <div className="courses-grid">
-                          {courses.map((course) => {
-                            const enrolled = enrolledIds.has(course.id);
-                            const busy = registeringId === course.id;
-                            return (
-                              <div className="course-card ps-course-card" key={course.id}>
-                                <div className="course-image-placeholder" style={{ minHeight: 80, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                  <BookOpen size={40} style={{ color: "#cbd5e0" }} />
-                                </div>
-                                <div className="course-content">
-                                  <h3 className="course-title">{course.name}</h3>
-                                  <p className="course-desc-snippet">{(course.description || "").slice(0, 80)}{(course.description || "").length > 80 ? "…" : ""}</p>
-                                  <div className="course-progress-container">
-                                    {enrolled ? (
-                                      <span className="ps-enrolled-badge">Enrolled</span>
-                                    ) : (
-                                      <button
-                                        type="button"
-                                        className="action-button"
-                                        disabled={busy}
-                                        onClick={() => handleRegister(course.id)}
-                                      >
-                                        {busy ? "Registering…" : "Register Now"}
-                                      </button>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            );
-                          })}
+                  <div className={`ps-course-card ${isEnrolled ? 'ps-enrolled-card' : ''}`} key={course.id}>
+                    <div className="course-image-placeholder">
+                      {course.course_logo ? (
+                        <img 
+                          src={course.course_logo} 
+                          alt={course.name} 
+                          className="course-logo-img"
+                          onError={(e) => {
+                            e.target.style.display = "none";
+                            e.target.nextSibling.style.display = "block"; // Show fallback icon
+                          }}
+                        />
+                      ) : null}
+                      <div className="fallback-icon" style={{ display: course.course_logo ? "none" : "block" }}>
+                        <BookOpen size={48} strokeWidth={1.5} style={{ color: "var(--sidebar-accent)", opacity: 0.6 }} />
+                      </div>
+                      <span className="course-badge">{course.type || "Specialization"}</span>
+                    </div>
+                    
+                    <div className="course-content">
+                      <div className="course-header-row">
+                        <h3 className="course-title">{course.name}</h3>
+                        {isEnrolled && (
+                          <span className="ps-enrolled-badge">
+                            <BookOpen size={14} /> Enrolled
+                          </span>
+                        )}
+                      </div>
+                      
+                      <p className="course-desc-snippet">
+                        Learn the fundamentals and advanced concepts of {course.name}. 
+                        This course includes comprehensive modules and hands-on practice.
+                      </p>
+                      
+                      <div className="course-footer">
+                        <div className="course-stats">
+                          <div className="stat-item">
+                            <BookOpen size={14} />
+                            <span>{course.levelsCount || 0} Levels</span>
+                          </div>
                         </div>
                       </div>
-                    )}
+
+                      <button
+                        type="button"
+                        className="action-button"
+                        onClick={() => navigate(`/course/${course.id}`)}
+                      >
+                        {isEnrolled ? "Continue Learning" : "View Curriculum"}
+                        <ChevronRight size={18} />
+                      </button>
+                    </div>
                   </div>
                 );
               })}
             </div>
-            )}
-            </>
-          )}
+          </section>
+        )}
       </div>
     </StudentLayout>
   );

@@ -73,7 +73,7 @@ export default function StudentDashboard() {
     return (
         <StudentLayout>
             <div className="dashboard-container-inner">
-                    <div className="welcome-banner">
+                    {/* <div className="welcome-banner">
                         <div>
                             <div className="welcome-banner-text">
                                 Welcome back, <span className="highlight">{profile.name}</span>! Ready to code?
@@ -87,9 +87,9 @@ export default function StudentDashboard() {
                             alt=""
                             className="welcome-banner-illustration"
                         />
-                    </div>
+                    </div> */}
 
-                    {practiceDashboard && (
+                    {/* {practiceDashboard && (
                         <div className="dashboard-grid" style={{ marginBottom: 24 }}>
                             <div className="left-column">
                                 <div className="dashboard-card practice-card">
@@ -157,7 +157,7 @@ export default function StudentDashboard() {
                                 </div>
                             </div>
                         </div>
-                    )}
+                    )} */}
 
                     <div className="dashboard-grid">
 

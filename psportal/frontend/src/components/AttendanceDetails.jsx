@@ -70,17 +70,17 @@ const AttendanceDetails = ({ attendance }) => {
             {/* Top Stat Cards */}
             <div className="attendance-stats-grid">
                 <div className="attendance-stat-card">
-                    <div className="stat-value highlight-purple">
+                    <div className="stat-value highlight-blue">
                         {attendance.percentage}<span className="percent-sign">%</span>
                     </div>
                     <div className="stat-label">Attendance</div>
                 </div>
                 <div className="attendance-stat-card">
-                    <div className="stat-value highlight-purple">{attendance.presentDays}</div>
+                    <div className="stat-value highlight-blue">{attendance.presentDays}</div>
                     <div className="stat-label">Present</div>
                 </div>
                 <div className="attendance-stat-card">
-                    <div className="stat-value highlight-purple">{attendance.absentDays}</div>
+                    <div className="stat-value highlight-blue">{attendance.absentDays}</div>
                     <div className="stat-label">Absent</div>
                 </div>
             </div>

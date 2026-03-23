@@ -40,6 +40,8 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import "./SuperAdminDashboard.css";
+import "../components/SidebarPremium.css";
+import { ChevronRight, Search, Bell } from "lucide-react";
 import ChatModal from "../components/ChatModal";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
@@ -447,81 +449,95 @@ export default function SuperAdminDashboard() {
     plugins: { legend: { position: "top" }, title: { display: !!title, text: title } },
   });
 
-  return (
-    <div className="dashboard-layout sa-dashboard-layout">
-      <header className="top-navbar">
-        <div className="top-nav-brand">
-          <img src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png" alt="PS Portal Logo" style={{ width: "32px", height: "32px", objectFit: "contain" }} />
-          <span>PCDP Portal</span>
-        </div>
-        <div className="top-nav-profile">
-          <img
-            src={`https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png`}
-            alt="Profile"
-            className="profile-avatar"
-          />
-          <div className="profile-info">
-            <span className="profile-id">Super Admin</span>
-            <span className="profile-name">{userName}</span>
-          </div>
-          <button type="button" className="sa-logout-btn" onClick={handleLogout} title="Logout">
-            <LogOut size={18} /> Logout
-          </button>
-        </div>
-      </header>
+  const userInitials = userName.split(' ').map(n => n[0]).join('');
 
-      <div className="sa-body">
-        <aside className="sa-sidebar">
+  return (
+    <div className="dashboard-layout premium-layout sa-dashboard-layout">
+      <aside className="student-sidebar-premium">
+        <div className="sidebar-header-premium">
+          <img
+            src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png"
+            alt="Logo"
+            className="sidebar-logo-premium"
+          />
+          <span className="sidebar-brand-premium">PCDP Portal</span>
+        </div>
+
+        <nav className="sidebar-nav-premium">
           {NAV.map((section) => {
-            const isOpen = openNav === section.id;
-            const Icon = section.icon;
             return (
-              <div
-                key={section.id}
-                className={`sa-nav-section ${isOpen ? "open" : ""}`}
-              >
-                <div
-                  className={`sa-nav-main ${isOpen ? "active" : ""}`}
-                  onClick={() => setOpenNav(isOpen ? "" : section.id)}
-                >
-                  <span className="sa-nav-label">
-                    <Icon size={24} />
-                    <span className="sa-nav-label-text">{section.label}</span>
-                  </span>
-                  <ChevronDown size={18} className="sa-chevon" />
-                </div>
-                {isOpen && (
-                  <ul className="sa-nav-sub">
-                    {section.sub.map((sub) => {
-                      const SubIcon = sub.icon;
-                      return (
-                        <li key={sub.id}>
-                          <a
-                            href="#"
-                            className={activeSub === sub.id ? "active" : ""}
-                            onClick={(e) => {
-                              e.preventDefault();
-                              setActiveSub(sub.id);
-                            }}
-                          >
-                            <span className="sa-nav-label">
-                              {SubIcon ? <SubIcon size={20} /> : null}
-                              <span className="sa-nav-label-text">{sub.label}</span>
-                            </span>
-                          </a>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+              <div key={section.id} className="nav-section-premium">
+                <h3 className="section-title-premium">{section.label}</h3>
+                <ul>
+                  {section.sub.map((sub) => {
+                    const SubIcon = sub.icon;
+                    const isActive = activeSub === sub.id;
+                    return (
+                      <li key={sub.id}>
+                        <a
+                          href="#"
+                          className={`nav-item-premium ${isActive ? "active" : ""}`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setActiveSub(sub.id);
+                          }}
+                        >
+                          <span className="icon-wrapper-premium">
+                            {SubIcon ? <SubIcon size={20} /> : <section.icon size={20} />}
+                          </span>
+                          <span className="item-name-premium">{sub.label}</span>
+                          {isActive && <ChevronRight size={14} className="active-indicator-premium" />}
+                        </a>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             );
           })}
-        </aside>
+        </nav>
 
-        <main className="sa-main">
-          <div className="dashboard-container-inner">
-            <div className="sa-welcome-banner">
+        <div className="sidebar-footer-premium">
+          <div className="user-profile-summary-premium">
+            <div className="user-avatar-premium">
+              {userInitials}
+            </div>
+            <div className="user-info-premium">
+              <span className="user-name-premium">{userName}</span>
+              <span className="user-role-premium">Super Admin</span>
+            </div>
+          </div>
+
+          <button onClick={handleLogout} className="logout-btn-premium">
+            <LogOut size={18} />
+            <span>Logout</span>
+          </button>
+        </div>
+      </aside>
+
+      <div className="main-container-premium">
+        <header className="top-navbar-premium">
+          <div className="search-bar-premium">
+            <Search size={18} className="search-icon" />
+            <input type="text" placeholder="Search for roles, users, etc." />
+          </div>
+
+          <div className="top-nav-actions-premium">
+            <button className="nav-btn-premium" title="Notifications">
+              <Bell size={20} />
+              <span className="badge-premium"></span>
+            </button>
+            <div className="header-profile-premium">
+              <div className="avatar-minimal-premium">
+                {userInitials}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="content-area-premium">
+          <div className="dashboard-container-inner" style={{ padding: '24px' }}>
+            <div className="sa-welcome-banner" style={{ marginBottom: '24px' }}>
               <span className="highlight">Super Admin Dashboard</span>
               {" — "}
               {NAV.flatMap((s) => s.sub).find((s) => s.id === activeSub)?.label || "Overview"}

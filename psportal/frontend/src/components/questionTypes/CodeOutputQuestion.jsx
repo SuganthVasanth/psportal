@@ -1,7 +1,7 @@
 import React from "react";
 
 const cardClass = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
-const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-mono text-sm";
+const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-sm";
 
 export default function CodeOutputQuestion({ config = {}, value = {}, onChange, readOnly = false }) {
   const props = config.properties || {};
@@ -28,7 +28,7 @@ export default function CodeOutputQuestion({ config = {}, value = {}, onChange, 
               disabled={readOnly}
               className="rounded border-slate-300 text-violet-600"
             />
-            <span className="text-sm font-mono">{typeof opt === "string" ? opt : opt?.text ?? `Output ${i + 1}`}</span>
+            <span className="text-sm"> {typeof opt === "string" ? opt : opt?.text ?? `Output ${i + 1}`}</span>
           </label>
         ))}
       </div>
