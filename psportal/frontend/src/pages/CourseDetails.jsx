@@ -35,6 +35,7 @@ const getLevelActionLabel = (courseName, level, index) => {
 
 export default function CourseDetails() {
   const { id } = useParams();
+  const courseId = id;
   const [course, setCourse] = useState(null);
   const [progress, setProgress] = useState([]);
   const [courseAttempts, setCourseAttempts] = useState(0);
@@ -59,9 +60,18 @@ export default function CourseDetails() {
   const [examError, setExamError] = useState("");
   const [examSubmitting, setExamSubmitting] = useState(false);
   const [examSubmitted, setExamSubmitted] = useState(false);
-
+  
   const registerNo = localStorage.getItem("register_no") || MOCK_PROFILE.register_no;
   const studentName = localStorage.getItem("userName") || MOCK_PROFILE.name;
+  const proctorKey = `proctor_${id}_${registerNo}`;
+
+  const [tabSwitchCount, setTabSwitchCount] = useState(() => {
+    return parseInt(localStorage.getItem(proctorKey) || "0", 10);
+  });
+  const [proctorWarning, setProctorWarning] = useState(() => {
+    const count = parseInt(localStorage.getItem(proctorKey) || "0", 10);
+    return count > 0 ? `Warning: We detected ${count} tab switch(es) or page refresh(es).` : "";
+  });
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const levelFilterName = params.get("level");
@@ -94,6 +104,98 @@ export default function CourseDetails() {
       })
       .finally(() => setLoading(false));
   }, [id, registerNo]);
+
+  const launchParam = params.get("launch");
+
+  // Auto-launch portal if ?launch=true is present
+  useEffect(() => {
+    if (loading || !course || launchParam !== "true" || examView) return;
+    
+    if (courseAttempts < 1) {
+      handleLaunchPortal();
+    }
+  }, [loading, course, courseAttempts, examView, launchParam]);
+
+  // Proctoring security logic
+  useEffect(() => {
+    if (!examView) return;
+
+    let unloadFired = false;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden && !unloadFired) {
+        setTabSwitchCount((prev) => {
+          const newCount = prev + 1;
+          localStorage.setItem(proctorKey, newCount.toString());
+          setProctorWarning(`Warning: You have switched tabs or refreshed ${newCount} time(s). This is a violation of assessment rules.`);
+          return newCount;
+        });
+      }
+    };
+
+    const handleBeforeUnload = (e) => {
+      unloadFired = true;
+      const currentCount = parseInt(localStorage.getItem(proctorKey) || "0", 10);
+      localStorage.setItem(proctorKey, (currentCount + 1).toString());
+      // Showing the standard browser warning for reload during exam
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    const handleContextMenu = (e) => {
+      e.preventDefault();
+    };
+
+    const handleCopyPaste = (e) => {
+      e.preventDefault();
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopyPaste);
+    document.addEventListener("paste", handleCopyPaste);
+    
+    // Disable text selection via CSS
+    document.body.style.userSelect = "none";
+    document.body.style.webkitUserSelect = "none";
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopyPaste);
+      document.removeEventListener("paste", handleCopyPaste);
+      document.body.style.userSelect = "auto";
+      document.body.style.webkitUserSelect = "auto";
+    };
+  }, [examView, proctorKey]);
+
+  // Auto fullscreen
+  useEffect(() => {
+    if (examView) {
+      const docElm = document.documentElement;
+      if (docElm.requestFullscreen) {
+        docElm.requestFullscreen().catch((err) => console.warn("Fullscreen failed:", err));
+      } else if (docElm.webkitRequestFullscreen) {
+        docElm.webkitRequestFullscreen().catch((err) => console.warn(err));
+      } else if (docElm.msRequestFullscreen) {
+        docElm.msRequestFullscreen().catch((err) => console.warn(err));
+      }
+
+      return () => {
+        if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
+          if (document.exitFullscreen) {
+            document.exitFullscreen().catch((err) => console.warn(err));
+          } else if (document.webkitExitFullscreen) {
+            document.webkitExitFullscreen().catch((err) => console.warn(err));
+          } else if (document.msExitFullscreen) {
+            document.msExitFullscreen().catch((err) => console.warn(err));
+          }
+        }
+      };
+    }
+  }, [examView]);
 
   // Load active slots when opening the booking modal
   useEffect(() => {
@@ -232,6 +334,9 @@ export default function CourseDetails() {
     setExamSubmitted(false);
     setExamLoading(true);
     setExamView(true);
+    
+    // Do not clear the existing tabSwitchCount here, so it persists if they refresh and re-enter.
+    
     fetch(`${API_BASE}/api/question-banks/approved-for-course/${courseId}`)
       .then((r) => {
         if (!r.ok) throw new Error("No approved questions for this course.");
@@ -280,6 +385,7 @@ export default function CourseDetails() {
       if (!res.ok) throw new Error(data.message || "Submit failed");
       setExamSubmitted(true);
       setCourseAttempts((prev) => prev + 1);
+      localStorage.removeItem(proctorKey); // Clear tracking on successful submit
     } catch (e) {
       setExamError(e.message || "Submit failed");
     } finally {
@@ -300,7 +406,7 @@ export default function CourseDetails() {
   // Exam / Portal view (when slot is active and user launched)
   if (examView) {
     return (
-      <StudentLayout>
+      <StudentLayout hideNav={true}>
         <div className="cd-container cd-main">
             <div className="cd-exam-header">
               <button type="button" className="cd-back-btn" onClick={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}>
@@ -308,6 +414,21 @@ export default function CourseDetails() {
               </button>
               <h1 className="cd-exam-title">Portal – {course?.name || courseName}</h1>
             </div>
+            
+            {proctorWarning && (
+              <div className="cd-proctor-warning">
+                <span>{proctorWarning}</span>
+                <button type="button" onClick={() => setProctorWarning("")} className="cd-proctor-close">
+                   <X size={16} />
+                </button>
+              </div>
+            )}
+            {tabSwitchCount > 0 && (
+              <div className="cd-tab-switch-counter">
+                 Tab Switches Detected: {tabSwitchCount}
+              </div>
+            )}
+
             {examLoading && <p className="cd-content-placeholder">Loading questions…</p>}
             {examError && <p className="cd-modal-error">{examError}</p>}
             {examSubmitted && <p className="cd-success-msg">Your attempt has been submitted successfully.</p>}

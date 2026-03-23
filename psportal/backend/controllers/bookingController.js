@@ -1,12 +1,35 @@
 const CourseSlotBooking = require("../models/CourseSlotBooking");
 const SlotTemplate = require("../models/SlotTemplate");
 const Slot = require("../models/Slot");
+const AdminCourse = require("../models/AdminCourse");
 
 exports.getActiveSlots = async (req, res) => {
   try {
-    const { course_id } = req.query;
+    const { course_id, level_index } = req.query;
     const filter = {};
-    if (course_id) filter.course_id = course_id;
+    let studentDuration = 60;
+
+    if (course_id) {
+      if (level_index !== undefined && level_index !== "") {
+        filter.allowed_courses = {
+          $elemMatch: {
+            course_id: course_id,
+            level_indices: parseInt(level_index)
+          }
+        };
+
+        // Find duration for this specific level
+        const course = await AdminCourse.findById(course_id).lean();
+        if (course && Array.isArray(course.levels)) {
+          const lvl = course.levels[parseInt(level_index)];
+          if (lvl && lvl.durationMinutes) {
+            studentDuration = lvl.durationMinutes;
+          }
+        }
+      } else {
+        filter["allowed_courses.course_id"] = course_id;
+      }
+    }
 
     // Fetch slots that are scheduled for the future (or today) and have capacity
     const today = new Date();
@@ -18,11 +41,31 @@ exports.getActiveSlots = async (req, res) => {
       .populate("time_slot_id")
       .lean();
 
+    const formatTime = (timeStr, duration) => {
+      if (!timeStr) return "";
+      const [h, m] = timeStr.split(":").map(Number);
+      const start = new Date();
+      start.setHours(h, m, 0, 0);
+
+      const end = new Date(start);
+      end.setMinutes(end.getMinutes() + duration);
+
+      const fmt = (d) => {
+        const hh = d.getHours();
+        const mm = d.getMinutes();
+        const ampm = hh >= 12 ? 'PM' : 'AM';
+        const h12 = hh % 12 || 12;
+        return `${h12}:${mm.toString().padStart(2, '0')} ${ampm}`;
+      };
+
+      return `${fmt(start)} – ${fmt(end)}`;
+    };
+
     const mapped = list.map((s) => ({
       id: s._id.toString(), // Assessment Slot ID
       slot_template_id: s.slot_template_id?.toString(),
       venueLabel: s.venue_id?.name || "",
-      timeLabel: s.time_slot_id ? `${s.time_slot_id.startTime} – ${s.time_slot_id.endTime}` : "",
+      timeLabel: s.time_slot_id ? formatTime(s.time_slot_id.startTime, studentDuration) : "",
       startTime: s.time_slot_id?.startTime || "",
       date: s.date,
       capacity: s.capacity,
@@ -66,13 +109,19 @@ exports.bookSlot = async (req, res) => {
     }
 
     // 3. Create booking
+    let slotTemplateId = slot.slot_template_id;
+    if (!slotTemplateId) {
+      const template = await SlotTemplate.findOne({ venue_id: slot.venue_id, time_slot_id: slot.time_slot_id });
+      if (template) slotTemplateId = template._id;
+    }
+
     const doc = await CourseSlotBooking.create({
       register_no,
       student_name: student_name || "",
       course_id,
       course_name,
       slot_id,
-      slot_template_id: slot.slot_template_id, // Keep for backward compatibility if needed
+      slot_template_id: slotTemplateId, 
       venue_label: venue_label || "",
       time_label: time_label || "",
     });
@@ -120,6 +169,8 @@ exports.getMyBookings = async (req, res) => {
           course_name: b.course_name,
           venue_label: slot?.venue_id?.name || b.venue_label,
           time_label: timeSlot ? `${timeSlot.startTime} – ${timeSlot.endTime}` : b.time_label,
+          startTime: timeSlot?.startTime || "",
+          endTime: timeSlot?.endTime || "",
           date: slot?.date,
           booked_at: b.booked_at,
         };

@@ -175,6 +175,178 @@
   transition: max-width 0.15s ease, opacity 0.15s ease;
 }
 
+/* Premium Course Dashboard Gallery - For AdminDashboard 'course-upload' view */
+.courses-grid-premium {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.course-card-premium {
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.course-card-premium:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 24px rgba(148, 163, 184, 0.15);
+  border-color: #cbd5e1;
+}
+
+.course-card-image-wrapper {
+  height: 160px;
+  position: relative;
+  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.course-card-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.course-card-premium:hover .course-card-cover {
+  transform: scale(1.05);
+}
+
+.course-image-placeholder-premium {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(135deg, #a855f7 0%, #6366f1 100%);
+}
+
+.course-card-badge {
+  position: absolute;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.type-badge {
+  top: 12px;
+  left: 12px;
+  background: rgba(255, 255, 255, 0.9);
+  color: #475569;
+}
+
+.status-badge {
+  top: 12px;
+  right: 12px;
+}
+
+.status-active {
+  background: rgba(22, 163, 74, 0.9);
+  color: #fff;
+}
+
+.status-inactive {
+  background: rgba(220, 38, 38, 0.9);
+  color: #fff;
+}
+
+.course-card-body-premium {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.course-card-title-premium {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 12px 0;
+  line-height: 1.3;
+}
+
+.course-card-meta-premium {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+}
+
+.meta-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #f1f5f9;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: #475569;
+}
+
+.course-card-footer-premium {
+  margin-top: auto;
+  padding-top: 16px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-full {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+}
+
+.courses-empty-premium {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 16px;
+}
+
+.empty-icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: #eef2ff;
+  color: #8b5cf6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+
+.courses-empty-premium h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+  margin: 0 0 8px 0;
+}
+
+.courses-empty-premium p {
+  font-size: 14px;
+  color: #64748b;
+  margin: 0 0 20px 0;
+}
 .sa-sidebar:not(:hover) .sa-chevon {
   opacity: 0;
   width: 0;
@@ -1394,10 +1566,11 @@
   inset: 0;
   background: rgba(15, 23, 42, 0.5);
   display: flex;
-  align-items: center;
+  align-items: flex-start; /* Ensure top space when content is tall */
   justify-content: center;
   z-index: 200;
-  padding: 20px;
+  padding: 60px 20px 40px; /* Safe padding from top browser edge */
+  overflow-y: auto; /* Allow scrolling if modal exceeds screen */
 }
 
 .sa-modal {
@@ -1406,10 +1579,11 @@
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
   max-width: 560px;
   width: 100%;
-  max-height: 90vh;
+  max-height: calc(100vh - 100px); /* Leave room for padding */
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  margin: auto; /* Vertically center if smaller than screen */
 }
 
 .sa-modal-header {

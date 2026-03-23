@@ -14,6 +14,7 @@ const levelSchema = new mongoose.Schema({
   prerequisiteLevelIndex: { type: Number, default: -1 },
   prerequisiteLevelIndices: [{ type: Number }],
   assessmentType: { type: String, default: "MCQ" },
+  durationMinutes: { type: Number, default: 60 },
   topics: [{ type: String }],
   studyMaterials: [studyMaterialSchema],
 }, { _id: false });

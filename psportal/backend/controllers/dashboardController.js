@@ -186,7 +186,7 @@ exports.getMyCourses = async (req, res) => {
             const levelName = lvl.name || `Level ${p.level_index + 1}`;
             cards.push({
                 id: c._id.toString(),
-                title: `${courseName} - ${levelName}`,
+                title: courseName,
                 image: c.course_logo || "",
                 completed: p.status === "completed",
                 levelName,

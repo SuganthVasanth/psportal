@@ -74,7 +74,7 @@ const NAV = [
     icon: BookOpen,
     sub: [
       { id: "course-upload", label: "Create", icon: Upload, path: "courses" },
-      { id: "course-points", label: "Details", icon: List, path: "course-details" },
+      // { id: "course-points", label: "Details", icon: List, path: "course-details" },
       { id: "ps-courses", label: "PS Courses", icon: BookMarked, path: "ps-courses" },
       { id: "question-banks", label: "Question banks", icon: ClipboardList, path: "question-banks" },
       { id: "question-form-builder", label: "Question form builder", icon: FileText, path: "question-form-builder" },
@@ -264,6 +264,7 @@ export default function AdminDashboard() {
   const [facultyAssignQuestionCount, setFacultyAssignQuestionCount] = useState(10);
   const [questionBankSubmissions, setQuestionBankSubmissions] = useState([]);
   const [questionBankFilterCourse, setQuestionBankFilterCourse] = useState("");
+  const [courseOverviewSearch, setCourseOverviewSearch] = useState("");
   const [psCoursesList, setPsCoursesList] = useState([]);
   const [psCourseSearch, setPsCourseSearch] = useState("");
   const [psCourseStatusFilter, setPsCourseStatusFilter] = useState("");
@@ -275,9 +276,10 @@ export default function AdminDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
-  const [openSlotCourseId, setOpenSlotCourseId] = useState("");
+  const [openSlotSelectedCourses, setOpenSlotSelectedCourses] = useState({}); // { [id]: [levelIndices] }
   const [openSlotDate, setOpenSlotDate] = useState("");
-  const [openSlotTemplateIds, setOpenSlotTemplateIds] = useState([]);
+  const [openSlotVenueId, setOpenSlotVenueId] = useState("");
+  const [openSlotStartTime, setOpenSlotStartTime] = useState("");
   const [openSlotCapacity, setOpenSlotCapacity] = useState(30);
   const [isOpeningSlots, setIsOpeningSlots] = useState(false);
 
@@ -670,6 +672,33 @@ export default function AdminDashboard() {
     return `${h12}:${m || "00"} ${am ? "AM" : "PM"}`;
   };
 
+  const calculateSlotEndTime = (startTimeStr, allowedCourses) => {
+    if (!startTimeStr) return "";
+    let maxDuration = 0;
+    (allowedCourses || []).forEach(ac => {
+      const course = coursesList.find(c => c.id === ac.courseId);
+      if (course && Array.isArray(course.levels)) {
+        ac.levelIndices.forEach(idx => {
+          const lvl = course.levels[idx];
+          if (lvl) {
+            maxDuration = Math.max(maxDuration, lvl.durationMinutes || 60);
+          }
+        });
+      }
+    });
+    if (maxDuration === 0) maxDuration = 60;
+    const [h, m] = startTimeStr.split(":").map(Number);
+    const date = new Date();
+    date.setHours(h, m, 0, 0);
+    date.setMinutes(date.getMinutes() + maxDuration);
+    const endH = date.getHours();
+    const endM = date.getMinutes();
+    const ampm = endH >= 12 ? 'PM' : 'AM';
+    const displayH = endH % 12 || 12;
+    const displayM = endM.toString().padStart(2, '0');
+    return `${displayH}:${displayM} ${ampm}`;
+  };
+
   const statsCourseChart = useMemo(() => {
     const labels = coursesList.length ? coursesList.map((c) => c.name) : ["PS Activity 101", "Advanced PS"];
     const counts = coursesList.length ? [320, 280, 150].slice(0, labels.length) : [320, 280, 150];
@@ -791,7 +820,7 @@ export default function AdminDashboard() {
 
         <main className="content-area-premium">
           <div className="dashboard-container-inner" style={{ padding: '24px' }}>
-            <div className="sa-welcome-banner" style={{ marginBottom: '24px' }}>
+            {/* <div className="sa-welcome-banner" style={{ marginBottom: '24px' }}>
               <span className="sa-breadcrumb">
                 <span className="highlight">Admin</span>
                 <span className="sa-breadcrumb-sep">/</span>
@@ -799,7 +828,7 @@ export default function AdminDashboard() {
                 <span className="sa-breadcrumb-sep">/</span>
                 <span className="sa-breadcrumb-current">{NAV.flatMap((s) => s.sub).find((s) => s.id === activeSub)?.label || "Overview"}</span>
               </span>
-            </div>
+            </div> */}
 
           {loading && <div className="sa-loading">Loading dashboard data…</div>}
           {loadError && <div className="sa-error">{loadError}</div>}
@@ -1137,98 +1166,160 @@ export default function AdminDashboard() {
 
           {/* Nav 2: Courses (Admin view as cards, like student dashboard) */}
           {activeSub === "course-upload" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Courses</h3>
-              <p className="card-subtitle">Add new courses and manage them in a card view, similar to the student dashboard.</p>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16, gap: 12 }}>
-                <button
-                  type="button"
-                  className="sa-btn sa-btn-primary"
-                  onClick={() =>
-                    openAdd("courses", {
-                      name: "",
-                      type: "",
-                      course_logo: "",
-                      level: "",
-                      status: "Active",
-                      activityPoints: 0,
-                      rewardPoints: 0,
-                      faculty: "",
-                      prerequisites: [],
-                      levels: [],
-                    })
-                  }
-                >
-                  <Plus size={16} /> Add new course
-                </button>
-                <span className="sa-muted" style={{ fontSize: 13 }}>
-                  Showing {coursesList.length} courses
-                </span>
+            <>
+              <div className="dashboard-card sa-roles-hero">
+                <div className="sa-roles-hero-header">
+                  <div>
+                    <h2 className="sa-roles-title">Admin Dashboard — Courses</h2>
+                    <p className="sa-roles-subtitle">
+                      Create, manage, and monitor all courses available on the portal. Update content, prerequisites, and reward structures.
+                    </p>
+                  </div>
+                </div>
+                <div className="sa-roles-metrics">
+                  <div className="sa-roles-metric-card sa-roles-metric-total">
+                    <div className="sa-roles-metric-label">Total Courses</div>
+                    <div className="sa-roles-metric-value">{coursesList.length}</div>
+                  </div>
+                  <div className="sa-roles-metric-card sa-roles-metric-active">
+                    <div className="sa-roles-metric-label">Active Courses</div>
+                    <div className="sa-roles-metric-value">{coursesList.filter((c) => c.status === "Active").length}</div>
+                  </div>
+                  <div className="sa-roles-metric-card sa-roles-metric-users">
+                    <div className="sa-roles-metric-label">PS Courses Integration</div>
+                    <div className="sa-roles-metric-value">{psCoursesList.length}</div>
+                  </div>
+                  <div className="sa-roles-metric-card sa-roles-metric-permissions">
+                    <div className="sa-roles-metric-label">Content Uploads</div>
+                    <div className="sa-roles-metric-value">{coursesList.reduce((acc, c) => acc + (Array.isArray(c.levels) ? c.levels.length : 0), 0)} Levels</div>
+                  </div>
+                </div>
+                <div className="sa-roles-actions-row">
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-primary"
+                    onClick={() =>
+                      openAdd("courses", {
+                        name: "",
+                        type: "",
+                        course_logo: "",
+                        level: "",
+                        status: "Active",
+                        activityPoints: 0,
+                        rewardPoints: 0,
+                        faculty: "",
+                        prerequisites: [],
+                        levels: [],
+                      })
+                    }
+                  >
+                    <Plus size={16} /> Create New Course
+                  </button>
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-ghost"
+                    onClick={() => navigate("/admin/course-details")}
+                  >
+                    Manage Course Details
+                  </button>
+                </div>
               </div>
 
-              <div className="courses-grid">
-                {coursesList.map((row) => (
-                  <div className="course-card" key={row.id}>
-                    <div className="course-image">
-                      {row.course_logo ? (
-                        <img
-                          src={row.course_logo}
-                          alt={row.name}
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                          }}
-                        />
-                      ) : (
-                        <div className="course-image-placeholder">
-                          <BookOpen size={40} style={{ color: "#cbd5e0" }} />
-                        </div>
-                      )}
-                    </div>
-                    <div className="course-content">
-                      <h3 className="course-title">{row.name}</h3>
-                      <div className="course-meta">
-                        <div className="meta-item">
-                          <span className="meta-label">{row.type || "Course"}</span>
-                        </div>
-                        <div className="meta-item">
-                          <span className="meta-label">{row.level || "General"}</span>
-                        </div>
-                        <div className="meta-item">
-                          <span
-                            className={`sa-badge ${
-                              row.status === "Active"
-                                ? "sa-badge-success"
-                                : row.status === "Inactive"
-                                ? "sa-badge-warning"
-                                : "sa-badge-neutral"
-                            }`}
-                          >
-                            {row.status}
-                          </span>
-                        </div>
-                      </div>
-                      <div className="course-progress-container" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8 }}>
-                        <button
-                          type="button"
-                          className="sa-btn sa-btn-sm"
-                          onClick={() => openEdit("courses", row)}
-                        >
-                          <Pencil size={14} /> Edit
-                        </button>
-                        {Array.isArray(row.levels) && row.levels.length > 0 && (
-                          <span className="progress-text">
-                            {row.levels.length} level{row.levels.length !== 1 ? "s" : ""}
-                          </span>
-                        )}
-                      </div>
+              <div className="dashboard-card sa-roles-table-card">
+                <div className="sa-roles-table-header">
+                  <div>
+                    <h3 className="card-title">Course Overview Gallery</h3>
+                    <p className="card-subtitle">Browsing {coursesList.length} total available courses in the system.</p>
+                  </div>
+                  <div className="sa-roles-table-controls">
+                    <div className="sa-roles-search">
+                      <input
+                        type="text"
+                        className="sa-roles-search-input"
+                        placeholder="Search courses..."
+                        value={courseOverviewSearch}
+                        onChange={(e) => setCourseOverviewSearch(e.target.value)}
+                      />
                     </div>
                   </div>
-                ))}
-                {coursesList.length === 0 && (
-                  <p className="courses-empty">No courses yet. Click "Add new course" to create one.</p>
-                )}
+                </div>
+
+                <div className="courses-grid-premium">
+                  {coursesList
+                    .filter((c) => !courseOverviewSearch || (c.name || "").toLowerCase().includes(courseOverviewSearch.toLowerCase()) || (c.type || "").toLowerCase().includes(courseOverviewSearch.toLowerCase()))
+                    .map((row) => (
+                    <div className="course-card-premium" key={row.id}>
+                      <div className="course-card-image-wrapper">
+                        {row.course_logo ? (
+                          <img
+                            src={row.course_logo}
+                            alt={row.name}
+                            className="course-card-cover"
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        ) : (
+                          <div className="course-image-placeholder-premium">
+                            <BookOpen size={48} style={{ color: "rgba(255,255,255,0.6)" }} />
+                          </div>
+                        )}
+                        <div className="course-card-badge type-badge">{row.type || "Course"}</div>
+                        <div className={`course-card-badge status-badge ${row.status === "Active" ? "status-active" : "status-inactive"}`}>
+                          {row.status}
+                        </div>
+                      </div>
+                      <div className="course-card-body-premium">
+                        <h3 className="course-card-title-premium">{row.name}</h3>
+                        <div className="course-card-meta-premium">
+                          <div className="meta-pill">
+                            <BookMarked size={14} /> {row.level || "General"}
+                          </div>
+                          {Array.isArray(row.levels) && row.levels.length > 0 && (
+                            <div className="meta-pill">
+                              <List size={14} />{row.levels.length} Level{row.levels.length !== 1 ? "s" : ""}
+                            </div>
+                          )}
+                        </div>
+                        <div className="course-card-footer-premium">
+                          <button
+                            type="button"
+                            className="sa-btn sa-btn-ghost btn-full"
+                            onClick={() => openEdit("courses", row)}
+                          >
+                            <Pencil size={14} /> Edit Course
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {coursesList.length === 0 ? (
+                    <div className="courses-empty-premium">
+                      <div className="empty-icon-wrapper"><BookOpen size={48} /></div>
+                      <h4>No Courses Found</h4>
+                      <p>Get started by creating your first course format.</p>
+                      <button
+                        type="button"
+                        className="sa-btn sa-btn-primary"
+                        onClick={() => openAdd("courses", {
+                          name: "", type: "", course_logo: "", level: "", status: "Active",
+                          activityPoints: 0, rewardPoints: 0, faculty: "", prerequisites: [], levels: []
+                        })}
+                      >
+                        Create Course
+                      </button>
+                    </div>
+                  ) : coursesList.filter((c) => !courseOverviewSearch || (c.name || "").toLowerCase().includes(courseOverviewSearch.toLowerCase()) || (c.type || "").toLowerCase().includes(courseOverviewSearch.toLowerCase())).length === 0 ? (
+                    <div className="courses-empty-premium" style={{ borderStyle: "solid", background: "transparent" }}>
+                      <div className="empty-icon-wrapper" style={{ background: "transparent", color: "#cbd5e1" }}><Search size={48} /></div>
+                      <h4>No Matches Found</h4>
+                      <p>Try adjusting your search query.</p>
+                      <button type="button" className="sa-btn sa-btn-ghost" onClick={() => setCourseOverviewSearch("")}>Clear Search</button>
+                    </div>
+                  ) : null}
+                </div>
               </div>
-            </div>
+            </>
           )}
 
           {activeSub === "course-points" && (
@@ -1794,48 +1885,93 @@ export default function AdminDashboard() {
                 </div>
                 
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
-                  <div className="sa-form-group">
-                    <label style={{ fontWeight: "600", color: "#475569" }}>Target Course</label>
-                    <select value={openSlotCourseId} onChange={(e) => setOpenSlotCourseId(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }}>
-                      <option value="">-- Select Course --</option>
-                      {coursesList.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                  <div className="sa-form-group" style={{ gridColumn: "1/-1" }}>
+                    <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Select Courses & Levels</label>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px", maxHeight: "300px", overflowY: "auto", padding: "12px", border: "1px solid #cbd5e1", borderRadius: "12px", backgroundColor: "#fff" }}>
+                      {coursesList.map((course) => {
+                        const isSelected = openSlotSelectedCourses[course.id];
+                        const levels = Array.isArray(course.levels) ? course.levels : [];
+                        return (
+                          <div key={course.id} style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px", backgroundColor: isSelected ? "#f0f9ff" : "#fff" }}>
+                            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", marginBottom: levels.length > 0 ? "8px" : 0 }}>
+                              <input 
+                                type="checkbox" 
+                                checked={!!isSelected}
+                                onChange={(e) => {
+                                  if (e.target.checked) {
+                                    setOpenSlotSelectedCourses(prev => ({
+                                      ...prev,
+                                      [course.id]: levels.map((_, idx) => idx)
+                                    }));
+                                  } else {
+                                    setOpenSlotSelectedCourses(prev => {
+                                      const next = { ...prev };
+                                      delete next[course.id];
+                                      return next;
+                                    });
+                                  }
+                                }}
+                              />
+                              <span style={{ fontWeight: "600", color: "#1e293b" }}>{course.name}</span>
+                            </label>
+                            {isSelected && levels.length > 0 && (
+                              <div style={{ marginLeft: "24px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                                {levels.map((lvl, idx) => (
+                                  <label key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#475569", cursor: "pointer" }}>
+                                    <input 
+                                      type="checkbox" 
+                                      checked={isSelected.includes(idx)}
+                                      onChange={(e) => {
+                                        setOpenSlotSelectedCourses(prev => {
+                                          const currentLevels = prev[course.id] || [];
+                                          let nextLevels;
+                                          if (e.target.checked) nextLevels = [...currentLevels, idx];
+                                          else nextLevels = currentLevels.filter(i => i !== idx);
+                                          
+                                          if (nextLevels.length === 0) {
+                                            const next = { ...prev };
+                                            delete next[course.id];
+                                            return next;
+                                          }
+                                          return { ...prev, [course.id]: nextLevels };
+                                        });
+                                      }}
+                                    />
+                                    {lvl.name || `Level ${idx + 1}`}
+                                  </label>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                   <div className="sa-form-group">
                     <label style={{ fontWeight: "600", color: "#475569" }}>Assessment Date</label>
                     <input type="date" value={openSlotDate} onChange={(e) => setOpenSlotDate(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
                   </div>
                   <div className="sa-form-group">
-                    <label style={{ fontWeight: "600", color: "#475569" }}>Capacity per Slot</label>
-                    <input type="number" min="1" value={openSlotCapacity} onChange={(e) => setOpenSlotCapacity(parseInt(e.target.value) || 30)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
+                    <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Select Venue</label>
+                    <select 
+                      value={openSlotVenueId} 
+                      onChange={(e) => setOpenSlotVenueId(e.target.value)} 
+                      style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}
+                    >
+                      <option value="">Choose Venue...</option>
+                      {venuesList.map(v => (
+                        <option key={v.id} value={v.id}>{v.name}</option>
+                      ))}
+                    </select>
                   </div>
-                </div>
-
-                <div style={{ marginTop: "24px" }}>
-                  <label style={{ display: "block", marginBottom: "12px", fontSize: "14px", fontWeight: "600", color: "#475569" }}>Select Available Slot Templates (Venue - Time)</label>
-                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))", gap: "12px", maxHeight: "250px", overflowY: "auto", padding: "8px", backgroundColor: "#fff", border: "1px solid #e2e8f0", borderRadius: "12px" }}>
-                    {slotsList.filter(s => (s.status || "Active") === "Active").map((t) => (
-                      <label key={t.id} style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px", backgroundColor: openSlotTemplateIds.includes(t.id) ? "#eff6ff" : "#f8fafc", border: "2px solid", borderColor: openSlotTemplateIds.includes(t.id) ? "#3b82f6" : "transparent", borderRadius: "10px", cursor: "pointer", transition: "all 0.2s" }}>
-                        <input 
-                          type="checkbox" 
-                          checked={openSlotTemplateIds.includes(t.id)} 
-                          style={{ width: "18px", height: "18px", cursor: "pointer" }}
-                          onChange={(e) => {
-                            if (e.target.checked) setOpenSlotTemplateIds(prev => [...prev, t.id]);
-                            else setOpenSlotTemplateIds(prev => prev.filter(id => id !== t.id));
-                          }} 
-                        />
-                        <div style={{ fontSize: "13px" }}>
-                          <div style={{ fontWeight: "600", color: "#1e293b" }}>{t.venueLabel}</div>
-                          <div style={{ color: "#64748b" }}>{t.timeLabel}</div>
-                        </div>
-                      </label>
-                    ))}
-                    {slotsList.filter(s => (s.status || "Active") === "Active").length === 0 && (
-                      <div className="sa-muted" style={{ gridColumn: "1/-1", textAlign: "center", padding: "20px" }}>No active slot templates found. Create them in "Slots (venue, time)" first.</div>
-                    )}
+                  <div className="sa-form-group">
+                    <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Start Time</label>
+                    <input 
+                      type="time" 
+                      value={openSlotStartTime} 
+                      onChange={(e) => setOpenSlotStartTime(e.target.value)} 
+                      style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} 
+                    />
                   </div>
                 </div>
 
@@ -1843,7 +1979,7 @@ export default function AdminDashboard() {
                   <button 
                     className="sa-btn sa-btn-primary" 
                     style={{ padding: "12px 32px", fontSize: "15px", borderRadius: "10px" }}
-                    disabled={!openSlotCourseId || !openSlotDate || openSlotTemplateIds.length === 0 || isOpeningSlots}
+                    disabled={Object.keys(openSlotSelectedCourses).length === 0 || !openSlotDate || !openSlotVenueId || !openSlotStartTime || isOpeningSlots}
                     onClick={async () => {
                       setIsOpeningSlots(true);
                       try {
@@ -1851,16 +1987,23 @@ export default function AdminDashboard() {
                           method: "POST",
                           headers: { "Content-Type": "application/json" },
                           body: JSON.stringify({
-                            course_id: openSlotCourseId,
+                            allowed_courses: Object.entries(openSlotSelectedCourses).map(([id, levels]) => ({
+                              course_id: id,
+                              level_indices: levels
+                            })),
                             date: openSlotDate,
-                            slot_template_ids: openSlotTemplateIds,
+                            venue_id: openSlotVenueId,
+                            startTime: openSlotStartTime,
                             capacity: openSlotCapacity
                           })
                         });
                         const data = await res.json();
                         if (!res.ok) throw new Error(data.message || "Failed to open slots");
                         alert(data.message);
-                        setOpenSlotTemplateIds([]);
+                        setOpenSlotVenueId("");
+                        setOpenSlotStartTime("");
+                        setOpenSlotDate("");
+                        setOpenSlotSelectedCourses({});
                         const updatedRes = await fetch(`${API_BASE}/api/superadmin/assessment-slots`);
                         const updatedData = await updatedRes.json();
                         setAssessmentSlots(updatedData);
@@ -1885,7 +2028,7 @@ export default function AdminDashboard() {
                 <table className="sa-table">
                   <thead style={{ backgroundColor: "#f8fafc" }}>
                     <tr>
-                      <th style={{ padding: "16px" }}>Course</th>
+                      <th style={{ padding: "16px" }}>Allowed Courses / Levels</th>
                       <th>Date</th>
                       <th>Venue</th>
                       <th>Time</th>
@@ -1896,10 +2039,21 @@ export default function AdminDashboard() {
                   <tbody>
                     {assessmentSlots.map((row) => (
                       <tr key={row.id}>
-                        <td style={{ padding: "16px" }}><strong>{row.courseName}</strong></td>
+                        <td style={{ padding: "16px" }}>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
+                            {(row.allowedCourses || []).map((ac, idx) => (
+                              <div key={idx} style={{ fontSize: "13px", lineHeight: "1.4" }}>
+                                <div style={{ fontWeight: "600", color: "#1e293b" }}>{ac.courseName}</div>
+                                <div style={{ color: "#64748b", fontSize: "11px" }}>
+                                  Levels: {ac.levelIndices.map(i => i + 1).join(", ")}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </td>
                         <td>{new Date(row.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
                         <td>{row.venueLabel}</td>
-                        <td>{row.timeLabel}</td>
+                        <td>{formatTime(row.startTime)} – {calculateSlotEndTime(row.startTime, row.allowedCourses)}</td>
                         <td>
                           <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                             <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "600" }}>
@@ -2849,6 +3003,10 @@ export default function AdminDashboard() {
                             <input type="text" placeholder="e.g. MCQ, Programming, Manual Grading" value={lev.assessmentType || ""} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], assessmentType: e.target.value }; setEditField("levels", l); }} />
                           </div>
                           <div className="sa-form-group">
+                            <label>Duration (minutes)</label>
+                            <input type="number" placeholder="60" value={lev.durationMinutes ?? 60} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], durationMinutes: Number(e.target.value) || 60 }; setEditField("levels", l); }} min="1" />
+                          </div>
+                          <div className="sa-form-group">
                             <label>Topics (one per line)</label>
                             <textarea rows={2} placeholder="Topic 1&#10;Topic 2" value={(lev.topics || []).join("\n")} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], topics: e.target.value.split("\n").map((t) => t.trim()).filter(Boolean) }; setEditField("levels", l); }} />
                           </div>
@@ -2985,7 +3143,7 @@ export default function AdminDashboard() {
                         </div>
                       );
                     })}
-                    <button type="button" className="sa-btn sa-btn-primary" onClick={() => setEditField("levels", [...(editModal.item.levels || []), { name: "", rewardPoints: 0, prerequisiteLevelIndex: -1, prerequisiteLevelIndices: [], assessmentType: "MCQ", topics: [], studyMaterials: [] }])}>+ Add level</button>
+                    <button type="button" className="sa-btn sa-btn-primary" onClick={() => setEditField("levels", [...(editModal.item.levels || []), { name: "", rewardPoints: 0, prerequisiteLevelIndex: -1, prerequisiteLevelIndices: [], assessmentType: "MCQ", topics: [], studyMaterials: [], durationMinutes: 60 }])}>+ Add level</button>
                   </div>
 
                   <div className="sa-course-section">

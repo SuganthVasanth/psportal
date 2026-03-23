@@ -1,11 +1,24 @@
 import React, { useState, useEffect } from "react";
-import { ChevronRight, Laptop, ChevronDown, CheckCircle2, Loader2, BookOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { ChevronRight, Laptop, ChevronDown, CheckCircle2, Loader2, BookOpen, Play } from "lucide-react";
 import StudentLayout from "../../components/StudentLayout";
 import "./BookSlots.css";
 
 const API_BASE = "http://localhost:5000";
 
+function isSlotActiveNow(slot_start_time, slot_end_time, slot_date) {
+  if (!slot_start_time || !slot_end_time || !slot_date) return false;
+  const now = new Date();
+  const slotDate = new Date(slot_date);
+  if (now.toDateString() !== slotDate.toDateString()) return false;
+  const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  // For simplicity, we assume the student's dynamic duration is already reflected in slot_end_time if possible, 
+  // but here we just check if it's within the window.
+  return nowStr >= slot_start_time && nowStr < slot_end_time;
+}
+
 export default function BookSlots() {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState([]);
   const [courseSlots, setCourseSlots] = useState({}); // { [courseId]: slots[] }
   const [loading, setLoading] = useState(true);
@@ -13,6 +26,7 @@ export default function BookSlots() {
   const [selectedSlots, setSelectedSlots] = useState({});
   const [openDropdown, setOpenDropdown] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [myBookings, setMyBookings] = useState([]);
 
   const registerNo = localStorage.getItem("register_no");
   const studentName = localStorage.getItem("name") || "Student";
@@ -37,12 +51,27 @@ export default function BookSlots() {
     fetchCourses();
   }, [registerNo]);
 
+  useEffect(() => {
+    if (!registerNo) return;
+    const fetchBookings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/api/my-bookings?register_no=${encodeURIComponent(registerNo)}`);
+        const data = await res.ok ? await res.json() : [];
+        setMyBookings(Array.isArray(data) ? data : []);
+      } catch (err) {
+        console.error("Error fetching bookings:", err);
+      }
+    };
+    fetchBookings();
+  }, [registerNo, submitting]);
+
   const fetchSlotsForCourse = async (courseId) => {
     if (courseSlots[courseId]) return; // Already loaded
 
+    const courseObj = courses.find(c => c.id === courseId);
     setLoadingSlots(prev => ({ ...prev, [courseId]: true }));
     try {
-      const res = await fetch(`${API_BASE}/api/active-slots?course_id=${courseId}`);
+      const res = await fetch(`${API_BASE}/api/active-slots?course_id=${courseId}&level_index=${courseObj?.levelIndex || 0}`);
       const data = await res.ok ? await res.json() : [];
       setCourseSlots(prev => ({ ...prev, [courseId]: data }));
     } catch (err) {
@@ -142,7 +171,15 @@ export default function BookSlots() {
         ) : (
           <div className="slots-grid-premium">
             {courses.map((course) => {
-              const currentSlots = courseSlots[course.id] || [];
+              const allSlots = courseSlots[course.id] || [];
+              const currentSlots = allSlots.filter(slot => {
+                // Check if student has ANY booking at the same time and date
+                const hasClash = myBookings.some(b => 
+                  new Date(b.date).toDateString() === new Date(slot.date).toDateString() &&
+                  b.startTime === slot.startTime
+                );
+                return !hasClash;
+              });
               const isLoading = loadingSlots[course.id];
               const selection = selectedSlots[course.id];
 
@@ -165,52 +202,92 @@ export default function BookSlots() {
                           <span className="meta-text-light">{course.completed ? "COMPLETED" : "IN PROGRESS"}</span>
                       </div>
 
-                      <div className="custom-dropdown-container">
-                          <button 
-                              className={`dropdown-trigger-premium ${selection ? 'has-selection' : ''}`}
-                              onClick={() => handleDropdownToggle(course.id)}
-                              disabled={isLoading}
-                          >
-                              {isLoading ? (
-                                <Loader2 size={18} className="animate-spin" />
-                              ) : (
-                                <>
-                                  <span>{selection ? `${selection.venueLabel} (${new Date(selection.date).toLocaleDateString()})` : "Select Assessment Slot"}</span>
-                                  <ChevronDown size={18} className={`chevron-icon ${openDropdown === course.id ? 'open' : ''}`} />
-                                </>
-                              )}
-                          </button>
+                      {(() => {
+                        const existingBooking = myBookings.find(b => String(b.course_id) === String(course.id));
+                        if (existingBooking) {
+                          const isActive = isSlotActiveNow(existingBooking.startTime, existingBooking.endTime, existingBooking.date);
+                          return (
+                            <div className="booked-slot-details-premium anim-fade-in">
+                                <div className="booked-status-header">
+                                    <CheckCircle2 size={18} />
+                                    <span>Slot Booked</span>
+                                </div>
+                                <div className="booked-info-grid">
+                                    <div className="booked-info-item">
+                                        <span className="booked-info-label">Venue</span>
+                                        <span className="booked-info-value">{existingBooking.venue_label}</span>
+                                    </div>
+                                    <div className="booked-info-item">
+                                        <span className="booked-info-label">Time</span>
+                                        <span className="booked-info-value">{existingBooking.time_label}</span>
+                                    </div>
+                                    <div className="booked-info-item">
+                                        <span className="booked-info-label">Date</span>
+                                        <span className="booked-info-value">{new Date(existingBooking.date).toLocaleDateString()}</span>
+                                    </div>
+                                </div>
+                                {isActive && (
+                                  <button 
+                                    className="launch-portal-btn-premium"
+                                    onClick={() => navigate(`/pre-test/${course.id}`)}
+                                  >
+                                    <Play size={16} />
+                                    Launch Test Portal
+                                  </button>
+                                )}
+                            </div>
+                          );
+                        }
 
-                          {openDropdown === course.id && (
-                              <div className="dropdown-menu-premium anim-fade-in">
-                                  <div className="dropdown-options-list">
-                                      {currentSlots.length === 0 ? (
-                                          <div className="dropdown-option-premium disabled">No slots opened for this course yet</div>
-                                      ) : (
-                                        currentSlots.map((slot) => (
-                                            <div 
-                                                key={slot.id} 
-                                                className={`dropdown-option-premium ${selection?.id === slot.id ? 'active' : ''} ${!slot.available ? 'disabled' : ''}`}
-                                                onClick={() => handleSlotSelect(course.id, slot)}
-                                                style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px", padding: "10px 12px" }}
-                                            >
-                                                <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontWeight: "600" }}>
-                                                    <span>{slot.venueLabel}</span>
-                                                    {selection?.id === slot.id && <CheckCircle2 size={14} className="check-icon" />}
-                                                </div>
-                                                <div style={{ fontSize: "12px", opacity: 0.8 }}>
-                                                    {new Date(slot.date).toLocaleDateString()} | {slot.timeLabel}
-                                                </div>
-                                                <div style={{ fontSize: "11px", marginTop: "4px", color: slot.available ? "#10b981" : "#ef4444" }}>
-                                                    {slot.available ? `${slot.capacity - slot.bookedCount} seats left` : "Slot full"}
-                                                </div>
-                                            </div>
-                                        ))
-                                      )}
-                                  </div>
-                              </div>
-                          )}
-                      </div>
+                        return (
+                          <div className="custom-dropdown-container">
+                            <button 
+                                className={`dropdown-trigger-premium ${selection ? 'has-selection' : ''}`}
+                                onClick={() => handleDropdownToggle(course.id)}
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                  <Loader2 size={18} className="animate-spin" />
+                                ) : (
+                                  <>
+                                    <span>{selection ? `${selection.venueLabel} (${new Date(selection.date).toLocaleDateString()})` : "Select Assessment Slot"}</span>
+                                    <ChevronDown size={18} className={`chevron-icon ${openDropdown === course.id ? 'open' : ''}`} />
+                                  </>
+                                )}
+                            </button>
+
+                            {openDropdown === course.id && (
+                                <div className="dropdown-menu-premium anim-fade-in">
+                                    <div className="dropdown-options-list">
+                                        {currentSlots.length === 0 ? (
+                                            <div className="dropdown-option-premium disabled">No slots opened for this course yet</div>
+                                        ) : (
+                                          currentSlots.map((slot) => (
+                                              <div 
+                                                  key={slot.id} 
+                                                  className={`dropdown-option-premium ${selection?.id === slot.id ? 'active' : ''} ${!slot.available ? 'disabled' : ''}`}
+                                                  onClick={() => handleSlotSelect(course.id, slot)}
+                                                  style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px", padding: "10px 12px" }}
+                                              >
+                                                  <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontWeight: "600" }}>
+                                                      <span>{slot.venueLabel}</span>
+                                                      {selection?.id === slot.id && <CheckCircle2 size={14} className="check-icon" />}
+                                                  </div>
+                                                  <div style={{ fontSize: "12px", opacity: 0.8 }}>
+                                                      {new Date(slot.date).toLocaleDateString()} | {slot.timeLabel}
+                                                  </div>
+                                                  <div style={{ fontSize: "11px", marginTop: "4px", color: slot.available ? "#10b981" : "#ef4444" }}>
+                                                      {slot.available ? `${slot.capacity - slot.bookedCount} seats left` : "Slot full"}
+                                                  </div>
+                                              </div>
+                                          ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {selection && (
                         <div style={{ marginTop: "8px", fontSize: "12px", color: "#64748b", backgroundColor: "#f8fafc", padding: "8px", borderRadius: "6px" }}>
@@ -218,13 +295,15 @@ export default function BookSlots() {
                         </div>
                       )}
 
-                      <button 
-                          className="confirm-booking-btn-premium"
-                          disabled={!selection || submitting}
-                          onClick={() => handleConfirm(course)}
-                      >
-                          {submitting ? "CONFIRMING..." : "CONFIRM BOOKING"}
-                      </button>
+                      {!myBookings.find(b => String(b.course_id) === String(course.id)) && (
+                        <button 
+                            className="confirm-booking-btn-premium"
+                            disabled={!selection || submitting}
+                            onClick={() => handleConfirm(course)}
+                        >
+                            {submitting ? "CONFIRMING..." : "CONFIRM BOOKING"}
+                        </button>
+                      )}
                   </div>
                 </div>
               );

@@ -22,6 +22,7 @@ import CodeforcesPractice from "./pages/practice/CodeforcesPractice";
 import Leaderboard from "./pages/practice/Leaderboard";
 import CodeReviewDashboard from "./pages/CodeReviewDashboard";
 import BookSlots from "./pages/practice/BookSlots";
+import PreTestPortal from "./pages/practice/PreTestPortal";
 import BusTracking from "./pages/staff/BusTracking";
 import BusIncharge from "./pages/staff/BusIncharge";
 import "./App.css";
@@ -173,6 +174,14 @@ export default function App() {
           element={
             <ProtectedRoute>
               <BookSlots />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/pre-test/:courseId"
+          element={
+            <ProtectedRoute>
+              <PreTestPortal />
             </ProtectedRoute>
           }
         />

@@ -613,18 +613,22 @@ exports.reviewQuestionBankSubmission = async (req, res) => {
 exports.getAssessmentSlots = async (req, res) => {
   try {
     const list = await Slot.find()
-      .populate("course_id", "name")
+      .populate("allowed_courses.course_id", "name")
       .populate("venue_id", "name")
       .populate("time_slot_id", "startTime endTime")
       .lean();
     res.json(
       list.map((s) => ({
         id: s._id.toString(),
-        courseId: s.course_id?._id?.toString(),
-        courseName: s.course_id?.name || "",
+        allowedCourses: (s.allowed_courses || []).map((ac) => ({
+          courseId: ac.course_id?._id?.toString(),
+          courseName: ac.course_id?.name || "",
+          levelIndices: ac.level_indices || [],
+        })),
         venueId: s.venue_id?._id?.toString(),
         venueLabel: s.venue_id?.name || "",
         timeId: s.time_slot_id?._id?.toString(),
+        startTime: s.time_slot_id?.startTime,
         timeLabel: s.time_slot_id ? `${s.time_slot_id.startTime} – ${s.time_slot_id.endTime}` : "",
         date: s.date,
         capacity: s.capacity,
@@ -638,23 +642,55 @@ exports.getAssessmentSlots = async (req, res) => {
 
 exports.openAssessmentSlots = async (req, res) => {
   try {
-    const { course_id, date, slot_template_ids, capacity } = req.body;
-    if (!course_id || !date || !slot_template_ids || !Array.isArray(slot_template_ids)) {
-      return res.status(400).json({ message: "course_id, date, and slot_template_ids (array) required" });
+    const { date, venue_id, startTime, capacity, allowed_courses, slot_template_ids } = req.body;
+
+    if (venue_id && startTime) {
+      if (!date || !allowed_courses || !Array.isArray(allowed_courses)) {
+        return res.status(400).json({ message: "date and allowed_courses required" });
+      }
+
+      // Find or create TimeSlot for this startTime
+      // Default endTime is startTime + 1 hour (though calculated dynamically in frontend)
+      let tSlot = await TimeSlot.findOne({ startTime });
+      if (!tSlot) {
+        const [h, m] = startTime.split(":").map(Number);
+        const d = new Date();
+        d.setHours(h, m, 0, 0);
+        d.setHours(d.getHours() + 1);
+        const endTimeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
+        tSlot = await TimeSlot.create({ startTime, endTime: endTimeStr });
+      }
+
+      const newSlot = new Slot({
+        allowed_courses,
+        venue_id,
+        time_slot_id: tSlot._id,
+        date: new Date(date),
+        capacity: capacity || 30,
+        booked_count: 0
+      });
+
+      await newSlot.save();
+      return res.status(201).json({ message: "Slot opened successfully" });
     }
 
-    const templates = await SlotTemplate.find({ _id: { $in: slot_template_ids } }).lean();
-    const newSlots = templates.map((t) => ({
-      course_id,
-      venue_id: t.venue_id,
-      time_slot_id: t.time_slot_id,
-      date: new Date(date),
-      capacity: capacity || 30,
-      booked_count: 0,
-    }));
+    if (slot_template_ids && Array.isArray(slot_template_ids) && slot_template_ids.length > 0) {
+      const templates = await SlotTemplate.find({ _id: { $in: slot_template_ids } }).lean();
+      const newSlots = templates.map((t) => ({
+        allowed_courses,
+        venue_id: t.venue_id,
+        time_slot_id: t.time_slot_id,
+        slot_template_id: t._id,
+        date: new Date(date),
+        capacity: capacity || 30,
+        booked_count: 0,
+      }));
 
-    const docs = await Slot.insertMany(newSlots);
-    res.status(201).json({ message: `${docs.length} slots opened successfully` });
+      const docs = await Slot.insertMany(newSlots);
+      return res.status(201).json({ message: `${docs.length} slots opened successfully` });
+    }
+
+    res.status(400).json({ message: "Either (venue_id, startTime) or slot_template_ids required" });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

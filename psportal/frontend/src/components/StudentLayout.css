@@ -17,6 +17,10 @@
   flex-direction: column;
 }
 
+.main-container-premium.nav-hidden {
+  margin-left: 0;
+}
+
 .top-navbar-premium {
   height: var(--navbar-h);
   background: #ffffff;
@@ -119,6 +123,11 @@
   padding: 8px;
   max-width: 1400px;
   width: 100%;
+}
+
+.main-container-premium.nav-hidden .content-area-premium {
+  padding: 0;
+  max-width: none;
 }
 
 @media (max-width: 1024px) {

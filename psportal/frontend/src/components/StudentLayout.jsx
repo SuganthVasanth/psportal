@@ -10,7 +10,7 @@ const FALLBACK_PROFILE = {
   avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
 };
 
-export default function StudentLayout({ children }) {
+export default function StudentLayout({ children, hideNav = false }) {
   const [profile, setProfile] = useState(FALLBACK_PROFILE);
 
   useEffect(() => {
@@ -38,29 +38,31 @@ export default function StudentLayout({ children }) {
 
   return (
     <div className="dashboard-layout premium-layout">
-      <StudentSidebar />
+      {!hideNav && <StudentSidebar />}
       
-      <div className="main-container-premium">
-        <header className="top-navbar-premium">
-          <div className="search-bar-premium">
-            <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Search for courses, practice, etc." />
-          </div>
-
-          <div className="top-nav-actions-premium">
-
-            <button className="nav-btn-premium" title="Notifications">
-              <Bell size={20} />
-              <span className="badge-premium"></span>
-            </button>
-            
-            <div className="header-profile-premium">
-               <div className="avatar-minimal-premium">
-                  {displayProfile.name.split(' ').map(n => n[0]).join('')}
-               </div>
+      <div className={`main-container-premium ${hideNav ? 'nav-hidden' : ''}`}>
+        {!hideNav && (
+          <header className="top-navbar-premium">
+            <div className="search-bar-premium">
+              <Search size={18} className="search-icon" />
+              <input type="text" placeholder="Search for courses, practice, etc." />
             </div>
-          </div>
-        </header>
+
+            <div className="top-nav-actions-premium">
+
+              <button className="nav-btn-premium" title="Notifications">
+                <Bell size={20} />
+                <span className="badge-premium"></span>
+              </button>
+              
+              <div className="header-profile-premium">
+                 <div className="avatar-minimal-premium">
+                    {displayProfile.name.split(' ').map(n => n[0]).join('')}
+                 </div>
+              </div>
+            </div>
+          </header>
+        )}
 
         <main className="content-area-premium">
           {children}
