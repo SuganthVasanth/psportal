@@ -1,0 +1,22 @@
+[
+  {
+    "_id": "69be294a8362b700e32761c3",
+    "register_no": "7376231CS323",
+    "course_id": "69a5814e345cf9e7503e4044",
+    "level_index": 0,
+    "status": "enrolled",
+    "createdAt": "2026-03-21T05:14:50.788Z",
+    "updatedAt": "2026-03-21T05:14:50.788Z",
+    "__v": 0
+  },
+  {
+    "_id": "69be294a8362b700e32761c8",
+    "register_no": "7376231CS323",
+    "course_id": "69be294a8362b700e32761c6",
+    "level_index": 1,
+    "status": "enrolled",
+    "createdAt": "2026-03-21T05:14:50.826Z",
+    "updatedAt": "2026-03-21T05:14:50.826Z",
+    "__v": 0
+  }
+]

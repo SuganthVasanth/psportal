@@ -43,8 +43,8 @@ export default function StudentSidebar() {
             items: [
                 { name: "Courses Available", path: "/courses-available", icon: <SquareLibrary size={20} /> },
                 { name: "My Courses", path: "/my-courses", icon: <Youtube size={20} /> },
-                { name: "Web Practice", path: "/web-practice", icon: <Globe size={20} /> },
-                { name: "Codeforces Practice", path: "/practice/codeforces", icon: <FileCode size={20} /> },
+                { name: "Web Practice", path: "/web-practice", icon: <Globe size={20} /> }
+                // { name: "Codeforces Practice", path: "/practice/codeforces", icon: <FileCode size={20} /> },
             ],
         },
         {

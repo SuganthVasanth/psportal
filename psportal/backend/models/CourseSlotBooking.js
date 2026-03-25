@@ -9,6 +9,7 @@ const courseSlotBookingSchema = new mongoose.Schema({
   slot_template_id: { type: mongoose.Schema.Types.ObjectId, ref: "SlotTemplate" },
   venue_label: { type: String, required: true },
   time_label: { type: String, required: true },
+  processed: { type: Boolean, default: false },
   booked_at: { type: Date, default: Date.now },
 }, { timestamps: true });
 

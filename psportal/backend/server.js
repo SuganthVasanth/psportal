@@ -21,7 +21,11 @@ const connectDB = require("./config/db");
 const { seedDefaultQuestionTemplates } = require("./templates/seedDefaultQuestionTemplates");
 
 connectDB()
-  .then(seedDefaultQuestionTemplates)
+  .then(() => {
+    seedDefaultQuestionTemplates();
+    // Start background jobs after DB connects
+    require("./services/cronService");
+  })
   .catch((err) => {
     // eslint-disable-next-line no-console
     console.error("DB connection or seeding failed", err);

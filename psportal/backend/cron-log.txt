@@ -1,0 +1,1 @@
+Starting manual cron run...\nConnected to DB.\nFound 0 pending bookings.\nDone.\n

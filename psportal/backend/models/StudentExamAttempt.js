@@ -5,6 +5,8 @@ const studentExamAttemptSchema = new mongoose.Schema(
     register_no: { type: String, required: true },
     course_id: { type: String, required: true },
     booking_id: { type: String, default: "" },
+    score: { type: Number, default: 0 },
+    isPassed: { type: Boolean, default: false },
     questions: [
       {
         questionNumber: { type: Number, required: true },

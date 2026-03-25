@@ -195,9 +195,9 @@ export default function BookSlots() {
                   </div>
 
                   <div className="card-content-premium">
-                      <h2 className="category-title-premium">{course.title}</h2>
+                      <h2 className="category-title-premium">{course.levelName}</h2>
                       <div className="category-meta-premium">
-                          <span className="meta-text-bold">{course.levelName || "Course"}</span>
+                          <span className="meta-text-bold">{course.title || "Course"}</span>
                           <div className="meta-divider"></div>
                           <span className="meta-text-light">{course.completed ? "COMPLETED" : "IN PROGRESS"}</span>
                       </div>

@@ -1,0 +1,1 @@
+[{"id":"69a5814e345cf9e7503e4044","title":"C Programming","image":"https://ps.bitsathy.ac.in/api/ps_v2/images/courses/5.png","completed":false,"levelName":"C Programming Level 1","levelIndex":0},{"id":"69be294a8362b700e32761c6","title":"Java Programming","image":"https://ps.bitsathy.ac.in/api/ps_v2/images/courses/8.png","completed":false,"levelName":"OOP Basics","levelIndex":1}]

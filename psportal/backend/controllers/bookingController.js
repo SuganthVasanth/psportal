@@ -95,7 +95,7 @@ exports.bookSlot = async (req, res) => {
     }
 
     // 1. Check if student already has a booking for this course
-    const existing = await CourseSlotBooking.findOne({ register_no, course_id });
+    const existing = await CourseSlotBooking.findOne({ register_no, course_id, processed: { $ne: true } });
     if (existing) {
       return res.status(400).json({ message: "You have already booked a slot for this course." });
     }
@@ -148,7 +148,8 @@ exports.getMyBookings = async (req, res) => {
     const { register_no } = req.query;
     if (!register_no) return res.status(400).json({ message: "register_no required" });
     
-    const list = await CourseSlotBooking.find({ register_no })
+    // Only return active (unprocessed) bookings
+    const list = await CourseSlotBooking.find({ register_no, processed: { $ne: true } })
       .populate({ 
         path: "slot_id", 
         populate: [
