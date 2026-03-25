@@ -3,7 +3,7 @@
 /* ========== DESIGN SYSTEM: Pastel SaaS (8px grid, soft shadows, smooth motion) ========== */
 :root {
   /* Pastel palette (brand-based) */
-  --pastel-bg: #f8fafc;
+  --pastel-bg: #f8f7ff;
   --pastel-bg-warm: #faf5ff;
   --pastel-surface: #ffffff;
   --pastel-surface-soft: #f1f5f9;
@@ -12,9 +12,9 @@
   --pastel-text: #1e293b;
   --pastel-text-muted: #64748b;
   --pastel-text-hint: #94a3b8;
-  --pastel-primary: #a78bfa;
-  --pastel-primary-soft: #ede9fe;
-  --pastel-primary-glow: rgba(167, 139, 250, 0.25);
+  --pastel-primary: #6366f1;
+  --pastel-primary-soft: rgba(99, 102, 241, 0.1);
+  --pastel-primary-glow: rgba(99, 102, 241, 0.25);
   --pastel-lavender: #e9d5ff;
   --pastel-indigo: #c7d2fe;
   --pastel-blue: #bae6fd;
@@ -52,15 +52,26 @@
   --transition-slow: 0.35s var(--ease-out);
 }
 
-/* Portal palette – pastel-focused (Tailwind theme) */
+/* Login / hero illustration float */
+@keyframes float {
+  0%,
+  100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-15px);
+  }
+}
+
 @theme {
-  --color-portal-bg: #f4f7fe;
+  --animate-float: float 6s ease-in-out infinite;
+  --color-portal-bg: #f8f7ff;
   --color-portal-card: #ffffff;
   --color-portal-border: #e2e8f0;
   --color-portal-text: #1e293b;
   --color-portal-muted: #64748b;
-  --color-portal-primary: #8b5cf6;
-  --color-portal-primary-light: #e0e7ff;
+  --color-portal-primary: #6366f1;
+  --color-portal-primary-light: rgba(99, 102, 241, 0.1);
   --color-portal-success: #22c55e;
   --color-portal-nav: #6366f1;
   --color-pastel-bg: #f8fafc;
@@ -73,7 +84,7 @@
   --color-pastel-peach: #ffedd5;
   --color-pastel-border: #e2e8f0;
   --color-pastel-text: #475569;
-  --color-pastel-primary: #a78bfa;
+  --color-pastel-primary: #6366f1;
 }
 
 /* Global base */
@@ -112,7 +123,7 @@ select {
 
 /* Primary button (pastel gradient + hover scale) */
 .portal-btn-primary {
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
+  background: #6366f1;
   color: #fff;
   border: none;
   padding: var(--space-2) var(--space-4);
@@ -124,6 +135,7 @@ select {
 }
 .portal-btn-primary:hover {
   transform: scale(1.02);
+  background: #4f46e5;
   box-shadow: 0 4px 14px var(--pastel-primary-glow);
 }
 

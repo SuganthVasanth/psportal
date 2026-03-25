@@ -20,5 +20,6 @@ const studentExamAttemptSchema = new mongoose.Schema(
 );
 
 studentExamAttemptSchema.index({ register_no: 1, course_id: 1 });
+studentExamAttemptSchema.index({ register_no: 1, course_id: 1, booking_id: 1 });
 
 module.exports = mongoose.model("StudentExamAttempt", studentExamAttemptSchema);

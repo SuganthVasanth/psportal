@@ -30,6 +30,7 @@ exports.getMyTasks = async (req, res) => {
           template_id: a.template_id?._id?.toString() || null,
           template_name: a.template_id?.name || "",
           question_count: a.question_count ?? 0,
+          assigned_at: a.updatedAt || a.createdAt || null,
         });
       }
     });
@@ -60,24 +61,32 @@ exports.getMyTasks = async (req, res) => {
     const tasks = courseIds.map((cid) => {
       const meta = courseMap.get(cid);
       const sub = submissionByCourse.get(cid);
-      const questions = (sub?.questions || []).map((q) => ({
+      const assignedAtMs = meta?.assigned_at ? new Date(meta.assigned_at).getTime() : 0;
+      const submissionUpdatedMs = sub?.updatedAt ? new Date(sub.updatedAt).getTime() : 0;
+      const isReviewed = sub?.status === "approved" || sub?.status === "rejected";
+      // If admin re-assigned this course after the previous reviewed submission,
+      // treat it as a fresh task so it appears under Pending.
+      const shouldResetByReassignment =
+        !!sub && isReviewed && assignedAtMs > 0 && submissionUpdatedMs > 0 && assignedAtMs > submissionUpdatedMs;
+      const effectiveSub = shouldResetByReassignment ? null : sub;
+      const questions = (effectiveSub?.questions || []).map((q) => ({
         questionNumber: q.questionNumber,
         template_id: q.template_id?.toString?.() || q.template_id,
         value: q.value || {},
         correctAnswerKey: q.correctAnswerKey ?? "",
       }));
       return {
-        id: sub?._id?.toString(),
+        id: effectiveSub?._id?.toString(),
         course_id: cid,
         course_name: meta?.name,
         course_status: meta?.status,
-        status: sub?.status || "not_started",
-        title: sub?.title || "",
-        content: sub?.content || "",
-        file_url: sub?.file_url || "",
-        submitted_at: sub?.submitted_at,
-        reviewed_at: sub?.reviewed_at,
-        review_remarks: sub?.review_remarks || "",
+        status: effectiveSub?.status || "not_started",
+        title: effectiveSub?.title || "",
+        content: effectiveSub?.content || "",
+        file_url: effectiveSub?.file_url || "",
+        submitted_at: effectiveSub?.submitted_at,
+        reviewed_at: effectiveSub?.reviewed_at,
+        review_remarks: effectiveSub?.review_remarks || "",
         template_id: meta?.template_id || null,
         template_name: meta?.template_name || "",
         question_count: meta?.question_count ?? 0,
@@ -164,12 +173,17 @@ exports.getApprovedQuestionsForCourse = async (req, res) => {
       .populate("questions.template_id", "name key layout")
       .lean();
     if (!doc) return res.status(404).json({ message: "No approved question bank for this course" });
-    const questions = (doc.questions || []).map((q) => ({
-      questionNumber: q.questionNumber,
-      template_id: q.template_id?._id?.toString(),
-      template_name: q.template_id?.name,
-      value: q.value || {},
-    }));
+    const questions = (doc.questions || []).map((q) => {
+      const tmpl = q.template_id;
+      const rawLayout = tmpl && Array.isArray(tmpl.layout) ? tmpl.layout : [];
+      return {
+        questionNumber: q.questionNumber,
+        template_id: tmpl?._id?.toString(),
+        template_name: tmpl?.name,
+        layout: rawLayout,
+        value: q.value || {},
+      };
+    });
     res.json({
       course_id: doc.course_id?._id?.toString() || doc.course_id?.toString(),
       course_name: doc.course_id?.name || "",
@@ -187,15 +201,24 @@ exports.submitStudentAttempt = async (req, res) => {
     const { register_no, course_id, booking_id, questions } = req.body;
     if (!register_no || !course_id) return res.status(400).json({ message: "register_no and course_id required" });
 
-    const existingCount = await StudentExamAttempt.countDocuments({ register_no, course_id });
+    const bookingId = booking_id != null ? String(booking_id).trim() : "";
+    if (!bookingId) {
+      return res.status(400).json({ message: "booking_id is required to submit this assessment." });
+    }
+
+    const existingCount = await StudentExamAttempt.countDocuments({
+      register_no,
+      course_id,
+      booking_id: bookingId,
+    });
     if (existingCount >= 1) {
-      return res.status(403).json({ message: "You have already attempted this test once. Only one attempt is allowed." });
+      return res.status(403).json({ message: "You have already submitted for this booked slot." });
     }
 
     const doc = await StudentExamAttempt.create({
       register_no,
       course_id,
-      booking_id: booking_id || "",
+      booking_id: bookingId,
       questions: Array.isArray(questions) ? questions : [],
     });
     res.status(201).json({

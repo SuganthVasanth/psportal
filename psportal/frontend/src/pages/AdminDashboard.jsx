@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useLocation, useNavigate, NavLink } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   ChevronDown,
   Shield,
@@ -11,7 +11,6 @@ import {
   Plus,
   Pencil,
   X,
-  LogOut,
   Users,
   UserPlus,
   Upload,
@@ -52,6 +51,7 @@ import ChatModal from "../components/ChatModal";
 import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
 import TimePicker12h from "../components/TimePicker12h";
 import { templateApi } from "../services/templateApi";
+import SmartSidebar from "../components/SmartSidebar";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -75,7 +75,7 @@ const NAV = [
     sub: [
       { id: "course-upload", label: "Create", icon: Upload, path: "courses" },
       // { id: "course-points", label: "Details", icon: List, path: "course-details" },
-      { id: "ps-courses", label: "PS Courses", icon: BookMarked, path: "ps-courses" },
+      // { id: "ps-courses", label: "PS Courses", icon: BookMarked, path: "ps-courses" },
       { id: "question-banks", label: "Question banks", icon: ClipboardList, path: "question-banks" },
       { id: "question-form-builder", label: "Question form builder", icon: FileText, path: "question-form-builder" },
       { id: "question-template-builder", label: "Question Template Builder", icon: LayoutTemplate, path: "question-template-builder" },
@@ -129,6 +129,12 @@ const NAV = [
       { id: "bus-list", label: "Manage Buses", icon: List, path: "bus-list" },
       { id: "bus-assign", label: "Assign Students", icon: Users, path: "bus-assign" },
     ],
+  },
+  {
+    id: "classroom",
+    label: "Classroom",
+    icon: BookOpen,
+    sub: [{ id: "classrooms-list", label: "Classrooms", icon: List, path: "classrooms" }],
   },
 ];
 
@@ -231,6 +237,7 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
   const [openNav, setOpenNav] = useState("rbac");
   const [activeSub, setActiveSub] = useState("roles");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
   useEffect(() => {
     const raw = (location.pathname || "").replace(/^\/admin\/?/, "").replace(/^\/+/, "");
@@ -262,6 +269,9 @@ export default function AdminDashboard() {
   const [facultyAssignCourseId, setFacultyAssignCourseId] = useState("");
   const [facultyAssignTemplateId, setFacultyAssignTemplateId] = useState("");
   const [facultyAssignQuestionCount, setFacultyAssignQuestionCount] = useState(10);
+  const [facultyAssignSortBy, setFacultyAssignSortBy] = useState("user");
+  const [facultyAssignSortDir, setFacultyAssignSortDir] = useState("asc");
+  const [facultyAssignSearch, setFacultyAssignSearch] = useState("");
   const [questionBankSubmissions, setQuestionBankSubmissions] = useState([]);
   const [questionBankFilterCourse, setQuestionBankFilterCourse] = useState("");
   const [courseOverviewSearch, setCourseOverviewSearch] = useState("");
@@ -291,6 +301,12 @@ export default function AdminDashboard() {
   const [studentDeptFilter, setStudentDeptFilter] = useState("");
   const [selectedStudentIds, setSelectedStudentIds] = useState([]);
   const [bulkAssignBusId, setBulkAssignBusId] = useState("none");
+  const [classroomsList, setClassroomsList] = useState([]);
+  const [classroomLoading, setClassroomLoading] = useState(false);
+  const [selectedClassroomId, setSelectedClassroomId] = useState("");
+  const [selectedClassroomMeta, setSelectedClassroomMeta] = useState(null);
+  const [classroomStudents, setClassroomStudents] = useState([]);
+  const [classroomStudentsLoading, setClassroomStudentsLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -333,6 +349,45 @@ export default function AdminDashboard() {
     (u.roles || []).some((r) => r.toLowerCase().includes("faculty") || r.toLowerCase().includes("mentor"))
   );
   const facultyList = facultyCandidates.length ? facultyCandidates : usersList;
+  const getFacultyAssignmentDisplayName = (a) =>
+    a.user_name ||
+    a.user_email ||
+    (usersList.find((u) => u.id === a.user_id)?.name) ||
+    (usersList.find((u) => u.id === a.user_id)?.email) ||
+    a.user_id ||
+    "—";
+  const sortedFacultyAssignments = useMemo(() => {
+    const q = facultyAssignSearch.trim().toLowerCase();
+    const filtered = q
+      ? facultyAssignments.filter((a) => {
+          const displayName = getFacultyAssignmentDisplayName(a);
+          return (
+            String(displayName).toLowerCase().includes(q) ||
+            String(a.course_name || a.course_id || "").toLowerCase().includes(q) ||
+            String(a.template_name || "").toLowerCase().includes(q)
+          );
+        })
+      : facultyAssignments;
+    const dir = facultyAssignSortDir === "desc" ? -1 : 1;
+    return [...filtered].sort((a, b) => {
+      if (facultyAssignSortBy === "qty") {
+        return (((a.question_count || 0) - (b.question_count || 0)) || 0) * dir;
+      }
+      const aVal =
+        facultyAssignSortBy === "course"
+          ? String(a.course_name || a.course_id || "")
+          : facultyAssignSortBy === "template"
+            ? String(a.template_name || "")
+            : String(getFacultyAssignmentDisplayName(a));
+      const bVal =
+        facultyAssignSortBy === "course"
+          ? String(b.course_name || b.course_id || "")
+          : facultyAssignSortBy === "template"
+            ? String(b.template_name || "")
+            : String(getFacultyAssignmentDisplayName(b));
+      return aVal.localeCompare(bVal, undefined, { sensitivity: "base", numeric: true }) * dir;
+    });
+  }, [facultyAssignments, facultyAssignSearch, facultyAssignSortBy, facultyAssignSortDir, usersList]);
 
   useEffect(() => {
     const fetchAll = async () => {
@@ -430,6 +485,67 @@ export default function AdminDashboard() {
       cancelled = true;
     };
   }, [activeSub]);
+
+  // Classroom management data for admin
+  useEffect(() => {
+    if (activeSub !== "classrooms-list") return;
+    let cancelled = false;
+    const load = async () => {
+      setClassroomLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/tasks/classrooms`).then((r) => r.json()).catch(() => []);
+        if (cancelled) return;
+        const list = Array.isArray(res) ? res : [];
+        setClassroomsList(list);
+        setSelectedClassroomId((prev) => {
+          if (prev && list.some((c) => c.id === prev)) return prev;
+          return list[0]?.id || "";
+        });
+      } catch (_) {
+        if (!cancelled) {
+          setClassroomsList([]);
+          setSelectedClassroomId("");
+        }
+      } finally {
+        if (!cancelled) setClassroomLoading(false);
+      }
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSub]);
+
+  useEffect(() => {
+    if (activeSub !== "classrooms-list" || !selectedClassroomId) {
+      setClassroomStudents([]);
+      setSelectedClassroomMeta(null);
+      return;
+    }
+    let cancelled = false;
+    const loadStudents = async () => {
+      setClassroomStudentsLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/tasks/classrooms/${selectedClassroomId}/students`)
+          .then((r) => r.json())
+          .catch(() => ({}));
+        if (cancelled) return;
+        setClassroomStudents(Array.isArray(res?.students) ? res.students : []);
+        setSelectedClassroomMeta(res?.classroom || null);
+      } catch (_) {
+        if (!cancelled) {
+          setClassroomStudents([]);
+          setSelectedClassroomMeta(null);
+        }
+      } finally {
+        if (!cancelled) setClassroomStudentsLoading(false);
+      }
+    };
+    loadStudents();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSub, selectedClassroomId]);
 
   // Combined list for PS Courses page: all Admin (Course details) + all PS courses
   const psCoursesCombinedList = useMemo(() => {
@@ -738,67 +854,25 @@ export default function AdminDashboard() {
 
   return (
     <div className="dashboard-layout premium-layout admin-dashboard-layout">
-      <aside className="student-sidebar-premium">
-        <div className="sidebar-header-premium">
-          <img
-            src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png"
-            alt="Logo"
-            className="sidebar-logo-premium"
-          />
-          <span className="sidebar-brand-premium">PCDP Portal</span>
-        </div>
+      <SmartSidebar
+        sections={NAV.map((section) => ({
+          title: section.label,
+          items: section.sub.map((sub) => ({
+            id: sub.id,
+            label: sub.label,
+            path: `/admin/${sub.path || sub.id}`,
+            icon: sub.icon || section.icon,
+            end: (sub.path || sub.id) === "overview",
+          })),
+        }))}
+        profileName={userName}
+        profileRole="Admin"
+        onLogout={handleLogout}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+      />
 
-        <nav className="sidebar-nav-premium">
-          {NAV.map((section) => {
-            return (
-              <div key={section.id} className="nav-section-premium">
-                <h3 className="section-title-premium">{section.label}</h3>
-                <ul>
-                  {section.sub.map((sub) => {
-                    const SubIcon = sub.icon;
-                    const path = sub.path || sub.id;
-                    const isActive = activeSub === sub.id;
-                    return (
-                      <li key={sub.id}>
-                        <NavLink
-                          to={`/admin/${path}`}
-                          className={`nav-item-premium ${isActive ? "active" : ""}`}
-                          end={path === "overview"}
-                        >
-                          <span className="icon-wrapper-premium">
-                            {SubIcon ? <SubIcon size={20} /> : <section.icon size={20} />}
-                          </span>
-                          <span className="item-name-premium">{sub.label}</span>
-                          {isActive && <ChevronRight size={14} className="active-indicator-premium" />}
-                        </NavLink>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer-premium">
-          <div className="user-profile-summary-premium">
-            <div className="user-avatar-premium">
-              {userInitials}
-            </div>
-            <div className="user-info-premium">
-              <span className="user-name-premium">{userName}</span>
-              <span className="user-role-premium">Admin</span>
-            </div>
-          </div>
-
-          <button onClick={handleLogout} className="logout-btn-premium">
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <div className="main-container-premium">
+      <div className={`main-container-premium ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
         <header className="top-navbar-premium">
           <div className="search-bar-premium">
             <Search size={18} className="search-icon" />
@@ -2282,7 +2356,7 @@ export default function AdminDashboard() {
                   <label>User (faculty)</label>
                   <select value={facultyAssignUserId} onChange={(e) => setFacultyAssignUserId(e.target.value)}>
                     <option value="">Select user</option>
-                    {usersList.map((u) => (
+                    {facultyList.map((u) => (
                       <option key={u.id} value={u.id}>{u.name || u.email} {u.roles?.length ? `(${u.roles.join(", ")})` : ""}</option>
                     ))}
                   </select>
@@ -2363,11 +2437,38 @@ export default function AdminDashboard() {
                   </button>
                 </div>
               </div>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 12, marginBottom: 12, alignItems: "end" }}>
+                <div className="sa-form-group" style={{ minWidth: 220 }}>
+                  <label>Search assignments</label>
+                  <input
+                    type="text"
+                    value={facultyAssignSearch}
+                    onChange={(e) => setFacultyAssignSearch(e.target.value)}
+                    placeholder="Search by user/course/template"
+                  />
+                </div>
+                <div className="sa-form-group" style={{ minWidth: 180 }}>
+                  <label>Sort by</label>
+                  <select value={facultyAssignSortBy} onChange={(e) => setFacultyAssignSortBy(e.target.value)}>
+                    <option value="user">User</option>
+                    <option value="course">Course</option>
+                    <option value="template">Question template</option>
+                    <option value="qty">Qty</option>
+                  </select>
+                </div>
+                <div className="sa-form-group" style={{ minWidth: 140 }}>
+                  <label>Order</label>
+                  <select value={facultyAssignSortDir} onChange={(e) => setFacultyAssignSortDir(e.target.value)}>
+                    <option value="asc">Ascending</option>
+                    <option value="desc">Descending</option>
+                  </select>
+                </div>
+              </div>
               <table className="sa-table">
                 <thead><tr><th>User</th><th>Course</th><th>Question template</th><th>Qty</th><th>Actions</th></tr></thead>
                 <tbody>
-                  {facultyAssignments.map((a) => {
-                    const displayName = a.user_name || a.user_email || (usersList.find((u) => u.id === a.user_id)?.name) || (usersList.find((u) => u.id === a.user_id)?.email) || a.user_id;
+                  {sortedFacultyAssignments.map((a) => {
+                    const displayName = getFacultyAssignmentDisplayName(a);
                     return (
                     <tr key={a.id}>
                       <td>
@@ -2408,6 +2509,9 @@ export default function AdminDashboard() {
                 </tbody>
               </table>
               {facultyAssignments.length === 0 && <p className="sa-muted">No assignments yet. Select a user and course above to assign.</p>}
+              {facultyAssignments.length > 0 && sortedFacultyAssignments.length === 0 && (
+                <p className="sa-muted">No assignments match your search.</p>
+              )}
             </div>
           )}
 
@@ -2813,6 +2917,122 @@ export default function AdminDashboard() {
                     })}
                   </tbody>
                 </table>
+              </div>
+            </div>
+          )}
+
+          {activeSub === "classrooms-list" && (
+            <div className="dashboard-card classroom-admin-wrap">
+              <div className="classroom-admin-header">
+                <div>
+                  <h3 className="card-title">Classrooms Created by Faculties</h3>
+                  <p className="card-subtitle">
+                    Select a classroom to view all registered students with clear details.
+                  </p>
+                </div>
+                <span className="classroom-admin-count">{classroomsList.length} Classrooms</span>
+              </div>
+
+              <div className="classroom-admin-grid">
+                <aside className="classroom-admin-list">
+                  {classroomLoading ? (
+                    <div className="sa-empty">Loading classrooms...</div>
+                  ) : classroomsList.length === 0 ? (
+                    <div className="sa-empty">No classrooms found yet.</div>
+                  ) : (
+                    classroomsList.map((room) => {
+                      const isActive = selectedClassroomId === room.id;
+                      return (
+                        <button
+                          key={room.id}
+                          type="button"
+                          className={`classroom-admin-item ${isActive ? "active" : ""}`}
+                          onClick={() => setSelectedClassroomId(room.id)}
+                        >
+                          <div className="classroom-admin-item-top">
+                            <strong>{room.topic}</strong>
+                            <span className="sa-badge sa-badge-neutral">{room.studentCount || 0} Students</span>
+                          </div>
+                          <div className="classroom-admin-item-meta">
+                            Faculty: {room.facultyName || "—"}
+                          </div>
+                          <div className="classroom-admin-item-meta">
+                            Date: {room.date ? new Date(room.date).toLocaleDateString() : "—"}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </aside>
+
+                <section className="classroom-admin-detail">
+                  {!selectedClassroomId ? (
+                    <div className="sa-empty">Pick a classroom from the left to view registrations.</div>
+                  ) : (
+                    <>
+                      <div className="classroom-admin-detail-head">
+                        <div>
+                          <h4>{selectedClassroomMeta?.topic || "Classroom"}</h4>
+                          <p>
+                            Faculty: {selectedClassroomMeta?.facultyName || "—"} • Date:{" "}
+                            {selectedClassroomMeta?.date ? new Date(selectedClassroomMeta.date).toLocaleDateString() : "—"}
+                          </p>
+                        </div>
+                        {selectedClassroomMeta?.googleClassroomLink ? (
+                          <a
+                            className="sa-btn sa-btn-primary"
+                            href={selectedClassroomMeta.googleClassroomLink}
+                            target="_blank"
+                            rel="noreferrer"
+                          >
+                            Open Classroom Link
+                          </a>
+                        ) : null}
+                      </div>
+
+                      <div className="sa-table-wrap">
+                        <table className="sa-table">
+                          <thead>
+                            <tr>
+                              <th>Register No</th>
+                              <th>Student Name</th>
+                              <th>Department</th>
+                              <th>Year</th>
+                              <th>Type</th>
+                              <th>Registered At</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {classroomStudentsLoading ? (
+                              <tr>
+                                <td colSpan={6} style={{ color: "#64748b" }}>
+                                  Loading registered students...
+                                </td>
+                              </tr>
+                            ) : classroomStudents.length === 0 ? (
+                              <tr>
+                                <td colSpan={6} style={{ color: "#64748b" }}>
+                                  No students registered for this classroom yet.
+                                </td>
+                              </tr>
+                            ) : (
+                              classroomStudents.map((s) => (
+                                <tr key={s.id}>
+                                  <td>{s.register_no}</td>
+                                  <td>{s.name}</td>
+                                  <td>{s.department}</td>
+                                  <td>{s.year}</td>
+                                  <td style={{ textTransform: "capitalize" }}>{s.type}</td>
+                                  <td>{s.registeredAt ? new Date(s.registeredAt).toLocaleString() : "—"}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </>
+                  )}
+                </section>
               </div>
             </div>
           )}

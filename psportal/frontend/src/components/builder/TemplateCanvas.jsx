@@ -1,7 +1,8 @@
-import React, { useCallback } from "react";
+import React, { useCallback, useMemo } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { createTemplateComponent, layoutToTemplateSchema } from "./templateComponentTypes";
 import CanvasItem from "./CanvasItem";
+import { getLockedTemplateCanvasSize } from "../renderer/LockedTemplateRenderer";
 
 const GRID = 8;
 export const CANVAS_DROP_ID = "template-canvas";
@@ -12,6 +13,7 @@ export default function TemplateCanvas({
   selectedId,
   setSelectedId,
   pushHistory,
+  canvasSize = null,
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: CANVAS_DROP_ID });
 
@@ -49,13 +51,25 @@ export default function TemplateCanvas({
     [updateComponent]
   );
 
+  const computedCanvasSize = useMemo(() => {
+    if (canvasSize && typeof canvasSize === "object") return canvasSize;
+    return getLockedTemplateCanvasSize(layout);
+  }, [canvasSize, layout]);
+
   return (
     <div
       ref={setNodeRef}
       className={`
-        relative flex-1 min-h-[500px] rounded-xl border-2 bg-slate-50/80 overflow-hidden
+        relative rounded-xl border-2 bg-slate-50/80 overflow-hidden
         ${isOver ? "border-violet-400 bg-violet-50/30" : "border-dashed border-slate-300"}
       `}
+      style={{
+        width: computedCanvasSize?.width,
+        height: computedCanvasSize?.height,
+        minWidth: computedCanvasSize?.width,
+        minHeight: computedCanvasSize?.height,
+        boxSizing: "border-box",
+      }}
       onClick={() => setSelectedId(null)}
     >
       {layout.map((component) => (

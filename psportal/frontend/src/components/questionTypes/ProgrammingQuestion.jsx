@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useMemo } from "react";
 import TestCaseEditor from "./subcomponents/TestCaseEditor";
 import ReferenceSolutionEditor from "./subcomponents/ReferenceSolutionEditor";
 
@@ -15,8 +15,32 @@ export default function ProgrammingQuestion({
   const props = config.properties || {};
   const problemStatement = value?.problemStatement ?? "";
   const referenceSolution = value?.referenceSolution ?? { language: "python", code: "" };
-  const testCases = value?.testCases ?? [];
+  const rawTestCases = Array.isArray(value?.testCases) ? value.testCases : [];
   const studentCode = value?.code ?? "";
+
+  const seededTestCases = useMemo(() => {
+    const sampleN = Math.max(0, Number(props.sampleTestCases ?? 2) || 0);
+    const hiddenN = Math.max(0, Number(props.hiddenTestCases ?? 2) || 0);
+    const total = sampleN + hiddenN;
+    if (!total) return [];
+    return Array.from({ length: total }, (_, i) => ({
+      input: "",
+      expectedOutput: "",
+      hidden: i >= sampleN,
+    }));
+  }, [props.sampleTestCases, props.hiddenTestCases]);
+
+  const testCases = rawTestCases.length ? rawTestCases : seededTestCases;
+
+  // Seed initial testcases once for faculty, so they can edit immediately.
+  useEffect(() => {
+    if (studentMode || readOnly) return;
+    if (rawTestCases.length > 0) return;
+    if (!seededTestCases.length) return;
+    onChange?.({ ...value, testCases: seededTestCases });
+    // Intentionally exclude `value` from deps to avoid infinite loops.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [studentMode, readOnly, rawTestCases.length, seededTestCases.length]);
 
   const handleGenerateOutput = () => {
     // Placeholder: in a real app this would call backend to run reference solution with each test input
@@ -47,8 +71,8 @@ export default function ProgrammingQuestion({
             <div className="mt-2 space-y-2">
               {testCases.filter((tc) => !tc.hidden).map((tc, i) => (
                 <div key={i} className="rounded border border-slate-200 p-2 text-xs">
-                  <div>Input: {tc.input || "—"}</div>
-                  <div>Expected: {tc.expectedOutput || "—"}</div>
+                  <div>Input format: {tc.input || "—"}</div>
+                  <div>Output format: {tc.expectedOutput || "—"}</div>
                 </div>
               ))}
             </div>

@@ -98,7 +98,7 @@ exports.getCourseById = async (req, res) => {
 exports.getStudentLevelProgress = async (req, res) => {
   try {
     const course_id = req.params.id;
-    const { register_no } = req.query;
+    const { register_no, booking_id } = req.query;
     if (!register_no) {
       return res.status(400).json({ message: "register_no required" });
     }
@@ -119,10 +119,13 @@ exports.getStudentLevelProgress = async (req, res) => {
       return { level_index: mergedIndex, status: p.status, completed_at: p.completed_at };
     }).filter(Boolean);
 
-    const courseAttempts = await StudentExamAttempt.countDocuments({
+    const bookingId = booking_id != null ? String(booking_id).trim() : "";
+    const attemptFilter = {
       register_no,
       course_id: { $in: courseIds },
-    });
+      ...(bookingId ? { booking_id: bookingId } : {}),
+    };
+    const courseAttempts = await StudentExamAttempt.countDocuments(attemptFilter);
     res.json({ progress: out, courseAttempts });
   } catch (err) {
     res.status(500).json({ message: err.message });

@@ -81,6 +81,14 @@ export default function MyCourses() {
     return (
         <StudentLayout>
             <div className="mycourses-container">
+                <div className="px-8 pt-7 pb-5">
+                    <h1 className="text-[22px] font-extrabold text-[#0f0e1a] tracking-tight">My Courses</h1>
+                    <p className="text-sm text-[#9ca3af] mt-0.5">
+                        {courses.length
+                            ? `You are enrolled in ${courses.length} course${courses.length === 1 ? "" : "s"}.`
+                            : "Track enrolled courses and continue learning."}
+                    </p>
+                </div>
                 {/* <div className="mycourses-hero">
                     <div className="mycourses-hero-inner">
                         <div className="mycourses-hero-titleRow">

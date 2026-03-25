@@ -23,6 +23,7 @@ import Leaderboard from "./pages/practice/Leaderboard";
 import CodeReviewDashboard from "./pages/CodeReviewDashboard";
 import BookSlots from "./pages/practice/BookSlots";
 import PreTestPortal from "./pages/practice/PreTestPortal";
+import AssessmentHub from "./pages/assessment/AssessmentHub";
 import BusTracking from "./pages/staff/BusTracking";
 import BusIncharge from "./pages/staff/BusIncharge";
 import "./App.css";
@@ -177,6 +178,15 @@ export default function App() {
             </ProtectedRoute>
           }
         />
+        {/* Optional assessment dashboard; classic /book-slots + /course/:id unchanged */}
+        <Route
+          path="/assessments"
+          element={
+            <ProtectedRoute>
+              <AssessmentHub />
+            </ProtectedRoute>
+          }
+        />
         <Route
           path="/pre-test/:courseId"
           element={
@@ -246,10 +256,10 @@ export default function App() {
           }
         />
 
+        <Route path="/oauth-success" element={<OAuthSuccess />} />
+
         {/* Catch-all redirect to login for undefined routes */}
         <Route path="*" element={<Navigate to="/" />} />
-
-        <Route path="/oauth-success" element={<OAuthSuccess />} />
       </Routes>
     </BrowserRouter>
   );

@@ -82,6 +82,10 @@ export default function CodeforcesPractice() {
   return (
     <StudentLayout>
       <div className="h-[calc(100vh-72px)] bg-slate-50 text-slate-900 flex flex-col overflow-hidden">
+        <div className="px-8 pt-7 pb-5 bg-[#f8f7ff] border-b border-[rgba(0,0,0,0.06)]">
+          <h1 className="text-[22px] font-extrabold text-[#0f0e1a] tracking-tight">Codeforces Practice</h1>
+          <p className="text-sm text-[#9ca3af] mt-0.5">Practice with test cases and compile in one workspace.</p>
+        </div>
         {/* Professional Header */}
         {/* <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-5">
@@ -102,15 +106,15 @@ export default function CodeforcesPractice() {
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3 px-4 py-2 bg-slate-50 rounded-xl border border-slate-200/60 shadow-inner">
               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Skill Level</span>
-              <select
-                value={level}
-                onChange={(e) => setLevel(Number(e.target.value))}
+            <select
+              value={level}
+              onChange={(e) => setLevel(Number(e.target.value))}
                 className="bg-transparent border-none focus:ring-0 text-sm font-bold text-slate-800 cursor-pointer"
               >
                 <option value={1}>Tier 1: Fundamentals</option>
                 <option value={2}>Tier 2: Algorithmic Patterns</option>
                 <option value={3}>Tier 3: Advanced Optimization</option>
-              </select>
+            </select>
             </div>
             <button className="p-3 hover:bg-slate-100 rounded-xl transition-all border border-transparent shadow-sm hover:shadow-md hover:border-slate-200 text-slate-500">
               <Settings2 className="w-5 h-5" />
@@ -182,9 +186,9 @@ export default function CodeforcesPractice() {
                           )}
                           {(p.tags || []).slice(0, 1).map((t) => (
                             <span key={t} className="text-[10px] font-bold px-2 py-0.5 rounded-lg bg-indigo-600/10 text-indigo-700 border border-indigo-100 uppercase tracking-tighter">
-                              {t}
-                            </span>
-                          ))}
+                          {t}
+                        </span>
+                      ))}
                         </div>
                       </div>
                       <ChevronRight className={`w-5 h-5 mt-0.5 transition-all duration-300 ${
@@ -204,26 +208,26 @@ export default function CodeforcesPractice() {
             <div className="flex-1 flex flex-col lg:flex-row overflow-hidden">
                {/* Detailed Specifications Panel */}
                <div className="w-full lg:w-[60%] xl:w-[55%] 2xl:w-[50%] flex-none border-b lg:border-b-0 lg:border-r border-slate-200 bg-white flex flex-col shadow-sm">
-                  {selected ? (
-                    <>
+              {selected ? (
+                <>
                       <div className="p-8 pb-6 border-b border-slate-100">
                         <div className="flex items-center justify-between mb-5">
                            <div className="flex items-center gap-2.5 text-indigo-600 font-bold text-[11px] uppercase tracking-[0.2em]">
                              <Layout className="w-4 h-4" />
                              Specifications
                            </div>
-                           {selected.link && (
-                            <a
-                              href={selected.link}
-                              target="_blank"
-                              rel="noreferrer"
+                  {selected.link && (
+                    <a
+                      href={selected.link}
+                      target="_blank"
+                      rel="noreferrer"
                               className="p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-600 hover:text-white text-slate-400 transition-all border border-slate-200 hover:border-indigo-600 hover:shadow-lg hover:shadow-indigo-200"
                               title="Original Source"
-                            >
+                    >
                               <ExternalLink className="w-4.5 h-4.5" />
-                            </a>
-                           )}
-                        </div>
+                    </a>
+                  )}
+                          </div>
                         <h2 className="text-2xl font-black text-slate-800 leading-tight">{selected.title}</h2>
                         <div className="mt-5 flex flex-wrap gap-2.5">
                            <span className="px-3 py-1 bg-slate-50 text-slate-600 border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-tight">
@@ -322,12 +326,12 @@ export default function CodeforcesPractice() {
                                      </div>
                                    ))
                                  )}
-                              </div>
-                            )}
-                         </div>
                       </div>
-                    </>
-                  ) : (
+                    )}
+                         </div>
+                  </div>
+                </>
+              ) : (
                     <div className="flex-1 flex items-center justify-center p-16 text-center text-slate-400">
                        <div className="space-y-6 max-w-[300px]">
                           <div className="w-24 h-24 bg-slate-50 rounded-[40px] mx-auto flex items-center justify-center shadow-lg shadow-slate-100 border border-slate-100 rotate-6 transition-transform hover:rotate-0 duration-500 group">
@@ -336,8 +340,8 @@ export default function CodeforcesPractice() {
                           <p className="text-[13px] font-bold uppercase tracking-widest leading-relaxed">Initialize system by selecting an arena objective</p>
                        </div>
                     </div>
-                  )}
-               </div>
+              )}
+            </div>
 
                {/* Professional Integrated IDE Area */}
                <div className="flex-1 min-w-0 p-2 flex flex-col bg-slate-50">
@@ -355,15 +359,15 @@ export default function CodeforcesPractice() {
                        </div>
                     </div> */}
                     <div className="flex-1 overflow-hidden relative flex flex-col min-w-0">
-                      <CodeCompiler
-                        initialLanguage="c"
-                        showSubmit
-                        editorHeight={editorHeight}
-                        submitMode="backend"
-                        submitMeta={{ level, problemId: selected?.problemId }}
-                        problem={selected}
+              <CodeCompiler
+                initialLanguage="c"
+                showSubmit
+                editorHeight={editorHeight}
+                submitMode="backend"
+                submitMeta={{ level, problemId: selected?.problemId }}
+                problem={selected}
                         resizable={false}
-                      />
+              />
                     </div>
                   </div>
                </div>

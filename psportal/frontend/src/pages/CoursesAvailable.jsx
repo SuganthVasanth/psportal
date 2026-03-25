@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import StudentLayout from "../components/StudentLayout";
-import { Search, BookOpen, ChevronDown, ChevronRight } from "lucide-react";
-import "./CoursesAvailable.css";
+import { Search, BookOpen } from "lucide-react";
 
 const API_BASE = "http://localhost:5000";
 
@@ -15,7 +14,7 @@ export default function CoursesAvailable() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [toast, setToast] = useState(null);
-  const [registeringId, setRegisteringId] = useState(null);
+  const [activeFilter, setActiveFilter] = useState("All");
 
   const registerNo = localStorage.getItem("register_no") || MOCK_PROFILE.register_no;
   const token = localStorage.getItem("token");
@@ -46,155 +45,155 @@ export default function CoursesAvailable() {
       .finally(() => setLoading(false));
   }, [token]);
 
-  const handleRegister = async (courseId) => {
-    setRegisteringId(courseId);
-    try {
-      const res = await fetch(`${API_BASE}/api/enrollments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
-        body: JSON.stringify({ courseId, studentId: registerNo }),
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.message || "Enrollment failed");
-      fetchEnrollments();
-      setToast({ type: "success", text: "Enrolled successfully!" });
-    } catch (e) {
-      setToast({ type: "error", text: e.message || "Could not enroll" });
-    } finally {
-      setRegisteringId(null);
-    }
-    setTimeout(() => setToast(null), 3000);
-  };
-
   const filteredLevelCourses = useMemo(() => {
     const term = (searchTerm || "").toLowerCase();
-    if (!term) return levelCourses;
-    return levelCourses.filter((c) => {
+    let list = levelCourses;
+    if (activeFilter !== "All") {
+      list = list.filter((c) => String(c.type || "Specialization").toLowerCase() === activeFilter.toLowerCase());
+    }
+    if (!term) return list;
+    return list.filter((c) => {
       const name = (c.name || "").toLowerCase();
       const type = (c.type || "").toLowerCase();
       return name.includes(term) || type.includes(term);
     });
-  }, [levelCourses, searchTerm]);
+  }, [levelCourses, searchTerm, activeFilter]);
 
-  const CourseSkeleton = () => (
-    <div className="skeleton-card">
-      <div className="skeleton-img"></div>
-      <div className="skeleton-text"></div>
-      <div className="skeleton-text short"></div>
-      <div className="skeleton-text"></div>
-      <div className="shimmer"></div>
-    </div>
-  );
+  const CourseCard = ({ course }) => {
+    const colorMap = {
+      Advanced: { bg: "rgba(99,102,241,0.1)", color: "#6366f1", emoji: "🚀" },
+      Mechanical: { bg: "rgba(245,158,11,0.1)", color: "#f59e0b", emoji: "⚙️" },
+      "Analog Electronics": { bg: "rgba(16,185,129,0.1)", color: "#10b981", emoji: "⚡" },
+      Electronics: { bg: "rgba(99,102,241,0.1)", color: "#6366f1", emoji: "🔌" },
+      AE: { bg: "rgba(236,72,153,0.1)", color: "#ec4899", emoji: "📡" },
+      Aptitude: { bg: "rgba(245,158,11,0.1)", color: "#f59e0b", emoji: "🧠" },
+      default: { bg: "rgba(99,102,241,0.08)", color: "#6366f1", emoji: "📘" },
+    };
+    const style = colorMap[course.name] || colorMap.default;
+
+    return (
+      <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.07)] overflow-hidden shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-200 flex flex-col">
+        <div className="h-[100px] flex items-center justify-center relative" style={{ background: style.bg }}>
+          {course.course_logo ? (
+            <img
+              src={course.course_logo}
+              alt={course.name}
+              className="w-full h-full object-cover absolute inset-0"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          ) : null}
+          <span className="text-4xl z-10">{style.emoji}</span>
+          <span
+            className="absolute top-3 right-3 text-[10px] font-bold tracking-widest uppercase px-2.5 py-1 rounded-full"
+            style={{ color: style.color, background: `${style.color}20` }}
+          >
+            {course.type || "Specialization"}
+          </span>
+        </div>
+
+        <div className="p-4 flex flex-col flex-1 gap-3">
+          <div>
+            <h3 className="text-[14px] font-bold text-[#0f0e1a] leading-snug">{course.name}</h3>
+            <p className="text-xs text-[#9ca3af] mt-1 line-clamp-2">
+              {course.description || `Learn the fundamentals and advanced concepts of ${course.name}.`}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 mt-auto">
+            <BookOpen size={14} className="text-[#9ca3af]" />
+            <span className="text-xs font-medium text-[#9ca3af]">{course.levelsCount || 0} Levels</span>
+          </div>
+
+          <button
+            type="button"
+            className="w-full py-2.5 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-sm font-semibold rounded-xl transition-colors flex items-center justify-center gap-2"
+            onClick={() => navigate(`/course/${course.id}`)}
+          >
+            {enrolledIds.has(course.id) ? "Continue Learning" : "View Curriculum"}
+            <span>→</span>
+          </button>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <StudentLayout>
-      <div className="courses-container">
-        <div className="page-header">
-          <h1 className="page-title">Explore Courses</h1>
-          <p className="page-subtitle">
-            {error ? error : "Master new skills with our premium learning paths."}
-          </p>
-        </div>
-
-        <div className="filters-card">
-          <div className="search-bar-wrapper">
-            <Search size={20} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Search for courses, skills, or levels..."
-              className="courses-search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          <div className="course-stats-overview">
-             <span className="stat-badge">{filteredLevelCourses.length} Courses Available</span>
-          </div>
-        </div>
-
-        {toast && (
-          <div className={`courses-toast courses-toast-${toast.type}`} role="alert">
-            {toast.type === "success" ? <BookOpen size={18} /> : <Search size={18} />}
-            {toast.text}
-          </div>
-        )}
-
-        {loading ? (
-          <div className="courses-grid">
-            {[1, 2, 3, 4, 5, 6].map((i) => <CourseSkeleton key={i} />)}
-          </div>
-        ) : filteredLevelCourses.length === 0 ? (
-          <div className="courses-empty">
-            <div className="empty-icon-wrapper">
-               <Search size={48} strokeWidth={1} />
+      <div className="dashboard-container-inner bg-[#f8f7ff] min-h-full">
+        <div className="px-8 pt-4 pb-4 flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-[22px] font-extrabold text-[#0f0e1a] tracking-tight">Courses Available</h1>
+              <p className="text-sm text-[#9ca3af] mt-0.5">
+                {error ? error : `${levelCourses.length} courses across all specializations`}
+              </p>
             </div>
-            <h3>No courses found</h3>
-            <p>Try adjusting your search or check back later for new content.</p>
           </div>
-        ) : (
-          <section className="courses-section">
-            <div className="courses-grid">
-              {filteredLevelCourses.map((course) => {
-                const isEnrolled = enrolledIds.has(course.id);
-                return (
-                  <div className={`ps-course-card ${isEnrolled ? 'ps-enrolled-card' : ''}`} key={course.id}>
-                    <div className="course-image-placeholder">
-                      {course.course_logo ? (
-                        <img 
-                          src={course.course_logo} 
-                          alt={course.name} 
-                          className="course-logo-img"
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                            e.target.nextSibling.style.display = "block"; // Show fallback icon
-                          }}
-                        />
-                      ) : null}
-                      <div className="fallback-icon" style={{ display: course.course_logo ? "none" : "block" }}>
-                        <BookOpen size={48} strokeWidth={1.5} style={{ color: "var(--sidebar-accent)", opacity: 0.6 }} />
-                      </div>
-                      <span className="course-badge">{course.type || "Specialization"}</span>
-                    </div>
-                    
-                    <div className="course-content">
-                      <div className="course-header-row">
-                        <h3 className="course-title">{course.name}</h3>
-                        {isEnrolled && (
-                          <span className="ps-enrolled-badge">
-                            <BookOpen size={14} /> Enrolled
-                          </span>
-                        )}
-                      </div>
-                      
-                      <p className="course-desc-snippet">
-                        Learn the fundamentals and advanced concepts of {course.name}. 
-                        This course includes comprehensive modules and hands-on practice.
-                      </p>
-                      
-                      <div className="course-footer">
-                        <div className="course-stats">
-                          <div className="stat-item">
-                            <BookOpen size={14} />
-                            <span>{course.levelsCount || 0} Levels</span>
-                          </div>
-                        </div>
-                      </div>
 
-                      <button
-                        type="button"
-                        className="action-button"
-                        onClick={() => navigate(`/course/${course.id}`)}
-                      >
-                        {isEnrolled ? "Continue Learning" : "View Curriculum"}
-                        <ChevronRight size={18} />
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+          <div className="flex items-center gap-3 flex-wrap">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af]" size={16} />
+              <input
+                placeholder="Search courses, skills, or levels..."
+                className="w-full h-10 pl-10 pr-4 bg-white border border-[rgba(0,0,0,0.08)] rounded-xl text-sm text-[#374151] outline-none focus:ring-2 focus:ring-[rgba(99,102,241,0.25)] focus:border-[#6366f1] transition-all"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
             </div>
-          </section>
-        )}
+            {["All", "Specialization", "Core", "Elective"].map((f) => (
+              <button
+                key={f}
+                className={`px-4 py-2 rounded-xl text-sm font-semibold transition-colors ${
+                  activeFilter === f
+                    ? "bg-[#6366f1] text-white"
+                    : "bg-white border border-[rgba(0,0,0,0.08)] text-[#6b7280] hover:border-[#6366f1] hover:text-[#6366f1]"
+                }`}
+                onClick={() => setActiveFilter(f)}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+
+          {toast && (
+            <div
+              className={`rounded-xl px-4 py-2 text-sm font-medium ${
+                toast.type === "success"
+                  ? "bg-[rgba(16,185,129,0.12)] text-[#10b981]"
+                  : "bg-[rgba(239,68,68,0.12)] text-[#ef4444]"
+              }`}
+              role="alert"
+            >
+              {toast.text}
+            </div>
+          )}
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <div key={i} className="h-56 bg-white rounded-2xl border border-[rgba(0,0,0,0.07)] animate-pulse" />
+              ))}
+            </div>
+          ) : filteredLevelCourses.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.07)] shadow-sm py-16 flex flex-col items-center gap-3 text-center px-8">
+              <div className="w-14 h-14 rounded-2xl bg-[rgba(99,102,241,0.08)] flex items-center justify-center text-2xl">
+                📘
+              </div>
+              <div className="text-[15px] font-semibold text-[#374151]">No courses found</div>
+              <div className="text-sm text-[#9ca3af] max-w-xs">
+                Try adjusting your search or filter. New courses will appear here when available.
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+              {filteredLevelCourses.map((course) => (
+                <CourseCard key={course.id} course={course} />
+              ))}
+            </div>
+          )}
+        </div>
       </div>
     </StudentLayout>
   );

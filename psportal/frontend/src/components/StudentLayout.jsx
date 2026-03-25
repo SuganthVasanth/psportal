@@ -12,6 +12,11 @@ const FALLBACK_PROFILE = {
 
 export default function StudentLayout({ children, hideNav = false }) {
   const [profile, setProfile] = useState(FALLBACK_PROFILE);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    const saved = localStorage.getItem("student_sidebar_open");
+    // Default collapsed; open only when user clicks ">".
+    return saved === "true";
+  });
 
   useEffect(() => {
     const registerNo = localStorage.getItem("register_no");
@@ -35,12 +40,15 @@ export default function StudentLayout({ children, hideNav = false }) {
 
   const displayProfile = { ...FALLBACK_PROFILE, ...profile };
 
+  useEffect(() => {
+    localStorage.setItem("student_sidebar_open", isSidebarOpen ? "true" : "false");
+  }, [isSidebarOpen]);
 
   return (
     <div className="dashboard-layout premium-layout">
-      {!hideNav && <StudentSidebar />}
+      {!hideNav && <StudentSidebar collapsed={!isSidebarOpen} onToggle={() => setIsSidebarOpen((v) => !v)} />}
       
-      <div className={`main-container-premium ${hideNav ? 'nav-hidden' : ''}`}>
+      <div className={`main-container-premium ${hideNav ? "nav-hidden" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
         {!hideNav && (
           <header className="top-navbar-premium">
             <div className="search-bar-premium">

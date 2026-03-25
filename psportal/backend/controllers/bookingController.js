@@ -132,6 +132,7 @@ exports.bookSlot = async (req, res) => {
 
     res.status(201).json({
       id: doc._id.toString(),
+      course_id: String(doc.course_id),
       register_no: doc.register_no,
       course_name: doc.course_name,
       venue_label: doc.venue_label,

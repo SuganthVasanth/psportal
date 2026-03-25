@@ -50,7 +50,7 @@ export default function TestCaseEditor({
         {testCases.map((tc, idx) => (
           <div key={idx} className="rounded-lg border border-slate-200 bg-slate-50/50 p-3 space-y-2">
             <div className="flex items-center justify-between">
-              <label className="text-xs font-medium text-slate-600">Input</label>
+              <label className="text-xs font-medium text-slate-600">Input format</label>
               {!readOnly && (
                 <label className="flex items-center gap-1 text-xs">
                   <input
@@ -71,7 +71,7 @@ export default function TestCaseEditor({
               readOnly={readOnly}
             />
             <div>
-              <label className="text-xs font-medium text-slate-600">Expected output</label>
+              <label className="text-xs font-medium text-slate-600">Output format</label>
               <textarea
                 className={inputClass}
                 rows={2}

@@ -1,177 +1,63 @@
-/* Full page – pastel SaaS */
-.login-container {
-  min-height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: var(--pastel-bg, #f8fafc);
-  padding: var(--space-4, 16px);
+/* Clean product-style page shell */
+.login-page {
+  background: #f8fafc;
+  color: #111827;
 }
 
-/* Card – soft pastel surface, rounded, hover elevation */
-.login-card {
-  width: 100%;
-  max-width: 400px;
-  background: var(--pastel-surface, #fff);
-  padding: var(--space-8, 32px);
-  border-radius: var(--radius-lg, 16px);
-  box-shadow: var(--shadow-md, 0 4px 12px rgba(0, 0, 0, 0.06));
-  border: 1px solid var(--pastel-border-soft, #e2e8f0);
-  transition: box-shadow 0.25s ease, transform 0.25s ease;
-}
-.login-card:hover {
-  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.1);
+@media (prefers-color-scheme: dark) {
+  .login-page {
+    background: #f8fafc;
+    color: #111827;
+  }
 }
 
-/* Logo section */
 .logo-section {
   display: flex;
-  justify-content: center;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
 }
 
 .logo-section h2 {
-  font-size: 20px;
-  font-weight: 600;
   margin: 0;
-}
-
-.logo-icon {
   font-size: 22px;
+  font-weight: 600;
+  color: #111827;
 }
 
-/* Welcome text */
 .welcome-text {
-  text-align: center;
-  color: var(--pastel-nav-active, #8b5cf6);
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: var(--space-6, 24px);
+  margin: 0;
+  color: #111827;
+}
+
+.welcome-subtext {
+  margin: 8px 0 18px;
+  color: #6b7280;
 }
 
 .login-error-msg {
-  background: #fee2e2;
+  background: #fef2f2;
   color: #b91c1c;
-  padding: var(--space-3, 12px) var(--space-4, 16px);
-  border-radius: var(--radius-sm, 8px);
+  padding: 10px 12px;
+  border-radius: 10px;
   font-size: 14px;
-  margin-bottom: var(--space-4, 16px);
+  margin-bottom: 14px;
   border: 1px solid #fecaca;
 }
 
-.login-hint {
-  font-size: 12px;
-  color: #64748b;
-  margin: 0 0 12px 0;
-}
-
-.login-google-hint {
-  font-size: 11px;
-  color: #94a3b8;
-  margin: 12px 0 0 0;
-}
-
-/* Input groups */
 .input-group {
-  margin-bottom: 18px;
+  margin-bottom: 0;
 }
 
-.input-group label {
-  display: block;
-  margin-bottom: 6px;
-  font-size: 14px;
-}
-
-.input-group input {
-  width: 100%;
-  padding: var(--space-3, 12px) var(--space-4, 16px);
-  border-radius: var(--radius-sm, 8px);
-  border: 1px solid var(--pastel-border-soft, #e2e8f0);
-  background: var(--pastel-surface-soft, #f8fafc);
-  outline: none;
-  font-size: 14px;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-.input-group input:focus {
-  border-color: var(--pastel-primary);
-  box-shadow: 0 0 0 3px rgba(167, 139, 250, 0.15);
-}
-
-/* Login button – pastel gradient, hover scale */
-.login-btn {
-  width: 100%;
-  padding: var(--space-3, 12px) var(--space-4, 16px);
-  border-radius: var(--radius-sm, 8px);
-  border: none;
-  background: linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%);
-  color: #fff;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: var(--space-2, 8px);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.login-btn:hover {
-  transform: scale(1.02);
-  box-shadow: 0 4px 14px rgba(139, 92, 246, 0.35);
-}
-.login-btn:active {
-  transform: scale(0.98);
-}
-
-/* Divider */
-.divider {
-  text-align: center;
-  margin: 18px 0;
-  color: #555;
-}
-
-/* Google button */
-.google-btn {
-  width: 100%;
-  background: var(--pastel-surface, #fff);
-  border: 1px solid var(--pastel-border, #e2e8f0);
-  border-radius: var(--radius-sm, 8px);
-  padding: var(--space-2, 8px) var(--space-3, 12px);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-}
-.google-btn:hover {
-  background: var(--pastel-surface-soft);
-  transform: scale(1.01);
-  box-shadow: var(--shadow-sm);
-}
-
-.google-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.profile-circle {
-  width: 28px;
-  height: 28px;
-  background-color: #bbb;
-  border-radius: 50%;
-}
-
-.google-name {
-  font-size: 13px;
-  font-weight: 600;
+.login-visual-overlay h1 {
   margin: 0;
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+  line-height: 1.2;
+  font-weight: 600;
+  color: #1e293b;
 }
 
-.google-email {
-  font-size: 12px;
-  color: gray;
-  margin: 0;
-}
-
-.google-icon {
-  font-weight: bold;
-  color: #db4437;
+.login-visual-overlay p {
+  margin: 10px 0 0;
+  font-size: 14px;
+  color: #64748b;
 }

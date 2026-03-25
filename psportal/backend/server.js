@@ -35,6 +35,40 @@ app.use(cors());
 app.use(express.json());
 app.use(passport.initialize());
 
+// Google OAuth — Passport redirect_uri must match Google Console (see backend startup log: Configured Callback URL)
+app.get(
+  "/auth/google",
+  (req, res, next) => {
+    // eslint-disable-next-line no-console
+    console.log("Auth route triggered from:", req.headers.host);
+    next();
+  },
+  passport.authenticate("google", { scope: ["profile", "email"] })
+);
+
+app.get(
+  "/auth/google/callback",
+  (req, res, next) => {
+    // eslint-disable-next-line no-console
+    console.log("[/auth/google/callback] originalUrl:", req.originalUrl);
+    // eslint-disable-next-line no-console
+    console.log("[/auth/google/callback] host:", req.headers.host);
+    // eslint-disable-next-line no-console
+    console.log("[/auth/google/callback] protocol:", req.protocol);
+    next();
+  },
+  passport.authenticate("google", { session: false, failureRedirect: "http://localhost:5173/?error=google_oauth" }),
+  (req, res) => {
+    // eslint-disable-next-line no-console
+    console.log("Callback successful");
+    const token = req.user?.token;
+    if (!token) {
+      return res.redirect("http://localhost:5173/?error=google_oauth");
+    }
+    res.redirect(`http://localhost:5173/oauth-success?token=${encodeURIComponent(token)}`);
+  }
+);
+
 const path = require("path");
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -107,6 +141,10 @@ app.use("/api/attendance", attendanceRoutes);
 // Bus routes + tracking
 const busRoutes = require("./routes/busRoutes");
 app.use("/api/buses", busRoutes);
+
+// Daily classroom tasks
+const taskRoutes = require("./routes/taskRoutes");
+app.use("/api/tasks", taskRoutes);
 
 // Practice / coding: courses, levels, problems, daily task, streak, submissions, leaderboard
 const practiceRoutes = require("./routes/practiceRoutes");

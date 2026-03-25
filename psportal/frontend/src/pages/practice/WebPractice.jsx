@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import StudentLayout from "../../components/StudentLayout";
+import { Search, Trophy, CircleCheckBig, Sparkles } from "lucide-react";
+import "./WebPractice.css";
 // no react-router navigation needed (Solve opens in a new tab)
 
 const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:5000";
@@ -85,47 +87,58 @@ export default function WebPractice() {
 
   return (
     <StudentLayout>
-      <div className="dashboard-container-inner" style={{ paddingBottom: 24 }}>
-        <div className="welcome-banner">
-          <div className="welcome-banner-text">Web Development Practice</div>
+      <div className="dashboard-container-inner web-practice-page">
+        <div className="pb-5">
+          <h1 className="text-[22px] font-extrabold text-[#0f0e1a] tracking-tight">Web Practice</h1>
+          <p className="text-sm text-[#9ca3af] mt-0.5">Solve curated coding problems and track your progress.</p>
         </div>
+        <section className="web-practice-hero">
+          <div className="web-practice-hero-left">
+            <div className="web-practice-badge"><Sparkles size={14} /> Smart Practice</div>
+            <h1>Web Practice Arena</h1>
+            <p>Clean practice flow, faster solving, and clear progress tracking.</p>
+          </div>
+          <div className="web-practice-hero-stat">
+            <Trophy size={18} />
+            <span>{Object.values(statusMap || {}).filter((s) => s?.isAccepted).length} Completed</span>
+          </div>
+        </section>
 
-        <div className="dashboard-card" style={{ marginBottom: 14 }}>
-          <div style={{ display: "flex", gap: 10, alignItems: "center", flexWrap: "wrap" }}>
+        <div className="web-practice-toolbar">
+          <div className="web-practice-search-wrap">
+            <Search size={16} />
             <input
-              className="sa-input"
               placeholder="Search Codeforces questions..."
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              style={{ flex: 1, minWidth: 220 }}
             />
-            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          </div>
+          <div className="web-practice-levels">
               {LEVEL_OPTIONS.map((opt) => (
                 <button
                   key={opt.value}
                   type="button"
-                  className={`sa-btn sa-btn-sm ${level === opt.value ? "sa-btn-primary" : ""}`}
+                  className={`web-practice-level-btn ${level === opt.value ? "active" : ""}`}
                   onClick={() => setLevel(opt.value)}
                 >
                   {opt.label}
                 </button>
               ))}
-            </div>
           </div>
-          <div style={{ marginTop: 10, display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
-            <label style={{ display: "flex", gap: 8, alignItems: "center", cursor: "pointer" }}>
+          <div className="web-practice-filters">
+            <label className="web-practice-check">
               <input
                 type="checkbox"
                 checked={completedOnly}
                 onChange={(e) => setCompletedOnly(e.target.checked)}
               />
-              <span style={{ fontSize: 13, color: "#334155" }}>Completed only</span>
+              <span>Completed only</span>
             </label>
-            {loadingStatus && <span style={{ fontSize: 13, color: "#64748b" }}>Loading completion status...</span>}
+            {loadingStatus && <span className="web-practice-muted">Loading completion status...</span>}
           </div>
         </div>
 
-        <div className="dashboard-card practice-card">
+        <div className="web-practice-table-card">
           <div className="sa-table-wrap">
             <table className="sa-table">
               <thead>
@@ -145,17 +158,18 @@ export default function WebPractice() {
                   </tr>
                 ) : filtered.map((p, idx) => (
                   <tr key={p.problemId}>
-                    <td>{idx + 1}</td>
+                    <td className="web-practice-index">{idx + 1}</td>
                     <td>
-                      <div style={{ fontWeight: 700 }}>{p.title}</div>
-                      <div style={{ fontSize: 12, color: "#64748b" }}>
+                      <div className="web-practice-title">{p.title}</div>
+                      <div className="web-practice-id">
                         {p.problemId}
                       </div>
                     </td>
                     <td>{p.rating || "—"}</td>
                     <td>{Array.isArray(p.tags) && p.tags.length ? p.tags.slice(0, 2).join(", ") : "—"}</td>
                     <td>
-                      <span className="sa-pill" style={{ background: "#f1f5f9", color: "#334155" }}>
+                      <span className={`web-practice-status ${statusMap?.[p.problemId]?.isAccepted ? "ok" : ""}`}>
+                        {statusMap?.[p.problemId]?.isAccepted && <CircleCheckBig size={13} />}
                         {statusMap?.[p.problemId]?.isAccepted
                           ? "Passed"
                           : statusMap?.[p.problemId]?.lastVerdict === "Failed"
@@ -166,7 +180,7 @@ export default function WebPractice() {
                     <td>
                       <button
                         type="button"
-                        className="sa-btn sa-btn-sm sa-btn-primary"
+                        className="web-practice-solve-btn"
                         onClick={() => solveInNewTab(p.problemId)}
                       >
                         Solve

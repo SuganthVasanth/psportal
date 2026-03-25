@@ -289,11 +289,11 @@ export default function BookSlots() {
                         );
                       })()}
 
-                      {selection && (
+                      {/* {selection && (
                         <div style={{ marginTop: "8px", fontSize: "12px", color: "#64748b", backgroundColor: "#f8fafc", padding: "8px", borderRadius: "6px" }}>
                           Selected: <strong>{selection.timeLabel}</strong> at <strong>{selection.venueLabel}</strong> on <strong>{new Date(selection.date).toLocaleDateString()}</strong>
                         </div>
-                      )}
+                      )} */}
 
                       {!myBookings.find(b => String(b.course_id) === String(course.id)) && (
                         <button 

@@ -1,37 +1,46 @@
 :root {
   --layout-bg: #f8fafc;
   --navbar-h: 72px;
-  --sidebar-w: 240px;
+  --sidebar-w: 256px;
+  --sidebar-w-collapsed: 80px;
 }
 
 .dashboard-layout.premium-layout {
   display: flex;
   min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
   background: var(--layout-bg);
 }
 
 .main-container-premium {
   flex: 1;
-  margin-left: var(--sidebar-w);
+  min-width: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .main-container-premium.nav-hidden {
   margin-left: 0;
 }
 
+.main-container-premium.sidebar-collapsed {
+  margin-left: 0;
+}
+
 .top-navbar-premium {
   height: var(--navbar-h);
+  flex-shrink: 0;
   background: #ffffff;
   border-bottom: 1px solid #f1f5f9;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
-  position: sticky;
-  top: 0;
+  padding: 0 28px;
   z-index: 999;
+  gap: 14px;
 }
 
 .search-bar-premium {
@@ -120,9 +129,12 @@
 }
 
 .content-area-premium {
-  padding: 8px;
-  max-width: 1400px;
+  padding: 0;
   width: 100%;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .main-container-premium.nav-hidden .content-area-premium {

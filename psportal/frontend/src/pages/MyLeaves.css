@@ -19,7 +19,7 @@
 }
 
 .apply-leave-btn {
-    background-color: #8b5cf6;
+    background-color: #6366f1;
     /* purple */
     color: white;
     border: none;
@@ -32,7 +32,7 @@
 }
 
 .apply-leave-btn:hover {
-    background-color: #7c3aed;
+    background-color: #4f46e5;
 }
 
 .leaves-loading {
@@ -277,7 +277,7 @@
 }
 
 .paginate-btn.active {
-    background-color: #8b5cf6;
+    background-color: #6366f1;
     color: white;
 }
 
@@ -371,13 +371,13 @@
 
 .leave-modal-actions .btn-submit,
 .leave-modal-actions .btn-submit-leave {
-    background: #8b5cf6;
+    background: #6366f1;
     color: white;
 }
 
 .leave-modal-actions .btn-submit:hover,
 .leave-modal-actions .btn-submit-leave:hover {
-    background: #7c3aed;
+    background: #4f46e5;
 }
 
 /* Apply for Leave modal (reference layout) */
@@ -455,13 +455,13 @@
 }
 
 .leave-apply-actions .btn-submit-leave {
-    background: #8b5cf6;
+    background: #6366f1;
     color: white;
     padding: 10px 20px;
 }
 
 .leave-apply-actions .btn-submit-leave:hover {
-    background: #7c3aed;
+    background: #4f46e5;
 }
 
 /* Clickable row */

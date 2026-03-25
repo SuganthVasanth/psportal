@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useRef, useState, useCallback, useEffect, useMemo } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -29,6 +29,7 @@ import {
 import { useTemplateHistory } from "../../components/builder/useTemplateHistory";
 import { templateApi } from "../../services/templateApi";
 import TemplatePreviewModal from "../../components/builder/TemplatePreviewModal";
+import { getLockedTemplateCanvasSize } from "../../components/renderer/LockedTemplateRenderer";
 
 const GRID = 8;
 const dropAnimation = {
@@ -44,6 +45,13 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
   const [editingId, setEditingId] = useState(null);
   const [saveStatus, setSaveStatus] = useState(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [canvasZoom, setCanvasZoom] = useState(1);
+  const [templatesList, setTemplatesList] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [templatesError, setTemplatesError] = useState(null);
+  const [templateIdInput, setTemplateIdInput] = useState("");
+
+  const lastLoadedTemplateIdRef = useRef(null);
 
   const history = useTemplateHistory(layout, 50);
 
@@ -183,15 +191,31 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
     setTemplateDescription(template.description || "");
     setEditingId(template._id);
     setSelectedId(null);
-  }, [history]);
+  }, [history.reset]);
 
   useEffect(() => {
     if (!initialTemplateId) return;
+    const id = String(initialTemplateId);
+    if (lastLoadedTemplateIdRef.current === id) return;
+    lastLoadedTemplateIdRef.current = id;
     templateApi
       .getById(initialTemplateId)
       .then(loadTemplate)
       .catch(() => {});
   }, [initialTemplateId, loadTemplate]);
+
+  useEffect(() => {
+    // If you open builder directly (without coming from the template list),
+    // initialTemplateId will be null. Let the admin pick a template to edit.
+    if (initialTemplateId) return;
+    setTemplatesLoading(true);
+    setTemplatesError(null);
+    templateApi
+      .getAll("")
+      .then((list) => setTemplatesList(Array.isArray(list) ? list : []))
+      .catch((e) => setTemplatesError(e?.message || "Failed to load templates"))
+      .finally(() => setTemplatesLoading(false));
+  }, [initialTemplateId]);
 
   const handleSave = useCallback(async () => {
     const name = templateName.trim() || "Untitled Template";
@@ -223,7 +247,30 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
     setTemplateDescription("");
     setEditingId(null);
     setSelectedId(null);
+    setTemplateIdInput("");
   }, [history]);
+
+  const handleLoadById = useCallback(() => {
+    const id = (templateIdInput || "").trim();
+    if (!id) return;
+    templateApi
+      .getById(id)
+      .then(loadTemplate)
+      .catch((e) => setTemplatesError(e?.message || "Failed to load template by id"));
+  }, [templateIdInput, loadTemplate]);
+
+  const canvasZoomBounds = { min: 0.6, max: 1.8, step: 0.1 };
+  const zoomOutCanvas = () =>
+    setCanvasZoom((z) =>
+      Math.max(canvasZoomBounds.min, Number((z - canvasZoomBounds.step).toFixed(2)))
+    );
+  const zoomInCanvas = () =>
+    setCanvasZoom((z) =>
+      Math.min(canvasZoomBounds.max, Number((z + canvasZoomBounds.step).toFixed(2)))
+    );
+  const resetCanvasZoom = () => setCanvasZoom(1);
+
+  const canvasSize = useMemo(() => getLockedTemplateCanvasSize(layout), [layout]);
 
   return (
     <div className="flex h-full min-h-0 flex-col" style={{ backgroundColor: "var(--color-pastel-surface, #f1f5f9)" }}>
@@ -271,9 +318,115 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
               value={templateDescription}
               onChange={(e) => setTemplateDescription(e.target.value)}
             />
+            {!initialTemplateId && (
+              <select
+                value={editingId || ""}
+                onChange={(e) => {
+                  const id = e.target.value;
+                  if (!id) {
+                    handleNew();
+                    return;
+                  }
+                  templateApi
+                    .getById(id)
+                    .then(loadTemplate)
+                    .catch(() => {});
+                }}
+                disabled={templatesLoading}
+                className="rounded-lg border px-3 py-1.5 text-sm"
+                style={{
+                  borderColor: "var(--color-pastel-border)",
+                  backgroundColor: "var(--color-portal-card)",
+                  minWidth: 280,
+                }}
+                aria-label="Choose template to edit"
+              >
+                <option value="">
+                  {templatesLoading ? "Loading templates..." : "Choose template to edit"}
+                </option>
+                {(templatesList || []).map((t) => (
+                  <option key={t._id} value={t._id}>
+                    {t.name || t.key || "Untitled"}
+                  </option>
+                ))}
+              </select>
+            )}
+            {!initialTemplateId && templatesError && (
+              <span className="text-xs text-red-500">
+                {templatesError}
+              </span>
+            )}
+            {!initialTemplateId && !templatesLoading && !templatesError && templatesList.length === 0 && (
+              <span className="text-xs text-slate-500">No templates found.</span>
+            )}
+            {!initialTemplateId && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  value={templateIdInput}
+                  onChange={(e) => setTemplateIdInput(e.target.value)}
+                  placeholder="Paste template id"
+                  className="rounded-lg border px-3 py-1.5 text-sm"
+                  style={{
+                    borderColor: "var(--color-pastel-border)",
+                    backgroundColor: "var(--color-portal-card)",
+                    minWidth: 240,
+                  }}
+                  aria-label="Template id"
+                />
+                <button
+                  type="button"
+                  onClick={handleLoadById}
+                  disabled={!templateIdInput.trim()}
+                  className="rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-50"
+                  style={{
+                    borderColor: "var(--color-pastel-border)",
+                    backgroundColor: "var(--color-portal-card)",
+                    color: "var(--color-portal-text)",
+                  }}
+                >
+                  Load
+                </button>
+              </div>
+            )}
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5 rounded-lg border px-2 py-1.5"
+            style={{ borderColor: "var(--color-pastel-border)", backgroundColor: "var(--color-portal-card)" }}
+            title="Canvas zoom"
+          >
+            <button
+              type="button"
+              onClick={zoomOutCanvas}
+              disabled={canvasZoom <= canvasZoomBounds.min + 1e-9}
+              className="rounded-md border px-2 py-1 text-sm font-medium transition-colors disabled:opacity-50"
+              style={{ borderColor: "var(--color-pastel-border)", color: "var(--color-portal-text)", backgroundColor: "var(--color-portal-card)" }}
+              aria-label="Zoom out canvas"
+            >
+              -
+            </button>
+            <button
+              type="button"
+              onClick={resetCanvasZoom}
+              className="rounded-md px-2 py-1 text-sm transition-colors hover:bg-slate-100"
+              style={{ color: "var(--color-pastel-text)" }}
+              aria-label="Reset canvas zoom"
+              title="Reset zoom"
+            >
+              {Math.round(canvasZoom * 100)}%
+            </button>
+            <button
+              type="button"
+              onClick={zoomInCanvas}
+              disabled={canvasZoom >= canvasZoomBounds.max - 1e-9}
+              className="rounded-md border px-2 py-1 text-sm font-medium transition-colors disabled:opacity-50"
+              style={{ borderColor: "var(--color-pastel-border)", color: "var(--color-portal-text)", backgroundColor: "var(--color-portal-card)" }}
+              aria-label="Zoom in canvas"
+            >
+              +
+            </button>
+          </div>
           <button
             type="button"
             onClick={handleUndo}
@@ -345,13 +498,18 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
             className="flex flex-1 min-w-0 flex-col min-h-0 rounded-xl shadow-sm overflow-hidden"
             style={{ border: "1px solid var(--color-pastel-border)", backgroundColor: "var(--color-portal-card)" }}
           >
-            <TemplateCanvas
-              layout={layout}
-              setLayout={setLayout}
-              selectedId={selectedId}
-              setSelectedId={setSelectedId}
-              pushHistory={pushHistory}
-            />
+            <div className="flex-1 min-h-0 overflow-auto">
+              <div style={{ zoom: canvasZoom }} className="min-w-max">
+                <TemplateCanvas
+                  layout={layout}
+                  canvasSize={canvasSize}
+                  setLayout={setLayout}
+                  selectedId={selectedId}
+                  setSelectedId={setSelectedId}
+                  pushHistory={pushHistory}
+                />
+              </div>
+            </div>
           </div>
 
           <div className="w-64 shrink-0 flex flex-col min-h-0">

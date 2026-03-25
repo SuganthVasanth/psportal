@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, MessageCircle, X, Maximize2, Search, History, ListTodo } from "lucide-react";
 import ChatModal from "../components/ChatModal";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
@@ -14,6 +15,8 @@ const SORT_NAME_DESC = "name_desc";
 const SORT_STATUS = "status";
 
 export default function FacultyDashboard({ data, has, authHeaders }) {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [questionBankTasks, setQuestionBankTasks] = useState([]);
   const [submittingTaskId, setSubmittingTaskId] = useState(null);
   const [expandTaskId, setExpandTaskId] = useState(null);
@@ -34,6 +37,22 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
 
   const { user, assigned_courses } = data || {};
   const showFaculty = has("faculty.courses_assigned") || has("faculty.question_bank") || (assigned_courses?.length > 0);
+
+  const qbBasePath = "/dashboard/faculty/question-banks";
+  const qbEditorPathFor = (courseId, templateId) =>
+    `${qbBasePath}/${encodeURIComponent(String(courseId || ""))}/${encodeURIComponent(String(templateId || ""))}`;
+
+  const qbRoute = useMemo(() => {
+    const path = (location.pathname || "").replace(/\/+$/, "");
+    if (!path.startsWith(qbBasePath)) return null;
+    const rest = path.slice(qbBasePath.length).split("/").filter(Boolean);
+    if (rest.length < 2) return { mode: "list" };
+    const [courseId, templateId] = rest;
+    const sp = new URLSearchParams(location.search || "");
+    const q = Number(sp.get("q") || "1");
+    const questionIndex = Number.isFinite(q) && q > 0 ? Math.floor(q) : 1;
+    return { mode: "editor", courseId: decodeURIComponent(courseId), templateId: decodeURIComponent(templateId), questionIndex };
+  }, [location.pathname, location.search]);
 
   const getDraftStorageKey = (courseId, templateId) => {
     const userId = data?.user?.id || "unknown";
@@ -74,6 +93,52 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
       .then((r) => setQuestionBankTasks(r.tasks || []))
       .catch(() => setQuestionBankTasks([]));
   }, [data?.user?.id, data?.user?.accesses, authHeaders]);
+
+  // Deep-link support: if the URL points to an editor route, open it.
+  useEffect(() => {
+    if (!qbRoute || qbRoute.mode !== "editor") {
+      if (fullScreenTask) {
+        setFullScreenTask(null);
+        setFullScreenQuestionValues({});
+        setFullScreenQuestionIndex(1);
+        setFullScreenDraftStorageKey("");
+      }
+      return;
+    }
+    const { courseId, templateId, questionIndex } = qbRoute;
+    const allTasksNow =
+      questionBankTasks?.length
+        ? questionBankTasks
+        : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, status: "not_started" }));
+    const task =
+      allTasksNow.find((t) => String(t.course_id) === String(courseId) && String(t.template_id) === String(templateId)) ||
+      null;
+    if (!task) return; // wait for tasks to load / or invalid URL
+
+    setFullScreenTask(task);
+    setFullScreenQuestionIndex(Math.max(1, questionIndex || 1));
+    const storageKey = getDraftStorageKey(task.course_id, task.template_id);
+    setFullScreenDraftStorageKey(storageKey);
+
+    const fromSaved = (task.questions || []).reduce((acc, q) => {
+      acc[q.questionNumber] = q.value || {};
+      return acc;
+    }, {});
+    const draft = draftQuestionValuesByCourse[task.course_id];
+    const fromStorage = loadDraftFromStorage(storageKey);
+    setFullScreenQuestionValues(
+      (fromStorage && Object.keys(fromStorage).length > 0)
+        ? fromStorage
+        : (draft && Object.keys(draft).length > 0 ? draft : fromSaved)
+    );
+  }, [
+    qbRoute,
+    questionBankTasks,
+    assigned_courses,
+    draftQuestionValuesByCourse,
+    fullScreenTask,
+    data?.user?.id,
+  ]);
 
   const openTaskForm = (task) => {
     const id = task.id || task.course_id;
@@ -269,24 +334,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                           className="ud-btn-primary"
                           style={{ marginRight: 8 }}
                           onClick={() => {
-                            setFullScreenTask(task);
-                            setFullScreenQuestionIndex(1);
-                            const storageKey = getDraftStorageKey(task.course_id, task.template_id);
-                            setFullScreenDraftStorageKey(storageKey);
-                            const fromSaved = (task.questions || []).reduce(
-                              (acc, q) => {
-                                acc[q.questionNumber] = q.value || {};
-                                return acc;
-                              },
-                              {}
-                            );
-                            const draft = draftQuestionValuesByCourse[task.course_id];
-                            const fromStorage = loadDraftFromStorage(storageKey);
-                            setFullScreenQuestionValues(
-                              (fromStorage && Object.keys(fromStorage).length > 0)
-                                ? fromStorage
-                                : (draft && Object.keys(draft).length > 0 ? draft : fromSaved)
-                            );
+                            navigate(`${qbEditorPathFor(task.course_id, task.template_id)}?q=1`);
                           }}
                         >
                           <Maximize2 size={16} style={{ marginRight: 4, verticalAlign: "middle" }} />
@@ -480,10 +528,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                   setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
                 }
                 saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
-                setFullScreenTask(null);
-                setFullScreenQuestionValues({});
-                setFullScreenQuestionIndex(1);
-                setFullScreenDraftStorageKey("");
+                navigate(qbBasePath);
               }}
               style={{
                 display: "inline-flex",
@@ -540,6 +585,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                         });
                       }}
                       readOnly={false}
+                      fitToContainer={true}
                       componentPrefix={`q${num}`}
                     />
                   </div>
@@ -563,7 +609,10 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <button
                 type="button"
-                onClick={() => setFullScreenQuestionIndex((i) => Math.max(1, i - 1))}
+                onClick={() => {
+                  const next = Math.max(1, fullScreenQuestionIndex - 1);
+                  navigate(`${qbEditorPathFor(fullScreenTask.course_id, fullScreenTask.template_id)}?q=${next}`, { replace: true });
+                }}
                 disabled={fullScreenQuestionIndex <= 1}
                 style={{
                   display: "inline-flex",
@@ -586,7 +635,11 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
               </span>
               <button
                 type="button"
-                onClick={() => setFullScreenQuestionIndex((i) => Math.min(Math.max(1, fullScreenTask.question_count || 1), i + 1))}
+                onClick={() => {
+                  const max = Math.max(1, fullScreenTask.question_count || 1);
+                  const next = Math.min(max, fullScreenQuestionIndex + 1);
+                  navigate(`${qbEditorPathFor(fullScreenTask.course_id, fullScreenTask.template_id)}?q=${next}`, { replace: true });
+                }}
                 disabled={fullScreenQuestionIndex >= Math.max(1, fullScreenTask.question_count || 1)}
                 style={{
                   display: "inline-flex",
@@ -613,10 +666,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                   setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
                 }
                 saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
-                setFullScreenTask(null);
-                setFullScreenQuestionValues({});
-                setFullScreenQuestionIndex(1);
-                setFullScreenDraftStorageKey("");
+                navigate(qbBasePath);
               }}
               style={{
                 padding: "10px 20px",

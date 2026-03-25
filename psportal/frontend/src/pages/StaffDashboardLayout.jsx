@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from "react";
-import { useLocation, useNavigate, NavLink } from "react-router-dom";
-import { LogOut, Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound, Bus, MapPin, ChevronRight, Search, Bell } from "lucide-react";
+import React, { useState, useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { Users, Building2, BookOpen, ChevronDown, UserCircle, CalendarCheck, Home, Fingerprint, FileText, ClipboardList, Code, MessageSquare, Shield, KeyRound, Bus, MapPin, Search, Bell } from "lucide-react";
 import "./SuperAdminDashboard.css";
 import "./UserDashboard.css";
 import "../components/SidebarPremium.css";
+import SmartSidebar from "../components/SmartSidebar";
 import StaffMentorMentees from "./StaffMentorMentees";
 import StaffMentorLeaveApprovals from "./StaffMentorLeaveApprovals";
 import StaffWardenWards from "./StaffWardenWards";
@@ -13,6 +14,7 @@ import StaffSecurityLeaves from "./staff/StaffSecurityLeaves";
 import StaffSecurityBiometric from "./staff/StaffSecurityBiometric";
 import StaffWardenLeaveApprovals from "./staff/StaffWardenLeaveApprovals";
 import BusIncharge from "./staff/BusIncharge";
+import CreateClassroomTask from "./staff/CreateClassroomTask";
 import FacultyDashboard from "./FacultyDashboard";
 import StaffFacultyCodeReview from "./StaffFacultyCodeReview";
 import StaffFacultyStudentAnswers from "./StaffFacultyStudentAnswers";
@@ -48,6 +50,7 @@ const STAFF_NAV = [
     roleKey: "technical_faculty",
     sub: [
       { id: "question-banks", label: "Questions uploading", path: "/dashboard/faculty/question-banks", icon: ClipboardList },
+      { id: "classroom-tasks", label: "Create Classroom Task", path: "/dashboard/faculty/classroom-tasks", icon: CalendarCheck },
       { id: "code-review", label: "Code review", path: "/dashboard/faculty/code-review", icon: Code },
       { id: "student-answers", label: "Student's answers", path: "/dashboard/faculty/student-answers", icon: MessageSquare },
     ],
@@ -92,6 +95,7 @@ export default function StaffDashboardLayout() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [openNav, setOpenNav] = useState(null);
+  const [collapsed, setCollapsed] = useState(false);
 
   const rolesFromStorage = (() => {
     try {
@@ -103,6 +107,10 @@ export default function StaffDashboardLayout() {
   })();
   const roles = data?.user?.roles ? data.user.roles.map((r) => String(r).toLowerCase().replace(/\s+/g, "_")) : rolesFromStorage.map((r) => String(r).toLowerCase().replace(/\s+/g, "_"));
   const staffNavSections = getStaffNavSections(roles);
+  const navItems = useMemo(
+    () => staffNavSections.flatMap((section) => (section.sub || []).map((sub) => ({ ...sub, sectionId: section.id }))),
+    [staffNavSections]
+  );
   useEffect(() => {
     if (data?.user?.roles?.length) {
       const roleNames = data.user.roles.map((r) => String(r).toLowerCase().replace(/\s+/g, "_"));
@@ -202,66 +210,24 @@ export default function StaffDashboardLayout() {
 
   return (
     <div className="dashboard-layout premium-layout staff-dashboard-layout">
-      <aside className="student-sidebar-premium">
-        <div className="sidebar-header-premium">
-          <img
-            src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png"
-            alt="Logo"
-            className="sidebar-logo-premium"
-          />
-          <span className="sidebar-brand-premium">PCDP Portal</span>
-        </div>
+      <SmartSidebar
+        sections={staffNavSections.map((section) => ({
+          title: section.label,
+          items: (section.sub || []).map((sub) => ({
+            id: sub.id,
+            label: sub.label,
+            path: sub.path,
+            icon: sub.icon,
+          })),
+        }))}
+        collapsed={collapsed}
+        onToggle={() => setCollapsed((v) => !v)}
+        profileName={userName}
+        profileRole="Staff"
+        onLogout={handleLogout}
+      />
 
-        <nav className="sidebar-nav-premium">
-          {staffNavSections.map((section) => {
-            const Icon = section.icon;
-            return (
-              <div key={section.id} className="nav-section-premium">
-                <h3 className="section-title-premium">{section.label}</h3>
-                <ul>
-                  {(section.sub || []).map((sub) => {
-                    const SubIcon = sub.icon;
-                    const isActive = location.pathname === sub.path;
-                    return (
-                      <li key={sub.id}>
-                        <NavLink
-                          to={sub.path}
-                          className={`nav-item-premium ${isActive ? "active" : ""}`}
-                        >
-                          <span className="icon-wrapper-premium">
-                            {SubIcon ? <SubIcon size={20} /> : <Icon size={20} />}
-                          </span>
-                          <span className="item-name-premium">{sub.label}</span>
-                          {isActive && <ChevronRight size={14} className="active-indicator-premium" />}
-                        </NavLink>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer-premium">
-          <div className="user-profile-summary-premium">
-            <div className="user-avatar-premium">
-              {userAvatar}
-            </div>
-            <div className="user-info-premium">
-              <span className="user-name-premium">{userName}</span>
-              <span className="user-role-premium">Staff</span>
-            </div>
-          </div>
-
-          <button onClick={handleLogout} className="logout-btn-premium">
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <div className="main-container-premium">
+      <div className={`main-container-premium ${collapsed ? "sidebar-collapsed" : ""}`}>
         <header className="top-navbar-premium">
           <div className="search-bar-premium">
             <Search size={18} className="search-icon" />
@@ -297,6 +263,7 @@ export default function StaffDashboardLayout() {
             {showNav && pathSection === "warden" && pathSub === "biometric" && <StaffWardenBiometric data={data} has={has} />}
             {showNav && pathSection === "warden" && pathSub === "leave-approvals" && <StaffWardenLeaveApprovals data={data} has={has} onRefresh={loadData} />}
             {showNav && pathSection === "faculty" && pathSub === "question-banks" && <FacultyDashboard data={data} has={has} authHeaders={authHeaders} />}
+            {showNav && pathSection === "faculty" && pathSub === "classroom-tasks" && <CreateClassroomTask />}
             {showNav && pathSection === "faculty" && pathSub === "code-review" && <StaffFacultyCodeReview />}
             {showNav && pathSection === "faculty" && pathSub === "student-answers" && <StaffFacultyStudentAnswers />}
             {showNav && pathSection === "hostel-manager" && pathSub === "wardens" && <StaffHostelManagerWardens data={data} />}

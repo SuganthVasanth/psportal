@@ -3,6 +3,8 @@ const judge0Service = require("../services/judge0Service");
 const testCaseGenerator = require("../services/testCaseGenerator");
 const WeeklyCodingSet = require("../models/WeeklyCodingSet");
 const WebCodingSubmission = require("../models/WebCodingSubmission");
+const Student = require("../models/Student");
+const PointTransaction = require("../models/PointTransaction");
 
 function getISOWeekKeyUTC(d) {
   // ISO week key: YYYY-Www using UTC date to avoid timezone drift.
@@ -206,6 +208,7 @@ exports.submit = async (req, res) => {
 
     const query = { register_no: rn, level: Number(levelNum), problemId: problemId };
     const existing = await WebCodingSubmission.findOne(query);
+    let newlyCompleted = false;
     if (!existing) {
       await WebCodingSubmission.create({
         ...query,
@@ -218,6 +221,7 @@ exports.submit = async (req, res) => {
         lastTotal: cases.length,
         lastSubmittedAt: new Date(),
       });
+      newlyCompleted = isAccepted;
     } else {
       existing.language = lang;
       existing.stdin = typeof stdin === "string" ? stdin : "";
@@ -227,8 +231,30 @@ exports.submit = async (req, res) => {
       existing.lastTotal = cases.length;
       existing.lastSubmittedAt = new Date();
       // Once accepted, never downgrade.
-      if (isAccepted) existing.isAccepted = true;
+      if (isAccepted && !existing.isAccepted) {
+        existing.isAccepted = true;
+        newlyCompleted = true;
+      }
       await existing.save();
+    }
+
+    let pointsAwarded = 0;
+    if (newlyCompleted && rn && rn !== "guest") {
+      const student = await Student.findOne({ register_no: rn });
+      if (student) {
+        student.activity_points = Number(student.activity_points || 0) + 10;
+        await student.save();
+        await PointTransaction.create({
+          student_id: student._id,
+          activity_title: `Web Practice: ${problemId}`,
+          activity_category: "Web Practice",
+          activity_status: "Completed",
+          points_earned: 10,
+          description: `First-time completion reward for ${problemId}`,
+          date_earned: new Date(),
+        });
+        pointsAwarded = 10;
+      }
     }
 
     res.json({
@@ -237,6 +263,8 @@ exports.submit = async (req, res) => {
       total: cases.length,
       verdict,
       submissionSaved: true,
+      pointsAwarded,
+      newlyCompleted,
       results,
     });
   } catch (err) {

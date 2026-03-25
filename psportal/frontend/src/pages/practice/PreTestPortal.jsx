@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import axios from "axios";
-import { Loader2, User, BookOpen, Fingerprint, Play, ArrowLeft } from "lucide-react";
+import { Loader2, User, Fingerprint, Play, ArrowLeft } from "lucide-react";
 import StudentLayout from "../../components/StudentLayout";
+import API from "../../services/api";
 import "./PreTestPortal.css";
-
-const API_BASE = "http://localhost:5000";
 
 export default function PreTestPortal() {
     const { courseId } = useParams();
@@ -27,11 +25,10 @@ export default function PreTestPortal() {
         const fetchData = async () => {
             try {
                 // Fetch student profile
-                const studentRes = await axios.get(`${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
+                const studentRes = await API.get(`/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
                 setStudentData(studentRes.data.profile);
 
-                // Fetch specific course to get level/name
-                const coursesRes = await axios.get(`${API_BASE}/api/dashboard/my-courses?register_no=${encodeURIComponent(registerNo)}`);
+                const coursesRes = await API.get(`/api/dashboard/my-courses?register_no=${encodeURIComponent(registerNo)}`);
                 const myCourses = Array.isArray(coursesRes.data) ? coursesRes.data : [];
                 const currentCourse = myCourses.find(c => String(c.id) === String(courseId));
                 setCourseData(currentCourse);

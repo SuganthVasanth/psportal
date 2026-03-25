@@ -6,6 +6,27 @@ const PracticeCourse = require("../models/PracticeCourse");
 const AdminCourse = require("../models/AdminCourse");
 const PracticeLevel = require("../models/PracticeLevel");
 const StudentLevelProgress = require("../models/StudentLevelProgress");
+const WebCodingSubmission = require("../models/WebCodingSubmission");
+const Student = require("../models/Student");
+const PointTransaction = require("../models/PointTransaction");
+
+function startOfPeriodUTC(period) {
+  const now = new Date();
+  const start = new Date(now);
+  start.setUTCHours(0, 0, 0, 0);
+  if (period === "weekly") {
+    // Monday start (UTC)
+    const day = start.getUTCDay(); // 0..6
+    const diff = day === 0 ? 6 : day - 1;
+    start.setUTCDate(start.getUTCDate() - diff);
+    return start;
+  }
+  if (period === "monthly") {
+    start.setUTCDate(1);
+    return start;
+  }
+  return null;
+}
 
 const startOfDayUTC = (d) => {
   const x = new Date(d);
@@ -283,36 +304,86 @@ exports.submit = async (req, res) => {
 exports.getLeaderboard = async (req, res) => {
   try {
     const limit = Math.min(parseInt(req.query.limit, 10) || 50, 100);
+    const periodRaw = String(req.query.period || "all").toLowerCase();
+    const period = ["all", "weekly", "monthly"].includes(periodRaw) ? periodRaw : "all";
+    const since = startOfPeriodUTC(period);
 
-    const solvedCounts = await CodingSubmission.aggregate([
-      { $match: { result: { $in: ["accepted", "Accepted"] } } },
-      { $group: { _id: "$register_no", solved: { $sum: 1 }, distinctProblems: { $addToSet: "$problemId" } } },
-      { $project: { register_no: "$_id", solved: { $size: "$distinctProblems" } } },
-    ]);
+    let solvedCounts = [];
+    if (period === "all") {
+      solvedCounts = await WebCodingSubmission.aggregate([
+        { $match: { isAccepted: true } },
+        { $group: { _id: "$register_no", distinctProblems: { $addToSet: "$problemId" } } },
+        { $project: { register_no: "$_id", solved: { $size: "$distinctProblems" } } },
+      ]);
+    } else {
+      // For weekly/monthly, derive solved count from awarded Web Practice point transactions.
+      const txFilter = {
+        activity_category: "Web Practice",
+        date_earned: { $gte: since },
+      };
+      solvedCounts = await PointTransaction.aggregate([
+        { $match: txFilter },
+        { $group: { _id: "$student_id", solved: { $sum: 1 } } },
+      ]);
+    }
 
     const streaks = await CodingStreak.find({}).lean();
+    const students = await Student.find({}).select("register_no name activity_points").lean();
     const streakMap = new Map(streaks.map((s) => [s.register_no, s.currentStreak || 0]));
-    const solvedMap = new Map(solvedCounts.map((s) => [s.register_no, s.solved]));
+    const studentMap = new Map(students.map((s) => [s.register_no, s]));
 
-    const registerNos = [...new Set([...solvedMap.keys(), ...streakMap.keys()])];
+    const solvedMap =
+      period === "all"
+        ? new Map(solvedCounts.map((s) => [s.register_no, s.solved]))
+        : new Map(
+            solvedCounts.map((s) => {
+              const student = students.find((st) => String(st._id) === String(s._id));
+              return [student?.register_no, s.solved];
+            }).filter(([reg]) => !!reg)
+          );
+
+    let pointsMap;
+    if (period === "all") {
+      pointsMap = new Map(students.map((s) => [s.register_no, Number(s.activity_points || 0)]));
+    } else {
+      const txAgg = await PointTransaction.aggregate([
+        { $match: { date_earned: { $gte: since } } },
+        { $group: { _id: "$student_id", points: { $sum: "$points_earned" } } },
+      ]);
+      pointsMap = new Map(
+        txAgg
+          .map((r) => {
+            const student = students.find((st) => String(st._id) === String(r._id));
+            return [student?.register_no, Number(r.points || 0)];
+          })
+          .filter(([reg]) => !!reg)
+      );
+    }
+
+    const registerNos = [...new Set([...solvedMap.keys(), ...streakMap.keys(), ...pointsMap.keys(), ...studentMap.keys()])];
     const rows = registerNos.map((register_no) => ({
       register_no,
+      name: studentMap.get(register_no)?.name || "",
       problemsSolved: solvedMap.get(register_no) || 0,
       streak: streakMap.get(register_no) || 0,
+      points: Number(pointsMap.get(register_no) || 0),
     }));
     rows.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
       if (b.problemsSolved !== a.problemsSolved) return b.problemsSolved - a.problemsSolved;
       return (b.streak || 0) - (a.streak || 0);
     });
+    const effectiveRows = period === "all" ? rows : rows.filter((r) => r.points > 0 || r.problemsSolved > 0);
 
-    const leaderboard = rows.slice(0, limit).map((r, i) => ({
+    const leaderboard = (period === "all" ? rows : effectiveRows).slice(0, limit).map((r, i) => ({
       rank: i + 1,
       register_no: r.register_no,
+      name: r.name,
       problemsSolved: r.problemsSolved,
       streak: r.streak,
-      points: r.problemsSolved * 10 + r.streak * 5,
+      points: r.points,
     }));
-    res.json(leaderboard);
+    res.json({ period, since, rows: leaderboard });
   } catch (err) {
     console.error("getLeaderboard error:", err);
     res.status(500).json({ message: "Failed to load leaderboard" });

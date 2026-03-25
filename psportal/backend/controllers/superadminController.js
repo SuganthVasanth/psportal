@@ -469,6 +469,15 @@ exports.assignFacultyToCourse = async (req, res) => {
   try {
     const { user_id, course_id, template_id, question_count } = req.body;
     if (!user_id || !course_id) return res.status(400).json({ message: "user_id and course_id required" });
+    const targetUser = await User.findById(user_id).populate("roles", "role_name").lean();
+    if (!targetUser) return res.status(404).json({ message: "User not found" });
+    const roleNames = (targetUser.roles || []).map((r) => String(r?.role_name || "").toLowerCase());
+    const isFacultyLike = roleNames.some((r) => r.includes("faculty") || r.includes("mentor"));
+    if (!isFacultyLike) {
+      return res.status(400).json({
+        message: "Selected user does not have a faculty/mentor role. Assign this course to a faculty user.",
+      });
+    }
     const doc = await FacultyCourseAssignment.findOneAndUpdate(
       { user_id, course_id },
       {

@@ -1,25 +1,12 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import StudentLayout from "../components/StudentLayout";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
 import { BookOpen, Award, ChevronDown, X, Play, ArrowLeft } from "lucide-react";
+import { isBookingAssessmentActive } from "../lib/assessmentWindow";
 import "./CourseDetails.css";
 
 const API_BASE = "http://localhost:5000";
-
-/** True if current local time (HH:mm) is within [slot_start_time, slot_end_time) on the correct date. */
-function isSlotActiveNow(slot_start_time, slot_end_time, slot_date) {
-  if (!slot_start_time || !slot_end_time || !slot_date) return false;
-  
-  const now = new Date();
-  const slotDate = new Date(slot_date);
-  
-  // Check date
-  if (now.toDateString() !== slotDate.toDateString()) return false;
-
-  const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  return nowStr >= slot_start_time && nowStr < slot_end_time;
-}
 
 const MOCK_PROFILE = {
   register_no: "7376231CS323",
@@ -77,6 +64,28 @@ export default function CourseDetails() {
   const levelFilterName = params.get("level");
   const slotDropdownRef = useRef(null);
 
+  const handleLaunchPortal = useCallback(() => {
+    setExamError("");
+    setExamSubmitted(false);
+    setExamLoading(true);
+    setExamView(true);
+    fetch(`${API_BASE}/api/question-banks/approved-for-course/${courseId}`)
+      .then((r) => {
+        if (!r.ok) throw new Error("No approved questions for this course.");
+        return r.json();
+      })
+      .then((data) => {
+        setExamQuestions(Array.isArray(data.questions) ? data.questions : []);
+        setExamAnswers({});
+        setExamLoading(false);
+      })
+      .catch((e) => {
+        setExamError(e.message || "Failed to load exam");
+        setExamQuestions([]);
+        setExamLoading(false);
+      });
+  }, [courseId]);
+
   useEffect(() => {
     if (!id) {
       setError("Course not found");
@@ -92,9 +101,7 @@ export default function CourseDetails() {
       .then(([courseData, progressData]) => {
         setCourse(courseData);
         const list = Array.isArray(progressData) ? progressData : (progressData?.progress ?? []);
-        const attempts = Array.isArray(progressData) ? 0 : (progressData?.courseAttempts ?? 0);
         setProgress(list);
-        setCourseAttempts(attempts);
       })
       .catch((e) => {
         setError(e.message || "Failed to load course");
@@ -110,11 +117,41 @@ export default function CourseDetails() {
   // Auto-launch portal if ?launch=true is present
   useEffect(() => {
     if (loading || !course || launchParam !== "true" || examView) return;
-    
-    if (courseAttempts < 1) {
-      handleLaunchPortal();
-    }
-  }, [loading, course, courseAttempts, examView, launchParam]);
+    const booking =
+      myBookings.find((b) => String(b.course_id) === String(courseId)) ||
+      (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
+    if (!booking || !isBookingAssessmentActive(booking)) return;
+    if (courseAttempts >= 1) return;
+    handleLaunchPortal();
+  }, [
+    loading,
+    course,
+    courseAttempts,
+    examView,
+    launchParam,
+    myBookings,
+    bookedSlot,
+    courseId,
+    handleLaunchPortal,
+  ]);
+
+  // Attempt count: per booked slot when we know booking id, else all attempts for this course
+  useEffect(() => {
+    if (!id || !registerNo) return;
+    const booking =
+      myBookings.find((b) => String(b.course_id) === String(courseId)) ||
+      (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
+    const bid = booking?.id;
+    const qs = new URLSearchParams({ register_no: registerNo });
+    if (bid) qs.set("booking_id", bid);
+    fetch(`${API_BASE}/api/courses/${id}/progress?${qs.toString()}`)
+      .then((r) => (r.ok ? r.json() : { courseAttempts: 0 }))
+      .then((d) => {
+        if (Array.isArray(d)) setCourseAttempts(0);
+        else setCourseAttempts(d.courseAttempts ?? 0);
+      })
+      .catch(() => setCourseAttempts(0));
+  }, [id, registerNo, courseId, myBookings, bookedSlot]);
 
   // Proctoring security logic
   useEffect(() => {
@@ -285,8 +322,7 @@ export default function CourseDetails() {
     myBookings.find((b) => String(b.course_id) === String(courseId)) ||
     (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
   const activeBookingForCourse =
-    bookingForThisCourse &&
-    isSlotActiveNow(bookingForThisCourse.slot_start_time, bookingForThisCourse.slot_end_time, bookingForThisCourse.date);
+    bookingForThisCourse && isBookingAssessmentActive(bookingForThisCourse);
 
   const handleBookNow = async () => {
     if (!selectedSlotId) {
@@ -329,31 +365,6 @@ export default function CourseDetails() {
     }
   };
 
-  const handleLaunchPortal = () => {
-    setExamError("");
-    setExamSubmitted(false);
-    setExamLoading(true);
-    setExamView(true);
-    
-    // Do not clear the existing tabSwitchCount here, so it persists if they refresh and re-enter.
-    
-    fetch(`${API_BASE}/api/question-banks/approved-for-course/${courseId}`)
-      .then((r) => {
-        if (!r.ok) throw new Error("No approved questions for this course.");
-        return r.json();
-      })
-      .then((data) => {
-        setExamQuestions(Array.isArray(data.questions) ? data.questions : []);
-        setExamAnswers({});
-        setExamLoading(false);
-      })
-      .catch((e) => {
-        setExamError(e.message || "Failed to load exam");
-        setExamQuestions([]);
-        setExamLoading(false);
-      });
-  };
-
   const handleExamAnswerChange = (questionNumber, value) => {
     setExamAnswers((prev) => ({ ...prev, [questionNumber]: value }));
   };
@@ -362,6 +373,10 @@ export default function CourseDetails() {
     setExamSubmitting(true);
     setExamError("");
     try {
+      const bookingId = bookingForThisCourse?.id;
+      if (!bookingId) {
+        throw new Error("You need an active booking for this course to submit your attempt.");
+      }
       const questions = examQuestions.map((q) => ({
         questionNumber: q.questionNumber,
         template_id: q.template_id,
@@ -373,7 +388,7 @@ export default function CourseDetails() {
         body: JSON.stringify({
           register_no: registerNo,
           course_id: courseId,
-          booking_id: bookingForThisCourse?.id || undefined,
+          booking_id: bookingId,
           questions,
         }),
       });
@@ -440,6 +455,7 @@ export default function CourseDetails() {
                       <h3 className="cd-question-heading">Question {q.questionNumber}</h3>
                       <TemplateQuestionForm
                         templateId={q.template_id}
+                        layout={q.layout}
                         value={{ ...(q.value || {}), ...(examAnswers[q.questionNumber] || {}) }}
                         onChange={(value) => handleExamAnswerChange(q.questionNumber, value)}
                         studentMode={true}
@@ -504,7 +520,7 @@ export default function CourseDetails() {
           {activeBookingForCourse && (
             <div className="cd-portal-banner">
               {courseAttempts >= 1 ? (
-                <span className="cd-already-attempted">You have already attempted this test. Only one attempt is allowed.</span>
+                <span className="cd-already-attempted">You have already submitted for this booked slot.</span>
               ) : (
                 <>
                   <span>Your slot is active. You can attempt the assessment now.</span>
@@ -543,7 +559,7 @@ export default function CourseDetails() {
                       <div className="cd-level-badges">
                         <span className="cd-badge attempt-badge">Attempts: {courseAttempts}</span>
                         {isCompleted && <span className="cd-badge completed-badge">Completed</span>}
-                        {isEnrolled && !isCompleted && <span className="cd-badge">Enrolled</span>}
+                        {isEnrolled && !isCompleted && <span className="cd-badge enrolled-badge">Enrolled</span>}
                       </div>
                     </div>
                     <div className="cd-level-content">
@@ -631,7 +647,7 @@ export default function CourseDetails() {
                       </button>
                     )}
                     {activeBookingForCourse && courseAttempts >= 1 && (
-                      <p className="cd-already-attempted-small">Already attempted (1 attempt allowed).</p>
+                      <p className="cd-already-attempted-small">Already submitted for this slot (one attempt per booking).</p>
                     )}
                   </div>
                 )}
