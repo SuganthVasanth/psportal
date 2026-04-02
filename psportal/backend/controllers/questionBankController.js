@@ -128,7 +128,10 @@ exports.upsertSubmission = async (req, res) => {
         ? { status: "submitted", submitted_at: new Date() }
         : { status: "draft" }),
     };
-    if (Array.isArray(questions)) {
+
+    // ONLY update questions if they are explicitly sent in the request.
+    // If they are missing (e.g. saving from the summary view), we MUST NOT touch the existing questions.
+    if (Array.isArray(questions) && questions.length > 0) {
       update.questions = questions.map((q) => ({
         questionNumber: q.questionNumber,
         template_id: q.template_id || q.templateId,
@@ -136,9 +139,10 @@ exports.upsertSubmission = async (req, res) => {
         correctAnswerKey: q.correctAnswerKey ?? "",
       }));
     }
+
     const doc = await QuestionBankSubmission.findOneAndUpdate(
       { course_id, user_id: userId },
-      update,
+      { $set: update }, // Using $set to only update provided fields
       { new: true, upsert: true }
     )
       .populate("course_id", "name")
@@ -221,9 +225,16 @@ exports.submitStudentAttempt = async (req, res) => {
       booking_id: bookingId,
       questions: Array.isArray(questions) ? questions : [],
     });
+
+    // Instant grading and progression logic
+    const { processAssessmentResult } = require("../services/assessmentService");
+    const result = await processAssessmentResult(register_no, course_id, bookingId);
+
     res.status(201).json({
       id: doc._id.toString(),
-      message: "Attempt submitted",
+      message: result.message,
+      score: result.score,
+      isPassed: result.isPassed,
       submitted_at: doc.submitted_at,
     });
   } catch (err) {

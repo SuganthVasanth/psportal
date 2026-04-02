@@ -221,3 +221,29 @@ exports.completeLevel = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+exports.logProctoringEvent = async (req, res) => {
+  try {
+    const { id: course_id } = req.params;
+    const { register_no, level_index } = req.body;
+    if (!register_no || level_index == null) {
+      return res.status(400).json({ message: "register_no and level_index required" });
+    }
+
+    const data = await getSameNameCourseData(course_id);
+    if (!data) return res.status(404).json({ message: "Course not found" });
+    const { mergedToSource } = data;
+    const src = mergedToSource[Number(level_index)];
+    if (!src) return res.status(400).json({ message: "Invalid level index" });
+
+    // Increment tabSwitches in StudentLevelProgress
+    await StudentLevelProgress.updateOne(
+      { register_no, course_id: src.course_id, level_index: src.level_index },
+      { $inc: { tabSwitches: 1 } }
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};

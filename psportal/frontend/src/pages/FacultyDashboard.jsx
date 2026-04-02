@@ -34,9 +34,12 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
   const [taskTab, setTaskTab] = useState(TASK_TAB_PENDING);
   const [taskSearch, setTaskSearch] = useState("");
   const [taskSort, setTaskSort] = useState(SORT_RECENT);
+  const [loadingTasks, setLoadingTasks] = useState(false);
 
   const { user, assigned_courses } = data || {};
-  const showFaculty = has("faculty.courses_assigned") || has("faculty.question_bank") || (assigned_courses?.length > 0);
+  const normalizedRoles = (user?.roles || []).map(r => String(r).toLowerCase().replace(/\s+/g, "_"));
+  const isTechFaculty = normalizedRoles.includes("technical_faculty");
+  const showFaculty = has("faculty.courses_assigned") || has("faculty.question_bank") || (assigned_courses?.length > 0) || isTechFaculty;
 
   const qbBasePath = "/dashboard/faculty/question-banks";
   const qbEditorPathFor = (courseId, templateId) =>
@@ -87,14 +90,18 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
   useEffect(() => {
     if (!data?.user?.id || !authHeaders?.Authorization) return;
     const accesses = data.user.accesses || [];
-    if (!accesses.includes("faculty.question_bank") && !accesses.includes("faculty.courses_assigned")) return;
+    const roles = data.user.roles || [];
+    const normRoles = roles.map(r => String(r).toLowerCase().replace(/\s+/g, "_"));
+    const isTechFaculty = normRoles.includes("technical_faculty");
+    if (!accesses.includes("faculty.question_bank") && !accesses.includes("faculty.courses_assigned") && !isTechFaculty) return;
+    setLoadingTasks(true);
     fetch(`${API_BASE}/api/question-banks/my-tasks`, { headers: authHeaders })
       .then((res) => res.json().then((p) => (res.ok ? p : { tasks: [] })))
       .then((r) => setQuestionBankTasks(r.tasks || []))
-      .catch(() => setQuestionBankTasks([]));
+      .catch(() => setQuestionBankTasks([]))
+      .finally(() => setLoadingTasks(false));
   }, [data?.user?.id, data?.user?.accesses, authHeaders]);
 
-  // Deep-link support: if the URL points to an editor route, open it.
   useEffect(() => {
     if (!qbRoute || qbRoute.mode !== "editor") {
       if (fullScreenTask) {
@@ -105,15 +112,22 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
       }
       return;
     }
+    
+    // If we're still loading actual tasks from the server, wait first.
+    // This prevents falling back to empty 'assigned_courses' and wiping work.
+    if (loadingTasks) return;
+
     const { courseId, templateId, questionIndex } = qbRoute;
     const allTasksNow =
       questionBankTasks?.length
         ? questionBankTasks
         : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, status: "not_started" }));
+    
     const task =
       allTasksNow.find((t) => String(t.course_id) === String(courseId) && String(t.template_id) === String(templateId)) ||
       null;
-    if (!task) return; // wait for tasks to load / or invalid URL
+    
+    if (!task) return; 
 
     setFullScreenTask(task);
     setFullScreenQuestionIndex(Math.max(1, questionIndex || 1));
@@ -124,15 +138,19 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
       acc[q.questionNumber] = q.value || {};
       return acc;
     }, {});
+    
     const draft = draftQuestionValuesByCourse[task.course_id];
     const fromStorage = loadDraftFromStorage(storageKey);
-    setFullScreenQuestionValues(
-      (fromStorage && Object.keys(fromStorage).length > 0)
-        ? fromStorage
-        : (draft && Object.keys(draft).length > 0 ? draft : fromSaved)
-    );
+    
+    // Priority: Local Storage (Active Draft) -> Component State Draft -> Backend Data
+    const finalValues = (fromStorage && Object.keys(fromStorage).length > 0)
+      ? fromStorage
+      : (draft && Object.keys(draft).length > 0 ? draft : fromSaved);
+      
+    setFullScreenQuestionValues(finalValues);
   }, [
     qbRoute,
+    loadingTasks,
     questionBankTasks,
     assigned_courses,
     draftQuestionValuesByCourse,
@@ -498,12 +516,12 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
         <div
           className="ud-fullscreen-overlay"
           style={{
-            position: "fixed",
-            inset: 0,
-            zIndex: 9999,
+            minHeight: "calc(100vh - 48px)",
             backgroundColor: "#fff",
             display: "flex",
             flexDirection: "column",
+            borderRadius: 12,
+            border: "1px solid #e2e8f0",
             overflow: "hidden",
           }}
         >

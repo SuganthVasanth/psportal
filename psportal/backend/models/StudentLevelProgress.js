@@ -5,6 +5,7 @@ const studentLevelProgressSchema = new mongoose.Schema({
   course_id: { type: String, required: true },
   level_index: { type: Number, required: true },
   status: { type: String, enum: ["enrolled", "completed"], default: "enrolled" },
+  tabSwitches: { type: Number, default: 0 },
   completed_at: { type: Date },
 }, { timestamps: true });
 

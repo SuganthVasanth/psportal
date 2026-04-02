@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useLocation } from "react-router-dom";
 import StudentLayout from "../components/StudentLayout";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
+import LeetCodePortal from "../components/renderer/LeetCodePortal";
 import { BookOpen, Award, ChevronDown, X, Play, ArrowLeft } from "lucide-react";
 import { isBookingAssessmentActive } from "../lib/assessmentWindow";
 import "./CourseDetails.css";
@@ -59,10 +60,32 @@ export default function CourseDetails() {
     const count = parseInt(localStorage.getItem(proctorKey) || "0", 10);
     return count > 0 ? `Warning: We detected ${count} tab switch(es) or page refresh(es).` : "";
   });
+  const draftKey = `draft_${id}_${registerNo}`;
   const location = useLocation();
   const params = new URLSearchParams(location.search);
   const levelFilterName = params.get("level");
   const slotDropdownRef = useRef(null);
+  
+  // Stable shuffle helper
+  const getSeededRandomQuestions = (questionsPool, seed) => {
+    if (!questionsPool || questionsPool.length <= 2) return questionsPool;
+    
+    // Simple deterministic shuffle using seed (register_no)
+    const seeded = [...questionsPool];
+    let m = seeded.length, t, i;
+    
+    // Create a numeric seed from the string
+    let seedValue = 0;
+    for (let j = 0; j < seed.length; j++) seedValue += seed.charCodeAt(j);
+
+    while (m) {
+      i = Math.floor(((Math.sin(seedValue++) + 1) / 2) * m--);
+      t = seeded[m];
+      seeded[m] = seeded[i];
+      seeded[i] = t;
+    }
+    return seeded.slice(0, 2);
+  };
 
   const handleLaunchPortal = useCallback(() => {
     setExamError("");
@@ -75,8 +98,29 @@ export default function CourseDetails() {
         return r.json();
       })
       .then((data) => {
-        setExamQuestions(Array.isArray(data.questions) ? data.questions : []);
-        setExamAnswers({});
+        let qs = Array.isArray(data.questions) ? data.questions : [];
+        
+        // Randomize 2 questions for programming assessments
+        const isProgramming = course?.type?.toLowerCase().includes("programming") || 
+                              (levels && levels.some(l => l.assessmentType?.toLowerCase().includes("programming")));
+        
+        if (isProgramming && qs.length > 2) {
+          qs = getSeededRandomQuestions(qs, registerNo);
+        }
+
+        const draft = localStorage.getItem(draftKey);
+        if (draft) {
+          try {
+            setExamAnswers(JSON.parse(draft));
+          } catch (e) {
+            console.warn("Could not load draft:", e);
+            setExamAnswers({});
+          }
+        } else {
+          setExamAnswers({});
+        }
+
+        setExamQuestions(qs);
         setExamLoading(false);
       })
       .catch((e) => {
@@ -153,60 +197,6 @@ export default function CourseDetails() {
       .catch(() => setCourseAttempts(0));
   }, [id, registerNo, courseId, myBookings, bookedSlot]);
 
-  // Proctoring security logic
-  useEffect(() => {
-    if (!examView) return;
-
-    let unloadFired = false;
-
-    const handleVisibilityChange = () => {
-      if (document.hidden && !unloadFired) {
-        setTabSwitchCount((prev) => {
-          const newCount = prev + 1;
-          localStorage.setItem(proctorKey, newCount.toString());
-          setProctorWarning(`Warning: You have switched tabs or refreshed ${newCount} time(s). This is a violation of assessment rules.`);
-          return newCount;
-        });
-      }
-    };
-
-    const handleBeforeUnload = (e) => {
-      unloadFired = true;
-      const currentCount = parseInt(localStorage.getItem(proctorKey) || "0", 10);
-      localStorage.setItem(proctorKey, (currentCount + 1).toString());
-      // Showing the standard browser warning for reload during exam
-      e.preventDefault();
-      e.returnValue = '';
-    };
-
-    const handleContextMenu = (e) => {
-      e.preventDefault();
-    };
-
-    const handleCopyPaste = (e) => {
-      e.preventDefault();
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    document.addEventListener("contextmenu", handleContextMenu);
-    document.addEventListener("copy", handleCopyPaste);
-    document.addEventListener("paste", handleCopyPaste);
-    
-    // Disable text selection via CSS
-    document.body.style.userSelect = "none";
-    document.body.style.webkitUserSelect = "none";
-
-    return () => {
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-      document.removeEventListener("contextmenu", handleContextMenu);
-      document.removeEventListener("copy", handleCopyPaste);
-      document.removeEventListener("paste", handleCopyPaste);
-      document.body.style.userSelect = "auto";
-      document.body.style.webkitUserSelect = "auto";
-    };
-  }, [examView, proctorKey]);
 
   // Auto fullscreen
   useEffect(() => {
@@ -316,6 +306,62 @@ export default function CourseDetails() {
     levelFilterName && allLevels.length
       ? allLevels.filter((l) => (l.name || "").toLowerCase() === levelFilterName.toLowerCase())
       : allLevels;
+
+  // Proctoring security logic
+  const handleVisibilityChange = useCallback(() => {
+    if (document.hidden) {
+      setTabSwitchCount((prev) => {
+        const newCount = prev + 1;
+        const pk = `proctor_${id}_${registerNo}`;
+        localStorage.setItem(pk, newCount.toString());
+        setProctorWarning(`Warning: You have switched tabs. Please stay on the assessment page.`);
+        
+        // Log to backend
+        const activeIdx = levels.findIndex(l => l.assessmentType?.toLowerCase() !== "none"); 
+        fetch(`${API_BASE}/api/courses/${id}/proctoring`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ register_no: registerNo, level_index: activeIdx >= 0 ? activeIdx : 0 })
+        }).catch(err => console.error("Proctoring log failed:", err));
+
+        return newCount;
+      });
+    }
+  }, [id, registerNo, levels]);
+
+  useEffect(() => {
+    if (!examView) return;
+
+    const handleBeforeUnload = (e) => {
+      const pk = `proctor_${id}_${registerNo}`;
+      const currentCount = parseInt(localStorage.getItem(pk) || "0", 10);
+      localStorage.setItem(pk, (currentCount + 1).toString());
+      e.preventDefault();
+      e.returnValue = '';
+    };
+
+    const handleContextMenu = (e) => e.preventDefault();
+    const handleCopyPaste = (e) => e.preventDefault();
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    document.addEventListener("contextmenu", handleContextMenu);
+    document.addEventListener("copy", handleCopyPaste);
+    document.addEventListener("paste", handleCopyPaste);
+    
+    document.body.style.userSelect = "none";
+    document.body.style.webkitUserSelect = "none";
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      document.removeEventListener("contextmenu", handleContextMenu);
+      document.removeEventListener("copy", handleCopyPaste);
+      document.removeEventListener("paste", handleCopyPaste);
+      document.body.style.userSelect = "auto";
+      document.body.style.webkitUserSelect = "auto";
+    };
+  }, [examView, handleVisibilityChange, registerNo, id]);
   const courseName = course?.name || "Course";
 
   const bookingForThisCourse =
@@ -366,7 +412,11 @@ export default function CourseDetails() {
   };
 
   const handleExamAnswerChange = (questionNumber, value) => {
-    setExamAnswers((prev) => ({ ...prev, [questionNumber]: value }));
+    setExamAnswers((prev) => {
+      const updated = { ...prev, [questionNumber]: value };
+      localStorage.setItem(draftKey, JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const handleSubmitAttempt = async () => {
@@ -401,6 +451,7 @@ export default function CourseDetails() {
       setExamSubmitted(true);
       setCourseAttempts((prev) => prev + 1);
       localStorage.removeItem(proctorKey); // Clear tracking on successful submit
+      localStorage.removeItem(draftKey); // Clear draft on successful submit
     } catch (e) {
       setExamError(e.message || "Submit failed");
     } finally {
@@ -420,6 +471,52 @@ export default function CourseDetails() {
 
   // Exam / Portal view (when slot is active and user launched)
   if (examView) {
+    const hasProgrammingQuestion = (examQuestions || []).some((q) =>
+      Array.isArray(q.layout) && q.layout.some((l) => l.type === "programming_question")
+    );
+
+    const isProgrammingTest = 
+      hasProgrammingQuestion || 
+      (course?.type?.toLowerCase().includes("programming")) || 
+      (levels.some(l => l.assessmentType?.toLowerCase().includes("programming")));
+
+    if (isProgrammingTest) {
+      const activeBooking =
+        myBookings.find((b) => String(b.course_id) === String(courseId)) ||
+        (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
+
+      let assessmentEndTime = null;
+      if (activeBooking && activeBooking.date) {
+        const endStr = activeBooking.endTime || activeBooking.slot_end_time;
+        if (endStr) {
+          const [h, m] = endStr.split(":").map(Number);
+          assessmentEndTime = new Date(activeBooking.date);
+          assessmentEndTime.setHours(h, m, 0, 0);
+        }
+      }
+
+      return (
+        <div className="cd-portal-takeover anim-fade-in" style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "#1a1a1a", overflow: "hidden" }}>
+          <LeetCodePortal
+            questions={examQuestions}
+            answers={examAnswers}
+            onAnswerChange={handleExamAnswerChange}
+            onSubmitAttempt={handleSubmitAttempt}
+            submitting={examSubmitting}
+            onBack={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}
+            course={course}
+            proctorStats={{ tabSwitchCount, proctorWarning }}
+            assessmentEndTime={assessmentEndTime}
+          />
+          {/* {proctorWarning && (
+            <div style={{ position: "absolute", bottom: 20, right: 20, zIndex: 10001, backgroundColor: "#fee2e2", color: "#991b1b", padding: "8px 16px", borderRadius: "8px", border: "1px solid #f87171", fontSize: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
+              {proctorWarning}
+            </div>
+          )} */}
+        </div>
+      );
+    }
+
     return (
       <StudentLayout hideNav={true}>
         <div className="cd-container cd-main">
@@ -430,50 +527,33 @@ export default function CourseDetails() {
               <h1 className="cd-exam-title">Portal – {course?.name || courseName}</h1>
             </div>
             
-            {proctorWarning && (
-              <div className="cd-proctor-warning">
-                <span>{proctorWarning}</span>
-                <button type="button" onClick={() => setProctorWarning("")} className="cd-proctor-close">
-                   <X size={16} />
-                </button>
-              </div>
-            )}
-            {tabSwitchCount > 0 && (
-              <div className="cd-tab-switch-counter">
-                 Tab Switches Detected: {tabSwitchCount}
-              </div>
-            )}
-
-            {examLoading && <p className="cd-content-placeholder">Loading questions…</p>}
-            {examError && <p className="cd-modal-error">{examError}</p>}
-            {examSubmitted && <p className="cd-success-msg">Your attempt has been submitted successfully.</p>}
             {!examLoading && !examError && examQuestions.length > 0 && !examSubmitted && (
-              <>
-                <div className="cd-questions-list">
-                  {examQuestions.map((q) => (
-                    <div key={q.questionNumber} className="cd-question-block">
-                      <h3 className="cd-question-heading">Question {q.questionNumber}</h3>
-                      <TemplateQuestionForm
-                        templateId={q.template_id}
-                        layout={q.layout}
-                        value={{ ...(q.value || {}), ...(examAnswers[q.questionNumber] || {}) }}
-                        onChange={(value) => handleExamAnswerChange(q.questionNumber, value)}
-                        studentMode={true}
-                      />
-                    </div>
-                  ))}
-                </div>
-                <div className="cd-exam-footer">
-                  <button
-                    type="button"
-                    className="cd-btn-primary"
-                    onClick={handleSubmitAttempt}
-                    disabled={examSubmitting}
-                  >
-                    {examSubmitting ? "Submitting…" : "Submit attempt"}
-                  </button>
-                </div>
-              </>
+                <>
+                  <div className="cd-questions-list">
+                    {examQuestions.map((q) => (
+                      <div key={q.questionNumber} className="cd-question-block">
+                        <h3 className="cd-question-heading">Question {q.questionNumber}</h3>
+                        <TemplateQuestionForm
+                          templateId={q.template_id}
+                          layout={q.layout}
+                          value={{ ...(q.value || {}), ...(examAnswers[q.questionNumber] || {}) }}
+                          onChange={(value) => handleExamAnswerChange(q.questionNumber, value)}
+                          studentMode={true}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  <div className="cd-exam-footer">
+                    <button
+                      type="button"
+                      className="cd-btn-primary"
+                      onClick={handleSubmitAttempt}
+                      disabled={examSubmitting}
+                    >
+                      {examSubmitting ? "Submitting…" : "Submit attempt"}
+                    </button>
+                  </div>
+                </>
             )}
         </div>
       </StudentLayout>

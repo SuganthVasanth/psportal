@@ -6,7 +6,7 @@ const Student = require("../models/Student");
 
 // Must match Google Cloud Console → Authorized redirect URI exactly (no trailing slash).
 // Also add http://127.0.0.1:5000/auth/google/callback in Console if you ever open the API via 127.0.0.1.
-const callbackURL = "http://127.0.0.1:5000/auth/google/callback";
+const callbackURL = "http://localhost:5000/auth/google/callback";
 async function ensureStudentRegisterNo(user) {
   let student = await Student.findOne({ user_id: user._id }).lean();
   if (student) return student.register_no;

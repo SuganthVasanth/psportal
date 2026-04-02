@@ -22,12 +22,15 @@
   overflow: hidden;
 }
 
-.main-container-premium.nav-hidden {
+.main-container-premium.sidebar-collapsed {
   margin-left: 0;
 }
 
-.main-container-premium.sidebar-collapsed {
-  margin-left: 0;
+.main-container-premium.nav-hidden {
+  margin: 0;
+  padding: 0;
+  width: 100vw;
+  height: 100vh;
 }
 
 .top-navbar-premium {
@@ -129,7 +132,7 @@
 }
 
 .content-area-premium {
-  padding: 0;
+  padding: 0px;
   width: 100%;
   flex: 1;
   min-height: 0;

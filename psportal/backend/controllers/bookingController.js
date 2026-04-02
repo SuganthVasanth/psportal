@@ -67,20 +67,28 @@ exports.getActiveSlots = async (req, res) => {
       venueLabel: s.venue_id?.name || "",
       timeLabel: s.time_slot_id ? formatTime(s.time_slot_id.startTime, studentDuration) : "",
       startTime: s.time_slot_id?.startTime || "",
+      endTime: s.time_slot_id?.endTime || "",
       date: s.date,
       capacity: s.capacity,
       bookedCount: s.booked_count || 0,
       available: (s.capacity || 30) > (s.booked_count || 0)
     }));
 
-    // Order by date first, then time
-    mapped.sort((a, b) => {
-      const d = new Date(a.date) - new Date(b.date);
-      if (d !== 0) return d;
-      return (a.startTime || "").localeCompare(b.startTime || "");
+    const now = new Date();
+    const finalFiltered = mapped.filter((s) => {
+      if (!s.date || !s.startTime) return true; // Keep if data is missing to be safe
+      const [h, m] = s.startTime.split(":").map(Number);
+      const slotEnd = new Date(s.date);
+      // We use endTime for strictness, but for visibility, we can use startTime + duration
+      // Let's use the same logic as cron but more immediate.
+      // If the slot date is before today, definitely hide.
+      // If it is today, check time.
+      slotEnd.setHours(h, m, 0, 0);
+      slotEnd.setMinutes(slotEnd.getMinutes() + studentDuration + 15); // 15m buffer
+      return now < slotEnd;
     });
 
-    res.json(mapped);
+    res.json(finalFiltered);
   } catch (err) {
     res.status(500).json({ message: err.message });
   }

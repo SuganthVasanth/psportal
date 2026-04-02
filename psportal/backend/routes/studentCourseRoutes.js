@@ -7,5 +7,6 @@ router.get("/:id/progress", ctrl.getStudentLevelProgress);
 router.get("/:id", ctrl.getCourseById);
 router.post("/:id/register-level", ctrl.registerLevel);
 router.patch("/:id/complete-level", ctrl.completeLevel);
+router.patch("/:id/proctoring", ctrl.logProctoringEvent);
 
 module.exports = router;

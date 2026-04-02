@@ -117,6 +117,7 @@ exports.getCourses = async (req, res) => {
           prerequisiteLevelIndex: l.prerequisiteLevelIndex ?? -1,
           prerequisiteLevelIndices: Array.isArray(l.prerequisiteLevelIndices) ? l.prerequisiteLevelIndices : (l.prerequisiteLevelIndex != null && l.prerequisiteLevelIndex >= 0 ? [l.prerequisiteLevelIndex] : []),
           assessmentType: l.assessmentType || "MCQ",
+          durationMinutes: l.durationMinutes ?? 60,
           topics: Array.isArray(l.topics) ? l.topics : [],
           studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials.map((m) => ({
             name: m.name || "",

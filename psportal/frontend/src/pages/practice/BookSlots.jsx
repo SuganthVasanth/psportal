@@ -11,10 +11,25 @@ function isSlotActiveNow(slot_start_time, slot_end_time, slot_date) {
   const now = new Date();
   const slotDate = new Date(slot_date);
   if (now.toDateString() !== slotDate.toDateString()) return false;
-  const nowStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-  // For simplicity, we assume the student's dynamic duration is already reflected in slot_end_time if possible, 
-  // but here we just check if it's within the window.
-  return nowStr >= slot_start_time && nowStr < slot_end_time;
+  
+  const [startH, startM] = slot_start_time.split(":").map(Number);
+  const [endH, endM] = slot_end_time.split(":").map(Number);
+  
+  const start = new Date(slotDate);
+  start.setHours(startH, startM, 0, 0);
+  const end = new Date(slotDate);
+  end.setHours(endH, endM, 0, 0);
+  
+  return now >= start && now < end;
+}
+
+function isSlotExpired(slot_date, slot_end_time) {
+  if (!slot_date || !slot_end_time) return false;
+  const now = new Date();
+  const [h, m] = slot_end_time.split(":").map(Number);
+  const end = new Date(slot_date);
+  end.setHours(h, m, 0, 0);
+  return now > end;
 }
 
 export default function BookSlots() {
@@ -171,15 +186,6 @@ export default function BookSlots() {
         ) : (
           <div className="slots-grid-premium">
             {courses.map((course) => {
-              const allSlots = courseSlots[course.id] || [];
-              const currentSlots = allSlots.filter(slot => {
-                // Check if student has ANY booking at the same time and date
-                const hasClash = myBookings.some(b => 
-                  new Date(b.date).toDateString() === new Date(slot.date).toDateString() &&
-                  b.startTime === slot.startTime
-                );
-                return !hasClash;
-              });
               const isLoading = loadingSlots[course.id];
               const selection = selectedSlots[course.id];
 
@@ -190,7 +196,14 @@ export default function BookSlots() {
                           <Laptop size={24} />
                       </div>
                       <div className="slots-count-badge">
-                          {currentSlots.filter(s => s.available).length} MATCHES
+                          {(() => {
+                            const slots = courseSlots[course.id] || [];
+                            const filtered = slots.filter(s => {
+                              const endStr = s.endTime || s.timeLabel.split(" – ")[1]?.trim();
+                              return !isSlotExpired(s.date, endStr);
+                            });
+                            return filtered.filter(s => s.available).length;
+                          })()} MATCHES
                       </div>
                   </div>
 
@@ -204,7 +217,7 @@ export default function BookSlots() {
 
                       {(() => {
                         const existingBooking = myBookings.find(b => String(b.course_id) === String(course.id));
-                        if (existingBooking) {
+                        if (existingBooking && !isSlotExpired(existingBooking.date, existingBooking.endTime)) {
                           const isActive = isSlotActiveNow(existingBooking.startTime, existingBooking.endTime, existingBooking.date);
                           return (
                             <div className="booked-slot-details-premium anim-fade-in">
@@ -259,10 +272,14 @@ export default function BookSlots() {
                             {openDropdown === course.id && (
                                 <div className="dropdown-menu-premium anim-fade-in">
                                     <div className="dropdown-options-list">
-                                        {currentSlots.length === 0 ? (
-                                            <div className="dropdown-option-premium disabled">No slots opened for this course yet</div>
-                                        ) : (
-                                          currentSlots.map((slot) => (
+                                        {(() => {
+                                          const slots = courseSlots[course.id] || [];
+                                          const filteredSlots = slots.filter(s => {
+                                            const endStr = s.endTime || s.timeLabel.split(" – ")[1]?.trim();
+                                            return !isSlotExpired(s.date, endStr);
+                                          });
+                                          if (filteredSlots.length === 0) return <div className="dropdown-option-premium disabled">No slots opened for this course yet</div>;
+                                          return filteredSlots.map((slot) => (
                                               <div 
                                                   key={slot.id} 
                                                   className={`dropdown-option-premium ${selection?.id === slot.id ? 'active' : ''} ${!slot.available ? 'disabled' : ''}`}
@@ -280,20 +297,14 @@ export default function BookSlots() {
                                                       {slot.available ? `${slot.capacity - slot.bookedCount} seats left` : "Slot full"}
                                                   </div>
                                               </div>
-                                          ))
-                                        )}
+                                          ));
+                                        })()}
                                     </div>
                                 </div>
                             )}
                           </div>
                         );
                       })()}
-
-                      {/* {selection && (
-                        <div style={{ marginTop: "8px", fontSize: "12px", color: "#64748b", backgroundColor: "#f8fafc", padding: "8px", borderRadius: "6px" }}>
-                          Selected: <strong>{selection.timeLabel}</strong> at <strong>{selection.venueLabel}</strong> on <strong>{new Date(selection.date).toLocaleDateString()}</strong>
-                        </div>
-                      )} */}
 
                       {!myBookings.find(b => String(b.course_id) === String(course.id)) && (
                         <button 

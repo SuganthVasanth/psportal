@@ -49,6 +49,7 @@ import "../components/SidebarPremium.css";
 import { ChevronRight, Search, Bell } from "lucide-react";
 import ChatModal from "../components/ChatModal";
 import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
+import QuestionBankSubmissionView from "./admin/QuestionBankSubmissionView";
 import TimePicker12h from "../components/TimePicker12h";
 import { templateApi } from "../services/templateApi";
 import SmartSidebar from "../components/SmartSidebar";
@@ -145,6 +146,7 @@ NAV.forEach((sec) => {
   });
 });
 PATH_TO_SECTION[""] = PATH_TO_SECTION["overview"] = { openNav: "rbac", activeSub: "roles" };
+PATH_TO_SECTION["question-bank-submissions-view"] = { openNav: "academic", activeSub: "question-bank-submissions-view" };
 
 // Role access options: admin selects what each role can see/do in the user dashboard
 const ACCESS_OPTIONS = [
@@ -246,11 +248,30 @@ export default function AdminDashboard() {
       navigate("/admin/roles", { replace: true });
       return;
     }
-    const sec = PATH_TO_SECTION[seg] || PATH_TO_SECTION["overview"];
+    
+    let querySeg = seg;
+    let dynamicId = null;
+    let bankSubId = null;
+    if (seg.startsWith("question-template-builder/")) {
+      querySeg = "question-template-builder";
+      dynamicId = seg.substring("question-template-builder/".length);
+    } else if (seg.startsWith("question-bank-submissions/")) {
+      querySeg = "question-bank-submissions-view";
+      bankSubId = seg.substring("question-bank-submissions/".length);
+    }
+    
+    const sec = PATH_TO_SECTION[querySeg] || PATH_TO_SECTION["overview"];
     setOpenNav(sec.openNav);
     setActiveSub(sec.activeSub);
+    
+    if (querySeg === "question-template-builder") {
+      setTemplateIdToEditForBuilder(dynamicId || null);
+    } else if (querySeg === "question-bank-submissions-view") {
+      setBankSubmissionIdView(bankSubId || null);
+    }
   }, [location.pathname, navigate]);
 
+  const [bankSubmissionIdView, setBankSubmissionIdView] = useState(null);
   const [rolesList, setRolesList] = useState([]);
   const [usersList, setUsersList] = useState([]);
   const [coursesList, setCoursesList] = useState([]);
@@ -453,7 +474,7 @@ export default function AdminDashboard() {
   }, []);
 
   useEffect(() => {
-    if (activeSub !== "question-form-builder") return;
+    if (activeSub !== "question-form-builder" && activeSub !== "course-upload") return;
     refetchQuestionTemplates();
   }, [activeSub, refetchQuestionTemplates]);
 
@@ -857,13 +878,17 @@ export default function AdminDashboard() {
       <SmartSidebar
         sections={NAV.map((section) => ({
           title: section.label,
-          items: section.sub.map((sub) => ({
-            id: sub.id,
-            label: sub.label,
-            path: `/admin/${sub.path || sub.id}`,
-            icon: sub.icon || section.icon,
-            end: (sub.path || sub.id) === "overview",
-          })),
+          items: section.sub.map((sub) => {
+            const baseUrl = `/admin/${sub.path || sub.id}`;
+            return {
+              id: sub.id,
+              label: sub.label,
+              // Map question-banks highlight for submissions view
+              path: (activeSub === "question-bank-submissions-view" && sub.id === "question-banks") ? location.pathname : baseUrl,
+              icon: sub.icon || section.icon,
+              end: (sub.path || sub.id) === "overview",
+            };
+          }),
         }))}
         profileName={userName}
         profileRole="Admin"
@@ -1804,6 +1829,10 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeSub === "question-bank-submissions-view" && (
+            <QuestionBankSubmissionView id={bankSubmissionIdView} />
+          )}
+
           {activeSub === "question-form-builder" && (
             <div className="dashboard-card">
               <h3 className="card-title">Question form builder</h3>
@@ -1832,9 +1861,7 @@ export default function AdminDashboard() {
                         type="button"
                         className="sa-btn sa-btn-primary sa-btn-sm"
                         onClick={() => {
-                          setTemplateIdToEditForBuilder(t._id);
-                          navigate("/admin/question-template-builder");
-                          setActiveSub("question-template-builder");
+                          navigate("/admin/question-template-builder/" + t._id);
                         }}
                       >
                         <Pencil size={14} style={{ marginRight: 4, verticalAlign: "middle" }} />
@@ -3220,7 +3247,19 @@ export default function AdminDashboard() {
                           </div>
                           <div className="sa-form-group">
                             <label>Assessment type</label>
-                            <input type="text" placeholder="e.g. MCQ, Programming, Manual Grading" value={lev.assessmentType || ""} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], assessmentType: e.target.value }; setEditField("levels", l); }} />
+                            <select 
+                              value={lev.assessmentType || ""} 
+                              onChange={(e) => { 
+                                const l = [...levelList]; 
+                                l[idx] = { ...l[idx], assessmentType: e.target.value }; 
+                                setEditField("levels", l); 
+                              }}
+                            >
+                              <option value="">Select type...</option>
+                              {questionTemplatesList.map((t) => (
+                                <option key={t._id} value={t.name}>{t.name}</option>
+                              ))}
+                            </select>
                           </div>
                           <div className="sa-form-group">
                             <label>Duration (minutes)</label>

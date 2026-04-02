@@ -90,6 +90,7 @@ export default function LockedTemplateRenderer({
   studentMode = false,
   className = "",
   style = {},
+  layoutMode = "canvas", // 'canvas' (absolute) or 'stack' (vertical list)
 }) {
   const mergedValue = { ...(value || {}), ...(answers || {}) };
 
@@ -107,17 +108,12 @@ export default function LockedTemplateRenderer({
 
   if (items.length === 0) return null;
 
+  const containerStyle = layoutMode === "stack" 
+    ? { display: "flex", flexDirection: "column", gap: "24px", width: "100%", ...style }
+    : { position: "relative", width: canvasW, minHeight: canvasH, boxSizing: "border-box", ...style };
+
   return (
-    <div
-      className={`relative ${className}`}
-      style={{
-        position: "relative",
-        width: canvasW,
-        minHeight: canvasH,
-        boxSizing: "border-box",
-        ...style,
-      }}
-    >
+    <div className={`${layoutMode === "stack" ? "sa-stack-renderer" : "relative"} ${className}`} style={containerStyle}>
       {items.map((item, index) => {
         const type = item.type;
         const props = item.properties || {};
@@ -128,20 +124,17 @@ export default function LockedTemplateRenderer({
         const top = clampNum(item.y, 0);
         const w = clampNum(item.width, 200);
         let h = clampNum(item.height, 80);
-        if (stretchSingleEditableItem) {
+
+        const isStack = layoutMode === "stack";
+        const boxStyle = isStack 
+          ? { width: "100%", zIndex: index + 1, boxSizing: "border-box" }
+          : { position: "absolute", left, top, width: w, height: h, zIndex: index + 1, boxSizing: "border-box" };
+
+        if (stretchSingleEditableItem && !isStack) {
           const availableH = Math.max(120, canvasH - top - LOCKED_TEMPLATE_PAD / 2);
           h = Math.max(h, availableH);
+          boxStyle.height = h;
         }
-
-        const boxStyle = {
-          position: "absolute",
-          left,
-          top,
-          width: w,
-          height: h,
-          zIndex: index + 1,
-          boxSizing: "border-box",
-        };
 
         const innerWrap = (child) => (
           <div className="h-full min-h-0 w-full overflow-auto" style={{ boxSizing: "border-box" }}>

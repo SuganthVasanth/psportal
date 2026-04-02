@@ -82,10 +82,10 @@ export default function CodeforcesPractice() {
   return (
     <StudentLayout>
       <div className="h-[calc(100vh-72px)] bg-slate-50 text-slate-900 flex flex-col overflow-hidden">
-        <div className="px-8 pt-7 pb-5 bg-[#f8f7ff] border-b border-[rgba(0,0,0,0.06)]">
+        {/* <div className="px-8 pt-7 pb-5 bg-[#f8f7ff] border-b border-[rgba(0,0,0,0.06)]">
           <h1 className="text-[22px] font-extrabold text-[#0f0e1a] tracking-tight">Codeforces Practice</h1>
           <p className="text-sm text-[#9ca3af] mt-0.5">Practice with test cases and compile in one workspace.</p>
-        </div>
+        </div> */}
         {/* Professional Header */}
         {/* <header className="sticky top-0 z-30 bg-white border-b border-slate-200 px-8 py-5 flex items-center justify-between shadow-sm">
           <div className="flex items-center gap-5">

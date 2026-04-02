@@ -44,33 +44,41 @@ export default function StudentLayout({ children, hideNav = false }) {
     localStorage.setItem("student_sidebar_open", isSidebarOpen ? "true" : "false");
   }, [isSidebarOpen]);
 
+  if (hideNav) {
+    return (
+      <div className="main-container-premium nav-hidden">
+        <main className="content-area-premium">
+          {children}
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="dashboard-layout premium-layout">
-      {!hideNav && <StudentSidebar collapsed={!isSidebarOpen} onToggle={() => setIsSidebarOpen((v) => !v)} />}
+      <StudentSidebar collapsed={!isSidebarOpen} onToggle={() => setIsSidebarOpen((v) => !v)} />
       
-      <div className={`main-container-premium ${hideNav ? "nav-hidden" : ""} ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
-        {!hideNav && (
-          <header className="top-navbar-premium">
-            <div className="search-bar-premium">
-              <Search size={18} className="search-icon" />
-              <input type="text" placeholder="Search for courses, practice, etc." />
-            </div>
+      <div className={`main-container-premium ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
+        <header className="top-navbar-premium">
+          <div className="search-bar-premium">
+            <Search size={18} className="search-icon" />
+            <input type="text" placeholder="Search for courses, practice, etc." />
+          </div>
 
-            <div className="top-nav-actions-premium">
+          <div className="top-nav-actions-premium">
 
-              <button className="nav-btn-premium" title="Notifications">
-                <Bell size={20} />
-                <span className="badge-premium"></span>
-              </button>
-              
-              <div className="header-profile-premium">
-                 <div className="avatar-minimal-premium">
-                    {displayProfile.name.split(' ').map(n => n[0]).join('')}
-                 </div>
-              </div>
+            <button className="nav-btn-premium" title="Notifications">
+              <Bell size={20} />
+              <span className="badge-premium"></span>
+            </button>
+            
+            <div className="header-profile-premium">
+               <div className="avatar-minimal-premium">
+                  {displayProfile.name.split(' ').map(n => n[0]).join('')}
+               </div>
             </div>
-          </header>
-        )}
+          </div>
+        </header>
 
         <main className="content-area-premium">
           {children}

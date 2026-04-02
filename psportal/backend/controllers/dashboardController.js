@@ -533,7 +533,8 @@ exports.getDashboardMe = async (req, res) => {
     });
 
     // Assigned courses (technical faculty): from FacultyCourseAssignment OR from Course details Faculty field (name match)
-    if (has("faculty.courses_assigned")) {
+    const normalizedRoles = roleNames.map(r => String(r).toLowerCase().replace(/\s+/g, "_"));
+    if (has("faculty.courses_assigned") || normalizedRoles.includes("technical_faculty")) {
       const userName = (user.name || "").trim();
       const assignments = await FacultyCourseAssignment.find({ user_id: userId }).populate("course_id", "name status description").lean();
       const fromAssignments = assignments.map((a) => ({

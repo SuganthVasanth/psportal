@@ -252,11 +252,7 @@ export default function StaffDashboardLayout() {
             {staffNavSections.length === 0 && (
               <p className="ud-empty">No role-specific view available. Ask admin to assign you Mentor, Warden, Hostel manager, Security or Faculty role.</p>
             )}
-            <div className="sa-welcome-banner" style={{ marginBottom: '24px' }}>
-              <span className="highlight">Staff Dashboard</span>
-              {" — "}
-              {showNav ? `${activeSectionLabel} / ${activeSubLabel}` : "Overview"}
-            </div>
+            
             {showNav && pathSection === "mentor" && pathSub === "mentees" && <StaffMentorMentees data={data} has={has} />}
             {showNav && pathSection === "mentor" && pathSub === "leave-approvals" && <StaffMentorLeaveApprovals data={data} has={has} onRefresh={loadData} />}
             {showNav && pathSection === "warden" && pathSub === "wards" && <StaffWardenWards data={data} has={has} />}

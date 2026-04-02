@@ -21,6 +21,7 @@ export default function TemplateQuestionForm({
   fitToContainer = false,
   componentPrefix = "",
   studentMode = false,
+  layoutMode = "canvas",
 }) {
   const [template, setTemplate] = useState(null);
   const hasEmbeddedLayout = Array.isArray(layoutFromExam) && layoutFromExam.length > 0;
@@ -41,8 +42,8 @@ export default function TemplateQuestionForm({
   }, [effectiveLayout]);
 
   // Fit-to-container keeps the same ratios across screens by scaling the whole canvas.
-  // Keep this as downscale-only to avoid oversized rendering in constrained wrappers.
-  const shouldFit = !!(readOnly || studentMode || fitToContainer);
+  // disabled in 'stack' mode as it uses native flow.
+  const shouldFit = !!(readOnly || studentMode || fitToContainer) && layoutMode !== "stack";
 
   useEffect(() => {
     if (hasEmbeddedLayout) {
@@ -122,11 +123,13 @@ export default function TemplateQuestionForm({
     );
   }
 
+  const isStack = layoutMode === "stack";
+
   return (
-    <div ref={containerRef} className="h-full w-full overflow-auto p-3">
+    <div ref={containerRef} className={`h-full w-full overflow-auto ${isStack ? "p-8" : "p-3"}`}>
       <div
-        className="mx-auto origin-top"
-        style={{
+        className={isStack ? "w-full" : "mx-auto origin-top"}
+        style={isStack ? {} : {
           width: bounds.width || "auto",
           minHeight: bounds.height || "auto",
           zoom: shouldFit ? fitZoom : 1,
@@ -139,6 +142,7 @@ export default function TemplateQuestionForm({
           readOnly={readOnly}
           componentPrefix={componentPrefix}
           studentMode={studentMode}
+          layoutMode={layoutMode}
         />
       </div>
     </div>

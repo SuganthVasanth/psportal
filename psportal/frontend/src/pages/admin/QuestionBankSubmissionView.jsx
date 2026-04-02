@@ -4,8 +4,9 @@ import TemplateQuestionForm from "../../components/renderer/TemplateQuestionForm
 
 const API_BASE = "http://localhost:5000";
 
-export default function QuestionBankSubmissionView() {
-  const { id } = useParams();
+export default function QuestionBankSubmissionView({ id: propId }) {
+  const params = useParams();
+  const id = propId || params.id;
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [submission, setSubmission] = useState(null);
@@ -73,7 +74,7 @@ export default function QuestionBankSubmissionView() {
         <div>
           <h2 style={{ margin: 0 }}>Question bank submission</h2>
           <div style={{ marginTop: 6, color: "#64748b" }}>
-            <Link to="/dashboard" style={{ color: "#2563eb", textDecoration: "none" }}>Back to dashboard</Link>
+            <button onClick={() => window.close()} style={{ background: "none", border: "none", color: "#2563eb", cursor: "pointer", padding: 0, textDecoration: "underline" }}>Close window</button>
           </div>
         </div>
       </div>
