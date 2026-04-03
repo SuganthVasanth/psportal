@@ -2,6 +2,7 @@ const StudentExamAttempt = require("../models/StudentExamAttempt");
 const QuestionBankSubmission = require("../models/QuestionBankSubmission");
 const StudentLevelProgress = require("../models/StudentLevelProgress");
 const CourseSlotBooking = require("../models/CourseSlotBooking");
+const AdminCourse = require("../models/AdminCourse");
 
 /**
  * Grades an assessment attempt and updates the student's level progress status.
@@ -71,6 +72,18 @@ async function processAssessmentResult(register_no, course_id, booking_id) {
     // 3. Update Progression
     const activeProgress = await StudentLevelProgress.findOne({ register_no, course_id, status: { $in: ["enrolled", "submitted"] } });
     
+    // 4. Recalculate pass if needed based on level configs
+    if (activeProgress && attempt) {
+      const course = await AdminCourse.findById(course_id).lean();
+      const levelIdx = activeProgress.level_index;
+      if (course && Array.isArray(course.levels) && course.levels[levelIdx]) {
+        const passReq = course.levels[levelIdx].passPercentage || 50;
+        isPassed = finalScore >= passReq;
+        attempt.isPassed = isPassed;
+        await attempt.save();
+      }
+    }
+
     if (activeProgress) {
       if (isPassed) {
         activeProgress.status = "completed";

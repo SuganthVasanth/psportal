@@ -95,12 +95,12 @@ export default function ProgrammingQuestion({
           readOnly={readOnly}
         />
       </div>
-      <ReferenceSolutionEditor
+      {/* <ReferenceSolutionEditor
         language={referenceSolution.language}
         code={referenceSolution.code}
         onChange={(sol) => onChange?.({ ...value, referenceSolution: sol })}
         readOnly={readOnly}
-      />
+      /> */}
       <TestCaseEditor
         testCases={testCases}
         onChange={(next) => onChange?.({ ...value, testCases: next })}

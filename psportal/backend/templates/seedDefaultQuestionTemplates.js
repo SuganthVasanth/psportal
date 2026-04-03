@@ -131,8 +131,8 @@ async function seedDefaultQuestionTemplates() {
       DEFAULT_TEMPLATES.map((tpl) =>
         QuestionTemplate.findOneAndUpdate(
           { key: tpl.key },
-          { ...tpl, isDefault: true },
-          { upsert: true, returnDocument: "after", setDefaultsOnInsert: true }
+          { $setOnInsert: { ...tpl, isDefault: true } },
+          { upsert: true, setDefaultsOnInsert: true }
         )
       )
     );

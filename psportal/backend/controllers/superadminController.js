@@ -116,12 +116,15 @@ exports.getCourses = async (req, res) => {
         rewardPoints: c.reward_points ?? 0,
         faculty: c.faculty || "",
         prerequisites: Array.isArray(c.prerequisites) ? c.prerequisites : [],
+        cooldownEnabled: c.cooldownEnabled ?? true,
         levels: Array.isArray(c.levels) ? c.levels.map((l) => ({
           name: l.name || "",
           rewardPoints: l.rewardPoints ?? 0,
           prerequisiteLevelIndex: l.prerequisiteLevelIndex ?? -1,
           prerequisiteLevelIndices: Array.isArray(l.prerequisiteLevelIndices) ? l.prerequisiteLevelIndices : (l.prerequisiteLevelIndex != null && l.prerequisiteLevelIndex >= 0 ? [l.prerequisiteLevelIndex] : []),
           assessmentType: l.assessmentType || "MCQ",
+          questionsPerAssessment: l.questionsPerAssessment ?? 5,
+          passPercentage: l.passPercentage ?? 50,
           durationMinutes: l.durationMinutes ?? 60,
           topics: Array.isArray(l.topics) ? l.topics : [],
           studyMaterials: Array.isArray(l.studyMaterials) ? l.studyMaterials.map((m) => ({
@@ -150,6 +153,7 @@ exports.createCourse = async (req, res) => {
       activityPoints,
       rewardPoints,
       faculty,
+      cooldownEnabled,
       prerequisites,
       levels,
     } = req.body;
@@ -163,6 +167,7 @@ exports.createCourse = async (req, res) => {
       activity_points: activityPoints ?? 0,
       reward_points: rewardPoints ?? 0,
       faculty: faculty || "",
+      cooldownEnabled: cooldownEnabled !== false,
       prerequisites: Array.isArray(prerequisites) ? prerequisites : [],
       levels: Array.isArray(levels) ? levels : [],
     });
@@ -177,6 +182,7 @@ exports.createCourse = async (req, res) => {
       activityPoints: doc.activity_points,
       rewardPoints: doc.reward_points,
       faculty: doc.faculty,
+      cooldownEnabled: doc.cooldownEnabled ?? true,
       prerequisites: doc.prerequisites || [],
       levels: doc.levels || [],
     });
@@ -197,6 +203,7 @@ exports.updateCourse = async (req, res) => {
       activityPoints,
       rewardPoints,
       faculty,
+      cooldownEnabled,
       prerequisites,
       levels,
     } = req.body;
@@ -210,6 +217,7 @@ exports.updateCourse = async (req, res) => {
     if (activityPoints !== undefined) update.activity_points = activityPoints;
     if (rewardPoints !== undefined) update.reward_points = rewardPoints;
     if (faculty !== undefined) update.faculty = faculty;
+    if (cooldownEnabled !== undefined) update.cooldownEnabled = !!cooldownEnabled;
     if (prerequisites !== undefined) update.prerequisites = Array.isArray(prerequisites) ? prerequisites : [];
     if (levels !== undefined) update.levels = Array.isArray(levels) ? levels : [];
     const doc = await AdminCourse.findByIdAndUpdate(req.params.id, update, { new: true });
@@ -225,6 +233,7 @@ exports.updateCourse = async (req, res) => {
       activityPoints: doc.activity_points,
       rewardPoints: doc.reward_points,
       faculty: doc.faculty,
+      cooldownEnabled: doc.cooldownEnabled ?? true,
       prerequisites: doc.prerequisites || [],
       levels: doc.levels || [],
     });

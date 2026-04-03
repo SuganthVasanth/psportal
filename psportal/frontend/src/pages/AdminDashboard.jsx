@@ -671,6 +671,7 @@ export default function AdminDashboard() {
             activityPoints: Number(item.activityPoints || 0),
             rewardPoints: Number(item.rewardPoints || 0),
             faculty: item.faculty || "",
+            cooldownEnabled: item.cooldownEnabled !== false,
             prerequisites: Array.isArray(item.prerequisites) ? item.prerequisites : [],
             levels: Array.isArray(item.levels) ? item.levels.map((l) => ({
               ...l,
@@ -3261,6 +3262,16 @@ export default function AdminDashboard() {
                             <label>Reward points</label>
                             <input type="number" placeholder="0" value={lev.rewardPoints ?? 0} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], rewardPoints: Number(e.target.value) || 0 }; setEditField("levels", l); }} min="0" />
                           </div>
+                          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px" }}>
+                            <div className="sa-form-group">
+                              <label>Questions per Assessment</label>
+                              <input type="number" placeholder="5" value={lev.questionsPerAssessment ?? 5} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], questionsPerAssessment: Number(e.target.value) || 5 }; setEditField("levels", l); }} min="1" />
+                            </div>
+                            <div className="sa-form-group">
+                              <label>Pass Percentage (%)</label>
+                              <input type="number" placeholder="50" value={lev.passPercentage ?? 50} onChange={(e) => { const l = [...levelList]; l[idx] = { ...l[idx], passPercentage: Number(e.target.value) || 50 }; setEditField("levels", l); }} min="1" max="100" />
+                            </div>
+                          </div>
                           <div className="sa-form-group">
                             <label>Prerequisite levels (select all that must be completed)</label>
                             <div className="sa-prereq-levels">
@@ -3505,6 +3516,17 @@ export default function AdminDashboard() {
                         <option value="Active">Active</option>
                         <option value="Inactive">Inactive</option>
                       </select>
+                    </div>
+                    <div className="sa-form-group" style={{ display: "flex", alignItems: "center", gap: "10px", marginTop: "10px" }}>
+                      <label style={{ display: "flex", alignItems: "center", gap: "8px", cursor: "pointer", fontWeight: "no" }}>
+                        <input 
+                          type="checkbox" 
+                          checked={editModal.item.cooldownEnabled !== false} 
+                          onChange={(e) => setEditField("cooldownEnabled", e.target.checked)} 
+                          style={{ width: "18px", height: "18px" }}
+                        />
+                        <span style={{ fontSize: "14px", color: "#334155" }}>Enable 48-hour cooldown after failed attempt</span>
+                      </label>
                     </div>
                   </div>
                 </>
@@ -4085,6 +4107,7 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                   <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '900' }}>Input</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '900' }}>Expected Output</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', fontWeight: '900' }}>Status</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', fontWeight: '900' }}>Visibility</th>
                   </tr>
                 </thead>
@@ -4096,6 +4119,20 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                       </td>
                       <td style={{ padding: '12px 16px' }}>
                         <code style={{ padding: '4px 8px', backgroundColor: '#f0fdf4', borderRadius: '6px', color: '#166534', fontWeight: '700', fontSize: '12px' }}>{tc.expectedOutput || "—"}</code>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        {tc.passed != null ? (
+                          <span style={{ 
+                            padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase',
+                            backgroundColor: tc.passed ? '#ecfdf5' : '#fff1f2',
+                            color: tc.passed ? '#059669' : '#e11d48',
+                            border: tc.passed ? '1px solid #d1fae5' : '1px solid #ffe4e6'
+                          }}>
+                            {tc.passed ? 'Passed' : 'Failed'}
+                          </span>
+                        ) : (
+                          <span style={{ color: '#94a3b8', fontSize: '12px' }}>—</span>
+                        )}
                       </td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <span style={{ 
@@ -4196,13 +4233,23 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    <div style={{ flex: 1, padding: '12px 16px', backgroundColor: '#fdf4ff', borderRadius: '12px', border: '1px solid #fae8ff', fontSize: '12px', color: '#a21caf', fontWeight: '700' }}>
+                  <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                    <div style={{ flex: 1, minWidth: '140px', padding: '12px 16px', backgroundColor: '#fdf4ff', borderRadius: '12px', border: '1px solid #fae8ff', fontSize: '12px', color: '#a21caf', fontWeight: '700' }}>
                       <span style={{ opacity: 0.6, marginRight: '4px' }}>Template:</span> {currentAnswer.template_name || "Custom"}
                     </div>
-                    <div style={{ flex: 1, padding: '12px 16px', backgroundColor: '#f0f9ff', borderRadius: '12px', border: '1px solid #e0f2fe', fontSize: '12px', color: '#0369a1', fontWeight: '700' }}>
+                    <div style={{ flex: 1, minWidth: '140px', padding: '12px 16px', backgroundColor: '#f0f9ff', borderRadius: '12px', border: '1px solid #e0f2fe', fontSize: '12px', color: '#0369a1', fontWeight: '700' }}>
                       <span style={{ opacity: 0.6, marginRight: '4px' }}>Original Index:</span> #{currentAnswer.questionNumber}
                     </div>
+                    {currentAnswer.score != null && (
+                      <div style={{ flex: 1, minWidth: '140px', padding: '12px 16px', backgroundColor: '#ecfdf5', borderRadius: '12px', border: '1px solid #d1fae5', fontSize: '12px', color: '#059669', fontWeight: '700' }}>
+                        <span style={{ opacity: 0.6, marginRight: '4px' }}>Score:</span> {currentAnswer.score}/50
+                      </div>
+                    )}
+                    {currentAnswer.value?.language && (
+                      <div style={{ flex: 1, minWidth: '140px', padding: '12px 16px', backgroundColor: '#fffbeb', borderRadius: '12px', border: '1px solid #fef3c7', fontSize: '12px', color: '#b45309', fontWeight: '700' }}>
+                        <span style={{ opacity: 0.6, marginRight: '4px' }}>Language:</span> {currentAnswer.value.language.toUpperCase()}
+                      </div>
+                    )}
                   </div>
                 </div>
 

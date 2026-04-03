@@ -76,8 +76,8 @@ export default function CourseDetails() {
       : allLevels;
   
   // Stable shuffle helper
-  const getSeededRandomQuestions = (questionsPool, seed) => {
-    if (!questionsPool || questionsPool.length <= 2) return questionsPool;
+  const getSeededRandomQuestions = (questionsPool, seed, count = 2) => {
+    if (!questionsPool || questionsPool.length <= count) return questionsPool;
     
     // Simple deterministic shuffle using seed (register_no)
     const seeded = [...questionsPool];
@@ -93,7 +93,7 @@ export default function CourseDetails() {
       seeded[m] = seeded[i];
       seeded[i] = t;
     }
-    return seeded.slice(0, 2);
+    return seeded.slice(0, count);
   };
 
   const [cooldownTimeLeft, setCooldownTimeLeft] = useState(null);
@@ -101,7 +101,7 @@ export default function CourseDetails() {
   useEffect(() => {
     // Identify if the currently active level (enrolled) has a cooldown from a previous failure
     const enrolledRecord = progress.find((p) => p.status === "enrolled");
-    if (enrolledRecord && enrolledRecord.last_failed_at) {
+    if (enrolledRecord && enrolledRecord.last_failed_at && course?.cooldownEnabled !== false) {
       const calculate = () => {
         const cooldownMs = 48 * 60 * 60 * 1000;
         const diff = Date.now() - new Date(enrolledRecord.last_failed_at).getTime();
@@ -117,7 +117,7 @@ export default function CourseDetails() {
     } else {
       setCooldownTimeLeft(null);
     }
-  }, [progress]);
+  }, [progress, course]);
 
   const formatCooldown = (seconds) => {
     if (!seconds) return "";
@@ -145,11 +145,15 @@ export default function CourseDetails() {
         const enrolledLevel = levels.find((l, idx) => enrolledLevelIndices.has(idx));
         const assessmentType = enrolledLevel?.assessmentType?.toLowerCase() || "";
         
-        // Randomize 2 questions only for programming assessments
-        const isProgramming = assessmentType.includes("programming") || course?.type?.toLowerCase().includes("programming");
+        // Determine number of questions (default to 2 for programming, 5 for others)
+        let numQuestions = enrolledLevel?.questionsPerAssessment;
+        if (!numQuestions) {
+          const isProgrammingType = assessmentType.includes("programming") || course?.type?.toLowerCase().includes("programming");
+          numQuestions = isProgrammingType ? 2 : 5;
+        }
         
-        if (isProgramming && qs.length > 2) {
-          qs = getSeededRandomQuestions(qs, registerNo);
+        if (qs.length > numQuestions) {
+          qs = getSeededRandomQuestions(qs, registerNo, numQuestions);
         }
 
         const draft = localStorage.getItem(draftKey);
@@ -566,6 +570,7 @@ export default function CourseDetails() {
             submitting={examSubmitting}
             onBack={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}
             course={course}
+            bookingId={activeBooking?.id || ""}
             proctorStats={{ tabSwitchCount, proctorWarning }}
             assessmentEndTime={assessmentEndTime}
           />

@@ -14,6 +14,8 @@ const levelSchema = new mongoose.Schema({
   prerequisiteLevelIndex: { type: Number, default: -1 },
   prerequisiteLevelIndices: [{ type: Number }],
   assessmentType: { type: String, default: "MCQ" },
+  questionsPerAssessment: { type: Number, default: 5 },
+  passPercentage: { type: Number, default: 50 },
   durationMinutes: { type: Number, default: 60 },
   topics: [{ type: String }],
   studyMaterials: [studyMaterialSchema],
@@ -30,6 +32,7 @@ const adminCourseSchema = new mongoose.Schema({
   reward_points: { type: Number, default: 0 },
   faculty: { type: String, default: "" },
   prerequisites: [{ type: String }],
+  cooldownEnabled: { type: Boolean, default: true },
   levels: [levelSchema],
 }, { timestamps: true });
 

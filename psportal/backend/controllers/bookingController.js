@@ -11,22 +11,25 @@ exports.getActiveSlots = async (req, res) => {
 
     // Check for cooldown if register_no is provided
     if (register_no && course_id && level_index !== undefined) {
-      const progress = await StudentLevelProgress.findOne({
-        register_no,
-        course_id,
-        level_index: parseInt(level_index)
-      }).lean();
+      const course = await AdminCourse.findById(course_id).lean();
+      if (course && course.cooldownEnabled !== false) {
+        const progress = await StudentLevelProgress.findOne({
+          register_no,
+          course_id,
+          level_index: parseInt(level_index)
+        }).lean();
 
-      if (progress && progress.last_failed_at) {
-        const cooldownMs = 48 * 60 * 60 * 1000;
-        const timeSinceFail = Date.now() - new Date(progress.last_failed_at).getTime();
-        if (timeSinceFail < cooldownMs) {
-          const remainingHours = Math.ceil((cooldownMs - timeSinceFail) / (60 * 60 * 1000));
-          return res.status(200).json({ 
-            cooldownActive: true, 
-            message: `A 48-hour cooldown is active after a failed attempt. Please try again in approximately ${remainingHours} hours.`,
-            remainingMs: cooldownMs - timeSinceFail
-          });
+        if (progress && progress.last_failed_at) {
+          const cooldownMs = 48 * 60 * 60 * 1000;
+          const timeSinceFail = Date.now() - new Date(progress.last_failed_at).getTime();
+          if (timeSinceFail < cooldownMs) {
+            const remainingHours = Math.ceil((cooldownMs - timeSinceFail) / (60 * 60 * 1000));
+            return res.status(200).json({ 
+              cooldownActive: true, 
+              message: `A 48-hour cooldown is active after a failed attempt. Please try again in approximately ${remainingHours} hours.`,
+              remainingMs: cooldownMs - timeSinceFail
+            });
+          }
         }
       }
     }
@@ -141,7 +144,9 @@ exports.bookSlot = async (req, res) => {
     }
 
     // Cooldown check
-    const progress = await StudentLevelProgress.findOne({ register_no, course_id }).sort({ level_index: -1 }).lean();
+    const course = await AdminCourse.findById(course_id).lean();
+    if (course && course.cooldownEnabled !== false) {
+      const progress = await StudentLevelProgress.findOne({ register_no, course_id }).sort({ level_index: -1 }).lean();
       if (progress && progress.last_failed_at) {
         const cooldownMs = 48 * 60 * 60 * 1000;
         const timeSinceFail = Date.now() - new Date(progress.last_failed_at).getTime();
@@ -150,6 +155,7 @@ exports.bookSlot = async (req, res) => {
           return res.status(403).json({ message: `A 48-hour cooldown is active after a failed attempt. Please try again in approximately ${remainingHours} hours.` });
         }
       }
+    }
 
     // 2. Check slot existence and capacity
     const slot = await Slot.findById(slot_id);

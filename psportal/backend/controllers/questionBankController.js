@@ -210,28 +210,60 @@ exports.submitStudentAttempt = async (req, res) => {
       return res.status(400).json({ message: "booking_id is required to submit this assessment." });
     }
 
-    const existingCount = await StudentExamAttempt.countDocuments({
-      register_no,
-      course_id,
-      booking_id: bookingId,
-    });
-    if (existingCount >= 1) {
-      return res.status(403).json({ message: "You have already submitted for this booked slot." });
+    const StudentLevelProgress = require("../models/StudentLevelProgress");
+    const progress = await StudentLevelProgress.findOne({ register_no, course_id });
+    if (progress && (progress.status === "completed" || progress.status === "failed")) {
+       return res.status(403).json({ message: "You have already finalized this assessment." });
     }
 
-    const doc = await StudentExamAttempt.create({
-      register_no,
-      course_id,
-      booking_id: bookingId,
-      questions: Array.isArray(questions) ? questions.map(q => ({
-        questionNumber: q.questionNumber,
-        template_id: q.template_id,
-        title: q.title || "",
-        content: q.content || "",
-        value: q.value || {}
-      })) : [],
-      tab_switches: Number(tab_switches) || 0,
+    let doc = await StudentExamAttempt.findOne({ register_no, course_id, booking_id: bookingId });
+    if (!doc) {
+      doc = new StudentExamAttempt({
+        register_no,
+        course_id,
+        booking_id: bookingId,
+        questions: [],
+        tab_switches: 0
+      });
+    }
+
+    const incMap = {};
+    if (Array.isArray(questions)) {
+      questions.forEach(q => { incMap[q.questionNumber] = q; });
+    }
+
+    const updatedQuestionNumbers = new Set();
+    // Merge into existing questions
+    doc.questions.forEach((aq, idx) => {
+      const inc = incMap[aq.questionNumber];
+      if (inc) {
+        const newVal = { ...(aq.value || {}), ...(inc.value || {}) };
+        doc.questions[idx].title = inc.title || aq.title || "";
+        doc.questions[idx].content = inc.content || aq.content || "";
+        doc.questions[idx].value = newVal;
+        updatedQuestionNumbers.add(aq.questionNumber);
+      }
     });
+
+    // Add new questions
+    if (Array.isArray(questions)) {
+      questions.forEach(q => {
+        if (!updatedQuestionNumbers.has(q.questionNumber)) {
+          doc.questions.push({
+            questionNumber: q.questionNumber,
+            template_id: q.template_id,
+            title: q.title || "",
+            content: q.content || "",
+            value: q.value || {},
+            score: 0
+          });
+        }
+      });
+    }
+
+    doc.tab_switches = Math.max(doc.tab_switches || 0, Number(tab_switches) || 0);
+    doc.submitted_at = new Date();
+    await doc.save();
 
     // Instant grading and progression logic
     const { processAssessmentResult } = require("../services/assessmentService");
@@ -317,7 +349,11 @@ exports.submitAssessmentQuestion = async (req, res) => {
     if (!question) return res.status(404).json({ message: "Question not found in bank" });
 
     const qValue = question.value || {};
-    const testcases = qValue.testcases || [];
+    // Unwrap component key wrapper: value may be { "component-xxxxx": { problemStatement, testCases } }
+    const componentKey = Object.keys(qValue).find(k => k.startsWith('component-'));
+    const innerValue = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
+    // Support both camelCase (ProgrammingQuestion) and lowercase field names
+    const testcases = innerValue.testCases || innerValue.testcases || [];
     if (!Array.isArray(testcases) || testcases.length === 0) {
       return res.status(400).json({ message: "No testcases defined for this question" });
     }
@@ -333,7 +369,8 @@ exports.submitAssessmentQuestion = async (req, res) => {
         language_id: language_id || judge0Service.DEFAULT_LANGUAGE_ID,
       });
 
-      const expected = tc.output || tc.output_format || "";
+      // Support both expectedOutput (ProgrammingQuestion) and output/output_format
+      const expected = tc.expectedOutput || tc.output || tc.output_format || "";
       const isPassed = runResult.success && testCaseGenerator.compareOutput(runResult.stdout, expected);
       if (isPassed) passedCount++;
 
@@ -354,9 +391,19 @@ exports.submitAssessmentQuestion = async (req, res) => {
 
     // Update specific question in attempt
     const qIndex = attempt.questions.findIndex(q => q.questionNumber === Number(questionNumber));
+    const qTitle = innerValue.title || innerValue.problem_title || "Question";
+    const qContent = innerValue.problemStatement || innerValue.content || innerValue.description || "";
     const questionData = {
       questionNumber: Number(questionNumber),
-      value: { omni_code: code, language },
+      template_id: question.template_id,
+      title: qTitle,
+      content: qContent,
+      value: { omni_code: code, language, testCases: detailedResults.map((r, i) => ({
+        input: testcases[i]?.input || testcases[i]?.input_format || "",
+        expectedOutput: testcases[i]?.expectedOutput || testcases[i]?.output || testcases[i]?.output_format || "",
+        passed: r.passed,
+        hidden: testcases[i]?.hidden !== false
+      })) },
       score: score
     };
 

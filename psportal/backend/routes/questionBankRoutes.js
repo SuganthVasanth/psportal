@@ -12,5 +12,7 @@ router.get("/approved-for-course/:courseId", questionBankController.getApprovedQ
 router.post("/run-code", questionBankController.runAssessmentCode);
 // Student: submit individual question for grading
 router.post("/submit-question", questionBankController.submitAssessmentQuestion);
+// Student: submit final attempt (all answers)
+router.post("/submit-attempt", questionBankController.submitStudentAttempt);
 
 module.exports = router;

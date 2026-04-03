@@ -27,6 +27,7 @@ export default function LeetCodePortal({
   submitting = false,
   onBack,
   course,
+  bookingId = "",
   proctorStats = { tabSwitchCount: 0, proctorWarning: "" },
   assessmentEndTime
 }) {
@@ -149,13 +150,26 @@ export default function LeetCodePortal({
     setIsExecuting(true);
     setTestResults(null);
     try {
+      // Get testcases from the question value (unwrap component key if needed)
+      const rv = currentQ.value || {};
+      const componentKey = Object.keys(rv).find(k => k.startsWith('component-'));
+      const innerVal = (componentKey && typeof rv[componentKey] === 'object') ? rv[componentKey] : rv;
+      const rawTestCases = innerVal.testCases || innerVal.testcases || [];
+      // Only run against visible (non-hidden) test cases for the "Run" button
+      const visibleTcs = rawTestCases.filter(tc => !tc.hidden);
+      // Normalize field names for the backend (backend expects input/output)
+      const normalizedTcs = visibleTcs.map(tc => ({
+        input: tc.input || tc.input_format || "",
+        output: tc.expectedOutput || tc.output || tc.output_format || ""
+      }));
+      
       const res = await fetch("http://localhost:5000/api/question-banks/run-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           code: studentCode,
           language,
-          testcases: currentQ.testcases || []
+          testcases: normalizedTcs
         }),
       });
       const data = await res.json();
@@ -182,7 +196,7 @@ export default function LeetCodePortal({
         body: JSON.stringify({
           register_no,
           course_id,
-          booking_id: "", 
+          booking_id: bookingId, 
           questionNumber: currentQ.questionNumber,
           code: studentCode,
           language
@@ -201,50 +215,88 @@ export default function LeetCodePortal({
   const studentName = localStorage.getItem("userName") || "Student";
   const registerNo = localStorage.getItem("register_no") || "N/A";
 
-  const qValue = currentQ.value || {};
+  const rawQValue = currentQ.value || {};
+  
+  // Unwrap template component wrapper: value may be { "component-xxxxx": { problemStatement, testCases } }
+  // Find the inner data by checking if the value has component-* keys
+  const unwrapComponentValue = (val) => {
+    if (!val || typeof val !== 'object') return val;
+    const keys = Object.keys(val);
+    // If there's a direct problemStatement or testCases, no unwrap needed
+    if (val.problemStatement || val.testCases || val.testcases || val.question || val.content) return val;
+    // Check for component-* key wrappers
+    const componentKey = keys.find(k => k.startsWith('component-'));
+    if (componentKey && typeof val[componentKey] === 'object') {
+      return val[componentKey];
+    }
+    return val;
+  };
+  const qValue = unwrapComponentValue(rawQValue);
+  
+  // Extract question data — programming questions use: problemStatement, testCases, referenceSolution
+  // Also support legacy field names: title, question, problem_statement, sample_input, sample_output, explanation
   const displayTitle = qValue.title || qValue.problem_title || currentQ.title || course?.course_name || course?.title || "Assessment Challenge";
   
+  // Get testcases from the question value (ProgrammingQuestion stores them as testCases in the value)
+  const questionTestCases = qValue.testCases || qValue.testcases || currentQ.testcases || [];
+  // Only show visible (non-hidden) testcases to the student
+  const visibleTestCases = questionTestCases.filter(tc => !tc.hidden);
+
   const scrapedContent = useMemo(() => {
     const data = {
       title: displayTitle,
       body: "",
       explanation: "",
-      samples: { input: qValue.sample_input || "", output: qValue.sample_output || "" }
+      samples: { input: "", output: "" }
     };
-    const allStrings = [];
-    const crawl = (obj) => {
-      if (!obj) return;
-      Object.values(obj).forEach(val => {
-        if (typeof val === 'string' && val.length > 10) allStrings.push(val);
-        else if (typeof val === 'object') crawl(val);
-      });
-    };
-    crawl(qValue);
-    if (currentQ.layout) {
+
+    // 1. Direct field extraction (highest priority)
+    // ProgrammingQuestion uses "problemStatement"
+    if (qValue.problemStatement) {
+      data.body = qValue.problemStatement;
+    } else if (qValue.question) {
+      data.body = qValue.question;
+    } else if (qValue.problem_statement) {
+      data.body = qValue.problem_statement;
+    } else if (qValue.content) {
+      data.body = qValue.content;
+    } else if (qValue.description) {
+      data.body = qValue.description;
+    }
+
+    // 2. Explanation
+    if (qValue.explanation) {
+      data.explanation = qValue.explanation;
+    } else if (qValue.logic) {
+      data.explanation = qValue.logic;
+    }
+
+    // 3. Sample I/O — extract from first visible testcase if no dedicated fields
+    if (qValue.sample_input || qValue.sample_output) {
+      data.samples.input = qValue.sample_input || "";
+      data.samples.output = qValue.sample_output || "";
+    } else if (visibleTestCases.length > 0) {
+      data.samples.input = visibleTestCases[0].input || visibleTestCases[0].input_format || "";
+      data.samples.output = visibleTestCases[0].expectedOutput || visibleTestCases[0].output || visibleTestCases[0].output_format || "";
+    }
+
+    // 4. Layout-based extraction (for template-rendered questions)
+    if (!data.body && currentQ.layout) {
       currentQ.layout.forEach(c => {
         if (c.properties) {
           const text = c.properties.text || c.properties.content || c.properties.value;
-          if (typeof text === 'string' && text.length > 10) allStrings.push(text);
+          if (typeof text === 'string' && text.length > 10 && !data.body) {
+            data.body = text;
+          }
           const label = (c.properties.label || "").toLowerCase();
-          if (label.includes("sample index") || label.includes("input")) data.samples.input = text;
-          if (label.includes("output")) data.samples.output = text;
+          if (label.includes("input") && !data.samples.input) data.samples.input = text;
+          if (label.includes("output") && !data.samples.output) data.samples.output = text;
         }
       });
     }
-    const uniqueStrings = [...new Set(allStrings)].sort((a, b) => b.length - a.length);
-    if (uniqueStrings.length > 0) {
-      if (uniqueStrings[0] !== data.title) {
-         data.body = uniqueStrings[0];
-         if (uniqueStrings[1] && uniqueStrings[1] !== data.title) data.explanation = uniqueStrings[1];
-      } else if (uniqueStrings[1]) {
-         data.body = uniqueStrings[1];
-         if (uniqueStrings[2]) data.explanation = uniqueStrings[2];
-      }
-    }
-    if (qValue.explanation || qValue.logic) data.explanation = qValue.explanation || qValue.logic;
-    if (qValue.question || qValue.problem_statement) data.body = qValue.question || qValue.problem_statement;
+
     return data;
-  }, [currentQ, qValue, displayTitle]);
+  }, [currentQ, qValue, displayTitle, visibleTestCases]);
 
   const displayQuestion = scrapedContent.body || "Analyze the problem requirements and implement an efficient solution in the editor.";
   const displayExplanation = scrapedContent.explanation || "";
@@ -315,7 +367,31 @@ export default function LeetCodePortal({
                      <div className="space-y-4 text-[14px] leading-relaxed text-slate-600 font-bold tracking-tight">{displayExplanation}</div>
                   </div>
                 )}
-                {(displaySamples.input || displaySamples.output) && (
+                {visibleTestCases.length > 0 && (
+                  <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-md">
+                     <div className="flex items-center gap-3 mb-6"><span className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Sample Test Cases ({visibleTestCases.length})</span></div>
+                     <div className="space-y-6">
+                       {visibleTestCases.map((tc, idx) => (
+                         <div key={idx} className="rounded-2xl border border-slate-100 overflow-hidden">
+                           <div className="bg-slate-50/50 px-5 py-2 border-b border-slate-100">
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Case #{idx + 1}</span>
+                           </div>
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+                             <div className="p-5 border-r border-slate-50">
+                               <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block mb-2">Input</span>
+                               <div className="bg-slate-50 rounded-xl p-4 font-mono text-[13px] text-indigo-600"><pre className="whitespace-pre-wrap m-0">{tc.input || tc.input_format || "—"}</pre></div>
+                             </div>
+                             <div className="p-5">
+                               <span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] block mb-2">Expected Output</span>
+                               <div className="bg-indigo-50/30 rounded-xl p-4 font-mono text-[13px] text-indigo-700"><pre className="whitespace-pre-wrap m-0">{tc.expectedOutput || tc.output || tc.output_format || "—"}</pre></div>
+                             </div>
+                           </div>
+                         </div>
+                       ))}
+                     </div>
+                  </div>
+                )}
+                {visibleTestCases.length === 0 && (displaySamples.input || displaySamples.output) && (
                   <div className="bg-white rounded-3xl border border-slate-100 p-8 shadow-md">
                      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                         {displaySamples.input && (<div className="space-y-4"><span className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em]">Sample Input</span><div className="bg-slate-50 rounded-2xl p-6 font-mono text-[13px] text-indigo-600"><pre className="whitespace-pre-wrap">{displaySamples.input}</pre></div></div>)}
