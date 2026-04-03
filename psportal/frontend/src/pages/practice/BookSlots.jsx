@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronRight, Laptop, ChevronDown, CheckCircle2, Loader2, BookOpen, Play } from "lucide-react";
+import { ChevronRight, Laptop, ChevronDown, CheckCircle2, Loader2, BookOpen, Play, AlertCircle } from "lucide-react";
 import StudentLayout from "../../components/StudentLayout";
 import "./BookSlots.css";
 
@@ -86,9 +86,13 @@ export default function BookSlots() {
     const courseObj = courses.find(c => c.id === courseId);
     setLoadingSlots(prev => ({ ...prev, [courseId]: true }));
     try {
-      const res = await fetch(`${API_BASE}/api/active-slots?course_id=${courseId}&level_index=${courseObj?.levelIndex || 0}`);
-      const data = await res.ok ? await res.json() : [];
-      setCourseSlots(prev => ({ ...prev, [courseId]: data }));
+      const res = await fetch(`${API_BASE}/api/active-slots?course_id=${courseId}&level_index=${courseObj?.levelIndex || 0}&register_no=${encodeURIComponent(registerNo)}`);
+      const data = await res.json();
+      if (data.cooldownActive) {
+        setCourseSlots(prev => ({ ...prev, [courseId]: { cooldown: true, message: data.message } }));
+      } else {
+        setCourseSlots(prev => ({ ...prev, [courseId]: Array.isArray(data) ? data : [] }));
+      }
     } catch (err) {
       console.error("Error fetching slots:", err);
     } finally {
@@ -197,7 +201,9 @@ export default function BookSlots() {
                       </div>
                       <div className="slots-count-badge">
                           {(() => {
-                            const slots = courseSlots[course.id] || [];
+                            const slotsData = courseSlots[course.id] || [];
+                            if (slotsData.cooldown) return 0;
+                            const slots = Array.isArray(slotsData) ? slotsData : [];
                             const filtered = slots.filter(s => {
                               const endStr = s.endTime || s.timeLabel.split(" – ")[1]?.trim();
                               return !isSlotExpired(s.date, endStr);
@@ -273,7 +279,20 @@ export default function BookSlots() {
                                 <div className="dropdown-menu-premium anim-fade-in">
                                     <div className="dropdown-options-list">
                                         {(() => {
-                                          const slots = courseSlots[course.id] || [];
+                                          const slotsData = courseSlots[course.id] || [];
+                                          if (slotsData.cooldown) {
+                                            return (
+                                              <div className="dropdown-option-premium disabled" style={{ color: '#e11d48', backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', fontSize: '12px', marginBottom: '4px' }}>
+                                                  <AlertCircle size={14} /> COOLDOWN ACTIVE
+                                                </div>
+                                                <div style={{ fontSize: '11px', fontWeight: '600', opacity: 0.8 }}>
+                                                  {slotsData.message}
+                                                </div>
+                                              </div>
+                                            );
+                                          }
+                                          const slots = Array.isArray(slotsData) ? slotsData : [];
                                           const filteredSlots = slots.filter(s => {
                                             const endStr = s.endTime || s.timeLabel.split(" – ")[1]?.trim();
                                             return !isSlotExpired(s.date, endStr);

@@ -223,7 +223,13 @@ exports.submitStudentAttempt = async (req, res) => {
       register_no,
       course_id,
       booking_id: bookingId,
-      questions: Array.isArray(questions) ? questions : [],
+      questions: Array.isArray(questions) ? questions.map(q => ({
+        questionNumber: q.questionNumber,
+        template_id: q.template_id,
+        title: q.title || "",
+        content: q.content || "",
+        value: q.value || {}
+      })) : [],
       tab_switches: Number(tab_switches) || 0,
     });
 
@@ -241,6 +247,142 @@ exports.submitStudentAttempt = async (req, res) => {
   } catch (err) {
     console.error("submitStudentAttempt error:", err);
     res.status(500).json({ message: err.message || "Failed to submit" });
+  }
+};
+
+// ——— Student: run code against visible testcases (Assessment Portal) ———
+exports.runAssessmentCode = async (req, res) => {
+  try {
+    const { code, language, stdin, testcases = [], language_id } = req.body;
+    if (!code) return res.status(400).json({ message: "Code is required" });
+
+    const judge0Service = require("../services/judge0Service");
+    const testCaseGenerator = require("../services/testCaseGenerator");
+
+    const results = [];
+    // If testcases are provided, run against them
+    if (Array.isArray(testcases) && testcases.length > 0) {
+      for (const tc of testcases) {
+        const runResult = await judge0Service.runCode({
+          source_code: code,
+          stdin: tc.input || tc.input_format || "",
+          language_id: language_id || judge0Service.DEFAULT_LANGUAGE_ID,
+        });
+        results.push({
+          input: tc.input || tc.input_format,
+          expected: tc.output || tc.output_format,
+          actual: (runResult.stdout || "").trim(),
+          passed: runResult.success && testCaseGenerator.compareOutput(runResult.stdout, tc.output || tc.output_format),
+          error: !runResult.success ? (runResult.stderr || runResult.compile_output || "Execution failed") : null
+        });
+      }
+    } else {
+      // Just a generic run with custom stdin
+      const runResult = await judge0Service.runCode({
+        source_code: code,
+        stdin: stdin || "",
+        language_id: language_id || judge0Service.DEFAULT_LANGUAGE_ID,
+      });
+      return res.json({
+        stdout: runResult.stdout,
+        stderr: runResult.stderr,
+        compile_output: runResult.compile_output,
+        success: runResult.success
+      });
+    }
+
+    res.json({ results });
+  } catch (err) {
+    console.error("runAssessmentCode error:", err);
+    res.status(500).json({ message: "Code execution failed" });
+  }
+};
+
+// ——— Student: submit individual question for grading (Assessment Portal) ———
+exports.submitAssessmentQuestion = async (req, res) => {
+  try {
+    const { register_no, course_id, booking_id, questionNumber, code, language, language_id } = req.body;
+    if (!register_no || !course_id || !questionNumber || !code) {
+      return res.status(400).json({ message: "register_no, course_id, questionNumber, and code are required" });
+    }
+
+    const judge0Service = require("../services/judge0Service");
+    const testCaseGenerator = require("../services/testCaseGenerator");
+
+    // 1. Get all testcases from the Question Bank
+    const qb = await QuestionBankSubmission.findOne({ course_id, status: "approved" }).lean();
+    if (!qb) return res.status(404).json({ message: "Approved Question Bank not found" });
+
+    const question = qb.questions.find(q => q.questionNumber === Number(questionNumber));
+    if (!question) return res.status(404).json({ message: "Question not found in bank" });
+
+    const qValue = question.value || {};
+    const testcases = qValue.testcases || [];
+    if (!Array.isArray(testcases) || testcases.length === 0) {
+      return res.status(400).json({ message: "No testcases defined for this question" });
+    }
+
+    // 2. Execute against each testcase
+    let passedCount = 0;
+    const detailedResults = [];
+
+    for (const tc of testcases) {
+      const runResult = await judge0Service.runCode({
+        source_code: code,
+        stdin: tc.input || tc.input_format || "",
+        language_id: language_id || judge0Service.DEFAULT_LANGUAGE_ID,
+      });
+
+      const expected = tc.output || tc.output_format || "";
+      const isPassed = runResult.success && testCaseGenerator.compareOutput(runResult.stdout, expected);
+      if (isPassed) passedCount++;
+
+      detailedResults.push({
+         passed: isPassed,
+         error: !runResult.success ? (runResult.stderr || runResult.compile_output) : null
+      });
+    }
+
+    // 3. Calculate score (out of 50)
+    const score = (passedCount / testcases.length) * 50;
+
+    // 4. Update/Create StudentExamAttempt
+    let attempt = await StudentExamAttempt.findOne({ register_no, course_id, booking_id });
+    if (!attempt) {
+       attempt = new StudentExamAttempt({ register_no, course_id, booking_id, questions: [] });
+    }
+
+    // Update specific question in attempt
+    const qIndex = attempt.questions.findIndex(q => q.questionNumber === Number(questionNumber));
+    const questionData = {
+      questionNumber: Number(questionNumber),
+      value: { omni_code: code, language },
+      score: score
+    };
+
+    if (qIndex >= 0) {
+       attempt.questions[qIndex] = { ...attempt.questions[qIndex].toObject(), ...questionData };
+    } else {
+       attempt.questions.push(questionData);
+    }
+
+    // Recalculate overall score (optional here, but good for consistency)
+    attempt.score = attempt.questions.reduce((sum, q) => sum + (q.score || 0), 0);
+    // Note: isPassed stays false until final submit potentially, or we can update it if they cross threshold.
+    
+    await attempt.save();
+
+    res.json({
+      success: true,
+      passedCount,
+      totalCount: testcases.length,
+      score,
+      results: detailedResults
+    });
+
+  } catch (err) {
+    console.error("submitAssessmentQuestion error:", err);
+    res.status(500).json({ message: "Submission failed" });
   }
 };
 

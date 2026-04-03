@@ -1,0 +1,134 @@
+[
+  {
+    "_id": "69a5814e345cf9e7503e4044",
+    "name": "C Programming",
+    "description": "",
+    "status": "Active",
+    "type": "Programming",
+    "course_logo": "https://ps.bitsathy.ac.in/api/ps_v2/images/courses/5.png",
+    "level": "",
+    "activity_points": 0,
+    "reward_points": 0,
+    "faculty": "",
+    "prerequisites": [],
+    "levels": [
+      {
+        "name": "C Programming Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "durationMinutes": 200,
+        "topics": [
+          "if-else",
+          "Switch Statements"
+        ],
+        "studyMaterials": [
+          {
+            "name": "if-else",
+            "type": "link",
+            "url": "https://youtu.be/oWTnLzWkF5w?si=2lTNtrJMHlG8CRzq",
+            "content": ""
+          },
+          {
+            "name": "Switch Statements",
+            "type": "link",
+            "url": "https://youtu.be/BHS4iA7bsDk?si=OJbOzNIQQznuHi8P",
+            "content": ""
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-02T12:23:42.028Z",
+    "updatedAt": "2026-04-02T18:18:02.798Z",
+    "__v": 1
+  },
+  {
+    "_id": "69be294a8362b700e32761c6",
+    "name": "Java Programming",
+    "description": "Introduction to Java",
+    "status": "Active",
+    "type": "Programming",
+    "course_logo": "https://ps.bitsathy.ac.in/api/ps_v2/images/courses/8.png",
+    "level": "",
+    "activity_points": 0,
+    "reward_points": 0,
+    "faculty": "",
+    "prerequisites": [],
+    "levels": [
+      {
+        "name": "Java Intro",
+        "rewardPoints": 150,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "durationMinutes": 60,
+        "topics": [
+          "JVM",
+          "JDK"
+        ],
+        "studyMaterials": []
+      },
+      {
+        "name": "OOP Basics",
+        "rewardPoints": 300,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "durationMinutes": 60,
+        "topics": [
+          "Classes",
+          "Objects"
+        ],
+        "studyMaterials": []
+      }
+    ],
+    "createdAt": "2026-03-21T05:14:50.820Z",
+    "updatedAt": "2026-04-02T09:09:28.823Z",
+    "__v": 0
+  },
+  {
+    "_id": "69be328c16a264557967b072",
+    "name": "Python Programming",
+    "description": "",
+    "status": "Active",
+    "type": "Programming",
+    "course_logo": "https://ps.bitsathy.ac.in/api/ps_v2/images/courses/7.png",
+    "level": "Beginner",
+    "activity_points": 0,
+    "reward_points": 0,
+    "faculty": "",
+    "prerequisites": [],
+    "levels": [
+      {
+        "name": "Programming Python Level 1",
+        "rewardPoints": 100,
+        "prerequisiteLevelIndex": -1,
+        "prerequisiteLevelIndices": [],
+        "assessmentType": "Programming",
+        "durationMinutes": 60,
+        "topics": [
+          "if-else",
+          "Switch Statements"
+        ],
+        "studyMaterials": [
+          {
+            "name": "if-else",
+            "type": "link",
+            "url": "https://youtu.be/MMzXz7EDTZM?si=JywrrbN6iS2S-8lR",
+            "content": ""
+          },
+          {
+            "name": "Switch Statements",
+            "type": "link",
+            "url": "https://youtu.be/BHS4iA7bsDk?si=ulSP8qLukZB0KGRB",
+            "content": ""
+          }
+        ]
+      }
+    ],
+    "createdAt": "2026-03-21T05:54:20.796Z",
+    "updatedAt": "2026-04-02T09:09:35.511Z",
+    "__v": 0
+  }
+]

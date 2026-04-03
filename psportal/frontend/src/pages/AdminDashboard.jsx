@@ -30,6 +30,7 @@ import {
   Bus,
   Trash2,
   PlusCircle,
+  CheckCircle,
   Terminal,
   ChevronRight,
   Search,
@@ -4004,27 +4005,125 @@ function ReviewAnswersModal({ student, answers, onClose }) {
   const currentAnswer = (answers || [])[activeIdx];
 
   const renderValue = (val) => {
-    if (!val) return <span style={{ color: "#94a3b8" }}>No response provided.</span>;
+    if (!val) return <div style={{ padding: '24px', backgroundColor: '#f8fafc', borderRadius: '16px', border: '1px dashed #cbd5e1', textAlign: 'center', color: '#94a3b8', fontSize: '13px', fontWeight: '600' }}>No response provided.</div>;
 
-    let content = val;
-    if (typeof val === 'object' && val !== null) {
-      const keys = Object.keys(val);
-      if (keys.length > 0) {
-        const topKey = keys[0];
-        if (typeof val[topKey] === 'object' && val[topKey] !== null && 'code' in val[topKey]) {
-           content = val[topKey].code;
-        } else if (typeof val[topKey] === 'string') {
-           content = val[topKey];
-        } else {
-           return <pre style={{ padding: "16px", backgroundColor: "#f8fafc", borderRadius: "10px", fontSize: "13px", color: "#475569", overflow: "auto" }}>{JSON.stringify(val, null, 2)}</pre>;
+    // Helper to check for testCases in nested objects
+    const findTestCases = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      if (Array.isArray(obj.testCases)) return obj.testCases;
+      if (Array.isArray(obj.testResults)) return obj.testResults; // Support alternate naming
+      for (const key in obj) {
+        const val = obj[key];
+        if (typeof val === 'object') {
+          const found = findTestCases(val);
+          if (found) return found;
         }
       }
-    }
+      return null;
+    };
+
+    const findCode = (obj) => {
+      if (!obj || typeof obj !== 'object') return null;
+      if (obj.omni_code) return obj.omni_code;
+      if (obj.code) return obj.code;
+      
+      // If we find a key that looks like a component ID with a string value (the code)
+      for (const key in obj) {
+        const val = obj[key];
+        if (key.startsWith('component-') && typeof val === 'string' && val.length > 10) return val;
+        if (typeof val === 'object') {
+          const found = findCode(val);
+          if (found) return found;
+        }
+      }
+      return null;
+    };
+
+    const studentResponse = findCode(val);
+    const testCases = findTestCases(val);
 
     return (
-      <div style={{ backgroundColor: "#1e293b", padding: "24px", borderRadius: "16px", border: "1px solid #334155", fontFamily: "'JetBrains Mono', 'Fira Code', monospace", color: "#f1f5f9", fontSize: "14px", lineHeight: "1.6", overflowX: "auto", position: "relative" }}>
-        <div style={{ position: "absolute", right: "12px", top: "12px", fontSize: "10px", color: "#94a3b8", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.1em" }}>Submission View</div>
-        <pre style={{ margin: 0 }}>{content}</pre>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        {/* 1. STUDENT ANSWER (CODE) */}
+        {studentResponse && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+               <Code size={14} className="text-indigo-500" />
+               Student's Submitted Code
+            </div>
+            <div style={{ 
+              backgroundColor: "#0f172a", 
+              padding: "24px", 
+              borderRadius: "20px", 
+              border: "1px solid #1e293b", 
+              fontFamily: "'JetBrains Mono', 'Fira Code', monospace",
+              color: "#f1f5f9", 
+              fontSize: "14px", 
+              lineHeight: "1.6", 
+              overflowX: "auto", 
+              position: "relative",
+              boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.1)'
+            }}>
+              <div style={{ position: "absolute", right: "16px", top: "16px", fontSize: "9px", color: "#475569", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em" }}>
+                Source Output
+              </div>
+              <pre style={{ margin: 0, whiteSpace: 'pre-wrap', fontWeight: '500' }}>{studentResponse}</pre>
+            </div>
+          </div>
+        )}
+
+        {/* 2. AUTOMATED TEST RESULTS */}
+        {testCases && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <CheckCircle size={14} className="text-emerald-500" />
+              Automated Test Results ({testCases.length})
+            </div>
+            <div style={{ borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+                <thead>
+                  <tr style={{ backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9' }}>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '900' }}>Input</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#64748b', fontWeight: '900' }}>Expected Output</th>
+                    <th style={{ padding: '12px 16px', textAlign: 'center', color: '#64748b', fontWeight: '900' }}>Visibility</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {testCases.map((tc, idx) => (
+                    <tr key={idx} style={{ borderBottom: idx === testCases.length - 1 ? 'none' : '1px solid #f1f5f9' }}>
+                      <td style={{ padding: '12px 16px' }}>
+                        <code style={{ padding: '4px 8px', backgroundColor: '#f1f5f9', borderRadius: '6px', color: '#1e293b', fontWeight: '700', fontSize: '12px' }}>{tc.input || "—"}</code>
+                      </td>
+                      <td style={{ padding: '12px 16px' }}>
+                        <code style={{ padding: '4px 8px', backgroundColor: '#f0fdf4', borderRadius: '6px', color: '#166534', fontWeight: '700', fontSize: '12px' }}>{tc.expectedOutput || "—"}</code>
+                      </td>
+                      <td style={{ padding: '12px 16px', textAlign: 'center' }}>
+                        <span style={{ 
+                          padding: '4px 10px', borderRadius: '20px', fontSize: '10px', fontWeight: '900', textTransform: 'uppercase',
+                          backgroundColor: tc.hidden ? '#fff7ed' : '#f0fdfa',
+                          color: tc.hidden ? '#c2410c' : '#0d9488',
+                          border: tc.hidden ? '1px solid #ffedd5' : '1px solid #ccfbf1'
+                        }}>
+                          {tc.hidden ? 'Hidden' : 'Visible'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* FALLBACK FOR NON-PROGRAMMING CONTENT */}
+        {!studentResponse && !testCases && (
+          <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0" }}>
+             <div style={{ fontSize: "9px", color: "#94a3b8", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: '12px' }}>Response Data</div>
+             <pre style={{ margin: 0, fontSize: "12px", color: "#475569", overflow: "auto", fontWeight: '600', whiteSpace: 'pre-wrap' }}>
+               {typeof val === 'string' ? val : JSON.stringify(val, null, 2)}
+             </pre>
+          </div>
+        )}
       </div>
     );
   };
@@ -4068,7 +4167,7 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                   boxShadow: activeIdx === i ? "0 10px 15px -3px rgba(79, 70, 229, 0.2)" : "none"
                 }}
               >
-                Question {ans.questionNumber}
+                Question {i + 1}
               </button>
             ))}
           </div>
@@ -4083,8 +4182,28 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                   <h4 style={{ fontSize: "18px", fontWeight: "900", color: "#1e293b", margin: 0 }}>Submission Detail</h4>
                 </div>
                 
-                <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#64748b' }}>
-                  <span style={{ fontWeight: '800', color: '#475569' }}>Template ID:</span> {currentAnswer.template_id}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                   <div style={{ padding: '24px', backgroundColor: '#f8fafc', borderRadius: '24px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#4f46e5' }}></div>
+                    <div style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                      Problem Statement
+                    </div>
+                    <h5 style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b', marginBottom: '12px', lineHeight: '1.4' }}>
+                      {currentAnswer.title || currentAnswer.value?.title || "Untitled Question"}
+                    </h5>
+                    <div style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', fontWeight: '500' }}>
+                      {currentAnswer.content || currentAnswer.value?.problemStatement || currentAnswer.value?.content || currentAnswer.value?.description || "No description provided."}
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '12px' }}>
+                    <div style={{ flex: 1, padding: '12px 16px', backgroundColor: '#fdf4ff', borderRadius: '12px', border: '1px solid #fae8ff', fontSize: '12px', color: '#a21caf', fontWeight: '700' }}>
+                      <span style={{ opacity: 0.6, marginRight: '4px' }}>Template:</span> {currentAnswer.template_name || "Custom"}
+                    </div>
+                    <div style={{ flex: 1, padding: '12px 16px', backgroundColor: '#f0f9ff', borderRadius: '12px', border: '1px solid #e0f2fe', fontSize: '12px', color: '#0369a1', fontWeight: '700' }}>
+                      <span style={{ opacity: 0.6, marginRight: '4px' }}>Original Index:</span> #{currentAnswer.questionNumber}
+                    </div>
+                  </div>
                 </div>
 
                 {renderValue(currentAnswer.value)}

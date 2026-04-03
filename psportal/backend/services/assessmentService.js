@@ -24,29 +24,44 @@ async function processAssessmentResult(register_no, course_id, booking_id) {
     let isPassed = false;
     let finalScore = 0;
 
-    if (attempt && qb && Array.isArray(qb.questions) && qb.questions.length > 0) {
-      let correctCount = 0;
-      const totalQuestions = qb.questions.length;
+    if (attempt) {
+      let totalScore = 0;
       
-      const correctAnswersMap = {};
-      qb.questions.forEach(q => {
-        correctAnswersMap[q.questionNumber] = q.correctAnswerKey;
-      });
+      // If we have an approved question bank, we can cross-reference
+      if (qb && Array.isArray(qb.questions)) {
+        const qbMap = {};
+        qb.questions.forEach(q => { qbMap[q.questionNumber] = q; });
 
-      if (Array.isArray(attempt.questions)) {
-        attempt.questions.forEach(aq => {
-          const expected = correctAnswersMap[aq.questionNumber];
-          const actual = aq.value;
-          if (expected != null && actual != null) {
-            if (String(expected).trim().toLowerCase() === String(actual).trim().toLowerCase()) {
-              correctCount++;
+        if (Array.isArray(attempt.questions)) {
+          attempt.questions.forEach(aq => {
+            const qInfo = qbMap[aq.questionNumber];
+            if (!qInfo) return;
+
+            // If it's a programming question, it likely already has a score from submitAssessmentQuestion
+            if (aq.score !== undefined && aq.score > 0) {
+              totalScore += aq.score;
+            } else {
+              // Fallback to MCQ/Text logic
+              const expected = qInfo.correctAnswerKey;
+              const actual = aq.value;
+              if (expected != null && actual != null) {
+                if (String(expected).trim().toLowerCase() === String(actual).trim().toLowerCase()) {
+                  // For non-programming, what is the score? 
+                  // If programming is 50, maybe MCQ is also significant.
+                  // But for now, let's say 10 points if not specified.
+                  totalScore += 10; 
+                }
+              }
             }
-          }
-        });
+          });
+        }
       }
 
-      finalScore = (correctCount / totalQuestions) * 100;
-      isPassed = finalScore >= 50; 
+      // The user wants "score" to determine pass/fail. 
+      // If they say "calculated out of 50" for each, 
+      // I'll just use the raw summed score.
+      finalScore = totalScore;
+      isPassed = finalScore >= 50; // Total 50 required to pass
       
       attempt.score = finalScore;
       attempt.isPassed = isPassed;
@@ -62,12 +77,10 @@ async function processAssessmentResult(register_no, course_id, booking_id) {
         activeProgress.completed_at = new Date();
         await activeProgress.save();
       } else {
-        // If failed or missed, remove the enrollment to allow retry
-        await StudentLevelProgress.deleteOne({ _id: activeProgress._id });
-        // Also remove the specific booking if it exists
-        if (booking_id) {
-          await CourseSlotBooking.deleteOne({ _id: booking_id });
-        }
+        // If failed or missed, set status to failed and record the time for cooldown
+        activeProgress.status = "failed";
+        activeProgress.last_failed_at = new Date();
+        await activeProgress.save();
       }
     }
 

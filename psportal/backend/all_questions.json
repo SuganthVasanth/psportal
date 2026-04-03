@@ -1,0 +1,12 @@
+{
+  "questionBankSubmissions": [
+    {
+      "id": "69ce0b292374d1dc30811a0a",
+      "course_id": "69a5814e345cf9e7503e4044",
+      "course_name": "C Programming",
+      "status": "approved",
+      "questions_count": 3
+    }
+  ],
+  "codingProblems": []
+}

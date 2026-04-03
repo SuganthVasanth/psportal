@@ -3,7 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import StudentLayout from "../components/StudentLayout";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
 import LeetCodePortal from "../components/renderer/LeetCodePortal";
-import { BookOpen, Award, ChevronDown, X, Play, ArrowLeft } from "lucide-react";
+import { BookOpen, Award, ChevronDown, X, Play, ArrowLeft, AlertCircle } from "lucide-react";
 import { isBookingAssessmentActive } from "../lib/assessmentWindow";
 import "./CourseDetails.css";
 
@@ -66,6 +66,14 @@ export default function CourseDetails() {
   const params = new URLSearchParams(location.search);
   const levelFilterName = params.get("level");
   const slotDropdownRef = useRef(null);
+
+  const completedLevelIndices = new Set(progress.filter((p) => p.status === "completed").map((p) => p.level_index));
+  const enrolledLevelIndices = new Set(progress.filter((p) => p.status === "enrolled").map((p) => p.level_index));
+  const allLevels = course?.levels || [];
+  const levels =
+    levelFilterName && allLevels.length
+      ? allLevels.filter((l) => (l.name || "").toLowerCase() === levelFilterName.toLowerCase())
+      : allLevels;
   
   // Stable shuffle helper
   const getSeededRandomQuestions = (questionsPool, seed) => {
@@ -88,7 +96,39 @@ export default function CourseDetails() {
     return seeded.slice(0, 2);
   };
 
+  const [cooldownTimeLeft, setCooldownTimeLeft] = useState(null);
+
+  useEffect(() => {
+    // Identify if the currently active level (enrolled) has a cooldown from a previous failure
+    const enrolledRecord = progress.find((p) => p.status === "enrolled");
+    if (enrolledRecord && enrolledRecord.last_failed_at) {
+      const calculate = () => {
+        const cooldownMs = 48 * 60 * 60 * 1000;
+        const diff = Date.now() - new Date(enrolledRecord.last_failed_at).getTime();
+        if (diff < cooldownMs) {
+          setCooldownTimeLeft(Math.floor((cooldownMs - diff) / 1000));
+        } else {
+          setCooldownTimeLeft(null);
+        }
+      };
+      calculate();
+      const timer = setInterval(calculate, 1000);
+      return () => clearInterval(timer);
+    } else {
+      setCooldownTimeLeft(null);
+    }
+  }, [progress]);
+
+  const formatCooldown = (seconds) => {
+    if (!seconds) return "";
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return `${h}h ${m}m ${s}s`;
+  };
+
   const handleLaunchPortal = useCallback(() => {
+    if (cooldownTimeLeft > 0) return;
     setExamError("");
     setExamSubmitted(false);
     setExamLoading(true);
@@ -101,9 +141,12 @@ export default function CourseDetails() {
       .then((data) => {
         let qs = Array.isArray(data.questions) ? data.questions : [];
         
-        // Randomize 2 questions for programming assessments
-        const isProgramming = course?.type?.toLowerCase().includes("programming") || 
-                              (levels && levels.some(l => l.assessmentType?.toLowerCase().includes("programming")));
+        // Identify the CURRENT level the student is attempting (the one they are enrolled in)
+        const enrolledLevel = levels.find((l, idx) => enrolledLevelIndices.has(idx));
+        const assessmentType = enrolledLevel?.assessmentType?.toLowerCase() || "";
+        
+        // Randomize 2 questions only for programming assessments
+        const isProgramming = assessmentType.includes("programming") || course?.type?.toLowerCase().includes("programming");
         
         if (isProgramming && qs.length > 2) {
           qs = getSeededRandomQuestions(qs, registerNo);
@@ -129,7 +172,7 @@ export default function CourseDetails() {
         setExamQuestions([]);
         setExamLoading(false);
       });
-  }, [courseId]);
+  }, [courseId, course, levels, enrolledLevelIndices, registerNo, draftKey, cooldownTimeLeft]);
 
   useEffect(() => {
     if (!id) {
@@ -299,14 +342,6 @@ export default function CourseDetails() {
     }
   };
 
-  const completedLevelIndices = new Set(progress.filter((p) => p.status === "completed").map((p) => p.level_index));
-  const enrolledLevelIndices = new Set(progress.filter((p) => p.status === "enrolled").map((p) => p.level_index));
-
-  const allLevels = course?.levels || [];
-  const levels =
-    levelFilterName && allLevels.length
-      ? allLevels.filter((l) => (l.name || "").toLowerCase() === levelFilterName.toLowerCase())
-      : allLevels;
 
   // Proctoring security logic
   const handleVisibilityChange = useCallback(() => {
@@ -428,11 +463,19 @@ export default function CourseDetails() {
       if (!bookingId) {
         throw new Error("You need an active booking for this course to submit your attempt.");
       }
-      const questions = examQuestions.map((q) => ({
-        questionNumber: q.questionNumber,
-        template_id: q.template_id,
-        value: examAnswers[q.questionNumber] ?? q.value ?? {},
-      }));
+      const questions = examQuestions.map((q) => {
+        const qValue = q.value || {};
+        const title = qValue.title || qValue.problem_title || q.title || "Question";
+        const content = qValue.problemStatement || qValue.content || qValue.description || q.content || "";
+
+        return {
+          questionNumber: q.questionNumber,
+          template_id: q.template_id,
+          title,
+          content,
+          value: examAnswers[q.questionNumber] ?? qValue ?? {},
+        };
+      });
       const res = await fetch(`${API_BASE}/api/question-banks/submit-attempt`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -640,6 +683,14 @@ export default function CourseDetails() {
             <div className="cd-portal-banner">
               {courseAttempts >= 1 ? (
                 <span className="cd-already-attempted">You have already submitted for this booked slot.</span>
+              ) : cooldownTimeLeft > 0 ? (
+                <div className="cd-cooldown-banner">
+                  <AlertCircle size={20} className="cooldown-icon" />
+                  <div className="cooldown-text">
+                    <span className="cooldown-title">Cooldown Active</span>
+                    <span className="cooldown-timer">Please try again in: {formatCooldown(cooldownTimeLeft)}</span>
+                  </div>
+                </div>
               ) : (
                 <>
                   <span>Your slot is active. You can attempt the assessment now.</span>
@@ -746,9 +797,19 @@ export default function CourseDetails() {
                   <h3 className="cd-card-title">Course Details</h3>
                   <p className="cd-course-name">{levels[0]?.name || courseName}</p>
                   {!bookingForThisCourse && (
-                    <button type="button" className="cd-book-slot-btn" onClick={() => setBookSlotOpen(true)}>
-                      Book a Slot
-                    </button>
+                    cooldownTimeLeft > 0 ? (
+                      <div className="cd-cooldown-card">
+                        <AlertCircle size={24} className="cooldown-icon-large" />
+                        <div className="cooldown-content">
+                          <span className="cooldown-title-large">Cooldown Active</span>
+                          <span className="cooldown-timer-large">Time left: {formatCooldown(cooldownTimeLeft)}</span>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" className="cd-book-slot-btn" onClick={() => setBookSlotOpen(true)}>
+                        Book a Slot
+                      </button>
+                    )
                   )}
                 </div>
 

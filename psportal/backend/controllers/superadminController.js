@@ -807,9 +807,56 @@ exports.getSlotReport = async (req, res) => {
       }
     });
 
+    // 7.1 Fetch Question Bank Metadata to populate problem statements in the report
+    const courseIdsUsed = Array.from(new Set(attempts.map(a => a.course_id.toString())));
+    const questionBanks = await mongoose.model("QuestionBankSubmission").find({
+      course_id: { $in: courseIdsUsed },
+      status: "approved"
+    }).populate("questions.template_id").lean();
+
+    const questionMetadataMap = new Map();
+    questionBanks.forEach(bank => {
+      const cid = bank.course_id.toString();
+      (bank.questions || []).forEach(q => {
+        const key = `${cid}_${q.questionNumber}`;
+        // If multiple banks exist, we might already have an entry. 
+        // We'll prefer the one that actually has content.
+        const existing = questionMetadataMap.get(key);
+        const title = q.value?.title || bank.title || "Question";
+        const content = q.value?.problemStatement || q.value?.content || q.value?.description || bank.content || "";
+        
+        if (!existing || (!existing.content && content)) {
+          questionMetadataMap.set(key, {
+            template_name: q.template_id?.name,
+            layout: q.template_id?.layout,
+            title,
+            content
+          });
+        }
+      });
+    });
+
     const reportData = Array.from(unifiedRegs.values()).map(reg => {
       const student = studentsList.find(s => s.register_no === reg.registerNo) || {};
       const attempt = attempts.find(a => a.register_no === reg.registerNo);
+      
+      let enrichedAnswers = [];
+      if (attempt && Array.isArray(attempt.questions)) {
+        enrichedAnswers = attempt.questions.map(q => {
+          const qObj = typeof q.toObject === 'function' ? q.toObject() : q;
+          const metaKey = `${attempt.course_id.toString()}_${qObj.questionNumber}`;
+          const bankMeta = questionMetadataMap.get(metaKey) || {};
+          
+          return {
+            ...qObj,
+            // Prioritize metadata stored in the attempt (immutability)
+            title: qObj.title || bankMeta.title || "Question",
+            content: qObj.content || bankMeta.content || "No description provided.",
+            template_name: bankMeta.template_name,
+            layout: bankMeta.layout
+          };
+        });
+      }
       
       return {
         registrationId: reg.id,
@@ -822,7 +869,7 @@ exports.getSlotReport = async (req, res) => {
         tabSwitches: attempt ? attempt.tab_switches : 0,
         isPassed: attempt ? attempt.isPassed : false,
         submittedAt: attempt ? attempt.submitted_at : null,
-        answers: attempt ? attempt.questions : []
+        answers: enrichedAnswers
       };
     });
 

@@ -116,7 +116,12 @@ exports.getStudentLevelProgress = async (req, res) => {
       const key = `${p.course_id}:${p.level_index}`;
       const mergedIndex = sourceToMerged.get(key);
       if (mergedIndex == null) return null;
-      return { level_index: mergedIndex, status: p.status, completed_at: p.completed_at };
+      return { 
+        level_index: mergedIndex, 
+        status: p.status, 
+        completed_at: p.completed_at,
+        last_failed_at: p.last_failed_at
+      };
     }).filter(Boolean);
 
     const bookingId = booking_id != null ? String(booking_id).trim() : "";
@@ -173,7 +178,23 @@ exports.registerLevel = async (req, res) => {
       course_id: src.course_id,
       level_index: src.level_index,
     });
+
     if (existing) {
+      if (existing.status === "completed") {
+        return res.status(200).json({
+          message: "Level already completed",
+          progress: { level_index: mergedIdx, status: "completed" },
+        });
+      }
+      
+      if (existing.status === "failed") {
+        // Allow re-enrollment during cooldown, but KEEP last_failed_at for booking restrictions
+        existing.status = "enrolled";
+        existing.enrolled_at = new Date();
+        await existing.save();
+        return res.status(200).json({ level_index: mergedIdx, status: "enrolled" });
+      }
+
       return res.status(200).json({
         message: "Already enrolled",
         progress: { level_index: mergedIdx, status: existing.status },

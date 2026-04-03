@@ -3,10 +3,34 @@ const CourseSlotBooking = require("../models/CourseSlotBooking");
 const SlotTemplate = require("../models/SlotTemplate");
 const Slot = require("../models/Slot");
 const AdminCourse = require("../models/AdminCourse");
+const StudentLevelProgress = require("../models/StudentLevelProgress");
 
 exports.getActiveSlots = async (req, res) => {
   try {
-    const { course_id, level_index } = req.query;
+    const { course_id, level_index, register_no } = req.query;
+
+    // Check for cooldown if register_no is provided
+    if (register_no && course_id && level_index !== undefined) {
+      const progress = await StudentLevelProgress.findOne({
+        register_no,
+        course_id,
+        level_index: parseInt(level_index)
+      }).lean();
+
+      if (progress && progress.last_failed_at) {
+        const cooldownMs = 48 * 60 * 60 * 1000;
+        const timeSinceFail = Date.now() - new Date(progress.last_failed_at).getTime();
+        if (timeSinceFail < cooldownMs) {
+          const remainingHours = Math.ceil((cooldownMs - timeSinceFail) / (60 * 60 * 1000));
+          return res.status(200).json({ 
+            cooldownActive: true, 
+            message: `A 48-hour cooldown is active after a failed attempt. Please try again in approximately ${remainingHours} hours.`,
+            remainingMs: cooldownMs - timeSinceFail
+          });
+        }
+      }
+    }
+
     const filter = {};
     let studentDuration = 60;
 
@@ -115,6 +139,17 @@ exports.bookSlot = async (req, res) => {
     if (existing) {
       return res.status(400).json({ message: "You have already booked a slot for this course." });
     }
+
+    // Cooldown check
+    const progress = await StudentLevelProgress.findOne({ register_no, course_id }).sort({ level_index: -1 }).lean();
+      if (progress && progress.last_failed_at) {
+        const cooldownMs = 48 * 60 * 60 * 1000;
+        const timeSinceFail = Date.now() - new Date(progress.last_failed_at).getTime();
+        if (timeSinceFail < cooldownMs) {
+          const remainingHours = Math.ceil((cooldownMs - timeSinceFail) / (60 * 60 * 1000));
+          return res.status(403).json({ message: `A 48-hour cooldown is active after a failed attempt. Please try again in approximately ${remainingHours} hours.` });
+        }
+      }
 
     // 2. Check slot existence and capacity
     const slot = await Slot.findById(slot_id);

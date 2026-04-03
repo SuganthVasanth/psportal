@@ -11,7 +11,10 @@ const studentExamAttemptSchema = new mongoose.Schema(
       {
         questionNumber: { type: Number, required: true },
         template_id: { type: mongoose.Schema.Types.ObjectId, ref: "QuestionTemplate" },
+        title: { type: String, default: "" },
+        content: { type: String, default: "" },
         value: { type: mongoose.Schema.Types.Mixed, default: {} },
+        score: { type: Number, default: 0 },
       },
     ],
     tab_switches: { type: Number, default: 0 },
