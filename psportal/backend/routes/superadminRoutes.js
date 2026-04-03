@@ -64,5 +64,6 @@ router.patch("/question-bank-submissions/:id/review", ctrl.reviewQuestionBankSub
 router.get("/assessment-slots", ctrl.getAssessmentSlots);
 router.post("/assessment-slots", ctrl.openAssessmentSlots);
 router.delete("/assessment-slots/:id", ctrl.deleteAssessmentSlot);
+router.get("/assessment-slots/:id/report", ctrl.getSlotReport);
 
 module.exports = router;

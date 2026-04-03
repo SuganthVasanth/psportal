@@ -202,7 +202,7 @@ exports.getApprovedQuestionsForCourse = async (req, res) => {
 // ——— Student: submit exam attempt (answers) ———
 exports.submitStudentAttempt = async (req, res) => {
   try {
-    const { register_no, course_id, booking_id, questions } = req.body;
+    const { register_no, course_id, booking_id, questions, tab_switches } = req.body;
     if (!register_no || !course_id) return res.status(400).json({ message: "register_no and course_id required" });
 
     const bookingId = booking_id != null ? String(booking_id).trim() : "";
@@ -224,6 +224,7 @@ exports.submitStudentAttempt = async (req, res) => {
       course_id,
       booking_id: bookingId,
       questions: Array.isArray(questions) ? questions : [],
+      tab_switches: Number(tab_switches) || 0,
     });
 
     // Instant grading and progression logic

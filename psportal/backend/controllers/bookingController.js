@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const CourseSlotBooking = require("../models/CourseSlotBooking");
 const SlotTemplate = require("../models/SlotTemplate");
 const Slot = require("../models/Slot");
@@ -13,7 +14,7 @@ exports.getActiveSlots = async (req, res) => {
       if (level_index !== undefined && level_index !== "") {
         filter.allowed_courses = {
           $elemMatch: {
-            course_id: course_id,
+            course_id: new mongoose.Types.ObjectId(course_id),
             level_indices: parseInt(level_index)
           }
         };
@@ -31,10 +32,15 @@ exports.getActiveSlots = async (req, res) => {
       }
     }
 
-    // Fetch slots that are scheduled for the future (or today) and have capacity
+    // Fetch slots that are scheduled for the future (or today / late yesterday) and have capacity
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    filter.date = { $gte: today };
+    
+    // Include yesterday to catch slots that span past midnight
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    filter.date = { $gte: yesterday };
 
     const list = await Slot.find(filter)
       .populate("venue_id")
@@ -78,13 +84,15 @@ exports.getActiveSlots = async (req, res) => {
     const finalFiltered = mapped.filter((s) => {
       if (!s.date || !s.startTime) return true; // Keep if data is missing to be safe
       const [h, m] = s.startTime.split(":").map(Number);
-      const slotEnd = new Date(s.date);
-      // We use endTime for strictness, but for visibility, we can use startTime + duration
-      // Let's use the same logic as cron but more immediate.
-      // If the slot date is before today, definitely hide.
-      // If it is today, check time.
-      slotEnd.setHours(h, m, 0, 0);
-      slotEnd.setMinutes(slotEnd.getMinutes() + studentDuration + 15); // 15m buffer
+      
+      // Calculate active window based on actual slot date + startTime
+      const slotStart = new Date(s.date);
+      slotStart.setHours(h, m, 0, 0);
+
+      const slotEnd = new Date(slotStart);
+      // Window remains open until startTime + duration + buffer
+      slotEnd.setMinutes(slotEnd.getMinutes() + studentDuration + 15); 
+      
       return now < slotEnd;
     });
 

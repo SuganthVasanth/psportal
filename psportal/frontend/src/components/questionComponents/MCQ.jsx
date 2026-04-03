@@ -13,8 +13,10 @@ const OPTION_BG = [
 const cardClass = "rounded-xl border border-[#e2e8f0] bg-[#f4f7fe] p-4 shadow-sm";
 const inputClass = "w-full rounded-lg border border-[#e2e8f0] bg-white/80 px-3 py-2.5 text-sm min-w-0";
 
-export default function MCQ({ config = {}, value = {}, onChange }) {
+export default function MCQ({ config = {}, value = {}, onChange, readOnly = false, studentMode = false }) {
   const { id: fieldId, label = "Options", required, options: numOptions = 4, prefix, optionLabels } = config;
+  const isStudent = studentMode;
+  const isDisabled = readOnly || isStudent;
   const radioName = `mcq-correct-${prefix || "q"}-${fieldId || "default"}`;
   const defaultOptions = Array.from({ length: Math.max(1, numOptions) }, (_, i) => ({
     text: (Array.isArray(optionLabels) && optionLabels[i]) || `Option ${i + 1}`,
@@ -36,6 +38,7 @@ export default function MCQ({ config = {}, value = {}, onChange }) {
   }, [fieldId, prefix, numOptions, JSON.stringify(value?.options || null), JSON.stringify(optionLabels || null)]);
 
   const syncValue = (next) => {
+    if (isDisabled && !isStudent) return; // Don't allow changes if readOnly and not student answering
     setOptionList(next);
     onChange?.({ ...value, options: next });
   };
@@ -64,12 +67,14 @@ export default function MCQ({ config = {}, value = {}, onChange }) {
               role="button"
               tabIndex={0}
               onClick={(e) => {
+                if (isDisabled && !isStudent) return;
                 if (e.target.closest("button") || e.target.closest("input[type='text']")) return;
                 setCorrect(idx);
               }}
               onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                   e.preventDefault();
+                  if (isDisabled && !isStudent) return;
                   if (e.target.closest("button") || e.target.closest("input[type='text']")) return;
                   setCorrect(idx);
                 }
@@ -81,10 +86,13 @@ export default function MCQ({ config = {}, value = {}, onChange }) {
               }}
             >
               <label
-                className="mcq-option-radio flex items-center justify-center shrink-0 w-10 h-10 rounded-full border-2 cursor-pointer transition-colors select-none hover:border-[#8b5cf6] hover:bg-[#ddd6fe]/80"
+                className={`mcq-option-radio flex items-center justify-center shrink-0 w-10 h-10 rounded-full border-2 cursor-pointer transition-colors select-none ${isStudent ? "pointer-events-none" : "hover:border-[#8b5cf6] hover:bg-[#ddd6fe]/80"}`}
                 style={{
                   borderColor: isCorrect ? "#8b5cf6" : "#c7d2fe",
                   backgroundColor: isCorrect ? "#8b5cf6" : "rgba(255,255,255,0.7)",
+                  visibility: isStudent ? "hidden" : "visible",
+                  width: isStudent ? 0 : 40,
+                  marginRight: isStudent ? -12 : 0
                 }}
                 title="Mark as correct answer"
                 onClick={(e) => e.stopPropagation()}
@@ -96,37 +104,49 @@ export default function MCQ({ config = {}, value = {}, onChange }) {
                   onChange={() => setCorrect(idx)}
                   className="sr-only"
                   aria-label={`Option ${idx + 1} correct`}
+                  disabled={isDisabled && !isStudent}
                 />
                 {isCorrect ? <Check size={20} className="text-white" strokeWidth={2.5} /> : null}
               </label>
-              <input
-                type="text"
-                className={`${inputClass} flex-1`}
-                placeholder={`Option ${idx + 1} text`}
-                value={opt.text}
-                onChange={(e) => updateText(idx, e.target.value)}
-                onClick={(e) => e.stopPropagation()}
-              />
-              <button
-                type="button"
-                onClick={(e) => removeOption(e, idx)}
-                disabled={optionList.length <= 1}
-                className="shrink-0 rounded-lg p-2 text-[#64748b] hover:bg-red-100 hover:text-red-600 disabled:opacity-40 transition-colors"
-                aria-label="Remove option"
-              >
-                <Trash2 size={18} />
-              </button>
+              
+              {isStudent || readOnly ? (
+                <span className="flex-1 text-sm text-[#1a202c] font-medium">{opt.text}</span>
+              ) : (
+                <input
+                  type="text"
+                  className={`${inputClass} flex-1`}
+                  placeholder={`Option ${idx + 1} text`}
+                  value={opt.text}
+                  onChange={(e) => updateText(idx, e.target.value)}
+                  onClick={(e) => e.stopPropagation()}
+                />
+              )}
+
+              {!(isStudent || readOnly) && (
+                <button
+                  type="button"
+                  onClick={(e) => removeOption(e, idx)}
+                  disabled={optionList.length <= 1}
+                  className="shrink-0 rounded-lg p-2 text-[#64748b] hover:bg-red-100 hover:text-red-600 disabled:opacity-40 transition-colors"
+                  aria-label="Remove option"
+                >
+                  <Trash2 size={18} />
+                </button>
+              )}
             </div>
           );
         })}
-        <button
-          type="button"
-          onClick={addOption}
-          className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#c7d2fe] bg-[#f4f7fe] py-3 text-sm font-medium text-[#6366f1] hover:border-[#8b5cf6] hover:bg-[#e0e7ff]/50 transition-colors"
-        >
-          <Plus size={18} />
-          Add option
-        </button>
+        
+        {!(isStudent || readOnly) && (
+          <button
+            type="button"
+            onClick={addOption}
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#c7d2fe] bg-[#f4f7fe] py-3 text-sm font-medium text-[#6366f1] hover:border-[#8b5cf6] hover:bg-[#e0e7ff]/50 transition-colors"
+          >
+            <Plus size={18} />
+            Add option
+          </button>
+        )}
       </div>
     </div>
   );

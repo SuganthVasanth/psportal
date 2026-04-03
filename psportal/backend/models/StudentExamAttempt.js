@@ -14,6 +14,7 @@ const studentExamAttemptSchema = new mongoose.Schema(
         value: { type: mongoose.Schema.Types.Mixed, default: {} },
       },
     ],
+    tab_switches: { type: Number, default: 0 },
     submitted_at: { type: Date, default: Date.now },
   },
   { timestamps: true }

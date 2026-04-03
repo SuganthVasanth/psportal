@@ -143,6 +143,7 @@ export default function LockedTemplateRenderer({
         );
 
         if (type === "question_text") {
+          const text = (typeof val === "string" ? val : val?.value) || props.placeholder || "Question here";
           return (
             <div key={item.id} className={cardClass} style={boxStyle}>
               {innerWrap(
@@ -150,14 +151,17 @@ export default function LockedTemplateRenderer({
                   {props.label && (
                     <label className="mb-1 block text-sm font-medium text-slate-700">{props.label}</label>
                   )}
+                  {itemReadOnly ? (
+                    <div className="mt-1 whitespace-pre-wrap text-sm text-slate-800 font-medium">{text}</div>
+                  ) : (
                   <textarea
                     className={inputClass}
                     rows={4}
                     placeholder={props.placeholder || "Question here"}
-                    value={val?.value ?? ""}
+                    value={text}
                     onChange={(e) => updateField(item.id, { value: e.target.value })}
-                    readOnly={itemReadOnly}
                   />
+                  )}
                 </>
               )}
             </div>
@@ -165,14 +169,14 @@ export default function LockedTemplateRenderer({
         }
 
         if (type === "paragraph") {
-          const displayText = val?.value ?? props.placeholder ?? "Instruction text";
+          const displayText = (typeof val === "string" ? val : val?.value) || props.placeholder || "Instruction text";
           return (
             <div key={item.id} className={cardClass} style={boxStyle}>
               {innerWrap(
                 <>
                   {props.label && <label className="text-sm font-medium text-slate-700">{props.label}</label>}
                   {itemReadOnly ? (
-                    <p className="mt-1 text-sm text-slate-600">{displayText}</p>
+                    <p className="mt-1 text-sm text-slate-600 whitespace-pre-wrap">{displayText}</p>
                   ) : (
                     <textarea
                       className={`${inputClass} mt-1`}

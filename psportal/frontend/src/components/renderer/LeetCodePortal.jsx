@@ -29,15 +29,57 @@ export default function LeetCodePortal({
   proctorStats = { tabSwitchCount: 0, proctorWarning: "" },
   assessmentEndTime
 }) {
+  const { tabSwitchCount = 0, proctorWarning = "" } = proctorStats;
   const containerRef = useRef(null);
   const rightPaneRef = useRef(null);
   const [leftWidth, setLeftWidth] = useState(40); // percentage
   const [topHeight, setTopHeight] = useState(65); // percentage for right pane vertical split
-  const [currentIdx, setCurrentIdx] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(null);
   const isDraggingLeft = useRef(false);
   const isDraggingTop = useRef(false);
-  const [timeLeft, setTimeLeft] = useState(null);
-  const [language, setLanguage] = useState("c");
+  
+  // SESSION PERSISTENCE KEYS
+  const sessionKey = course ? `portal_ui_${course.id || course?._id}_${localStorage.getItem("register_no") || "anon"}` : null;
+
+  const [currentIdx, setCurrentIdx] = useState(() => {
+    if (!sessionKey) return 0;
+    const saved = localStorage.getItem(sessionKey);
+    if (saved) {
+      try {
+        return JSON.parse(saved).currentIdx || 0;
+      } catch (e) { return 0; }
+    }
+    return 0;
+  });
+
+  const [language, setLanguage] = useState(() => {
+    if (!sessionKey) return "c";
+    const saved = localStorage.getItem(sessionKey);
+    if (saved) {
+      try {
+        return JSON.parse(saved).language || "c";
+      } catch (e) { return "c"; }
+    }
+    return "c";
+  });
+
+  const [standardInput, setStandardInput] = useState(() => {
+    if (!sessionKey) return "";
+    const saved = localStorage.getItem(sessionKey);
+    if (saved) {
+      try {
+        return JSON.parse(saved).standardInput || "";
+      } catch (e) { return ""; }
+    }
+    return "";
+  });
+
+  // Sync session state to localStorage
+  useEffect(() => {
+    if (!sessionKey) return;
+    const sessionData = { currentIdx, language, standardInput };
+    localStorage.setItem(sessionKey, JSON.stringify(sessionData));
+  }, [currentIdx, language, standardInput, sessionKey]);
 
   useEffect(() => {
     if (!assessmentEndTime) return;
@@ -234,6 +276,25 @@ export default function LeetCodePortal({
         </div>
 
         <div className="flex items-center gap-5 ml-4">
+          {/* FINISH TEST BUTTON */}
+          <button
+            onClick={() => {
+              if (window.confirm("Are you sure you want to finish the assessment? This will submit all your answers.")) {
+                onSubmitAttempt();
+              }
+            }}
+            disabled={submitting}
+            className="flex items-center gap-3 px-6 py-2.5 bg-rose-500 hover:bg-rose-600 disabled:bg-rose-300 text-white rounded-xl shadow-lg shadow-rose-100 transition-all active:scale-95 group"
+          >
+            <div className="flex flex-col items-end">
+              <span className="text-[10px] font-black uppercase tracking-widest opacity-80 leading-none mb-1">Final Submission</span>
+              <span className="text-[13px] font-black leading-none">Finish Test</span>
+            </div>
+            <Send size={18} className="group-hover:translate-x-0.5 transition-transform" />
+          </button>
+
+          <div className="w-[1px] h-8 bg-slate-100 mx-2"></div>
+
           {/* NOTIFICATIONS */}
           <button className="relative p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-50 rounded-xl transition-all">
             <Bell size={20} />
@@ -437,8 +498,10 @@ export default function LeetCodePortal({
             {/* INTEGRATED ACTION BAR */}
             <div className="px-6 py-3 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
                <div className="flex items-center gap-3">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.4)]"></div>
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Console Interface</span>
+                  <div className={`w-2 h-2 rounded-full ${tabSwitchCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`}></div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                    {tabSwitchCount > 0 ? `Alert: ${tabSwitchCount} Tab Switches` : "System Status: Stable"}
+                  </span>
                </div>
                <div className="flex items-center gap-2">
                  <button 
@@ -467,6 +530,8 @@ export default function LeetCodePortal({
                 </div>
                 <div className="flex-1 p-0 overflow-hidden">
                   <textarea
+                    value={standardInput}
+                    onChange={(e) => setStandardInput(e.target.value)}
                     className="w-full h-full bg-transparent p-6 text-[13px] font-semibold text-slate-400 outline-none resize-none placeholder:text-slate-200"
                     placeholder="Type input parameters here..."
                   />

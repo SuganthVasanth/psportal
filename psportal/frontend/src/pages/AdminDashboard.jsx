@@ -30,6 +30,10 @@ import {
   Bus,
   Trash2,
   PlusCircle,
+  Terminal,
+  ChevronRight,
+  Search,
+  Bell,
 } from "lucide-react";
 import {
   Chart as ChartJS,
@@ -46,7 +50,6 @@ import {
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import "./SuperAdminDashboard.css";
 import "../components/SidebarPremium.css";
-import { ChevronRight, Search, Bell } from "lucide-react";
 import ChatModal from "../components/ChatModal";
 import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
 import QuestionBankSubmissionView from "./admin/QuestionBankSubmissionView";
@@ -146,6 +149,7 @@ NAV.forEach((sec) => {
   });
 });
 PATH_TO_SECTION[""] = PATH_TO_SECTION["overview"] = { openNav: "rbac", activeSub: "roles" };
+PATH_TO_SECTION["assessment-slot-report"] = { openNav: "slots", activeSub: "assessment-slot-report" };
 PATH_TO_SECTION["question-bank-submissions-view"] = { openNav: "academic", activeSub: "question-bank-submissions-view" };
 
 // Role access options: admin selects what each role can see/do in the user dashboard
@@ -258,6 +262,10 @@ export default function AdminDashboard() {
     } else if (seg.startsWith("question-bank-submissions/")) {
       querySeg = "question-bank-submissions-view";
       bankSubId = seg.substring("question-bank-submissions/".length);
+    } else if (seg.startsWith("assessment-slots/") && seg.endsWith("/report")) {
+      querySeg = "assessment-slot-report";
+      const parts = seg.split("/");
+      dynamicId = parts[1];
     }
     
     const sec = PATH_TO_SECTION[querySeg] || PATH_TO_SECTION["overview"];
@@ -268,6 +276,8 @@ export default function AdminDashboard() {
       setTemplateIdToEditForBuilder(dynamicId || null);
     } else if (querySeg === "question-bank-submissions-view") {
       setBankSubmissionIdView(bankSubId || null);
+    } else if (querySeg === "assessment-slot-report") {
+      setSelectedReportSlotId(dynamicId || null);
     }
   }, [location.pathname, navigate]);
 
@@ -328,6 +338,11 @@ export default function AdminDashboard() {
   const [selectedClassroomMeta, setSelectedClassroomMeta] = useState(null);
   const [classroomStudents, setClassroomStudents] = useState([]);
   const [classroomStudentsLoading, setClassroomStudentsLoading] = useState(false);
+  
+  // Slot Report State
+  const [selectedReportSlotId, setSelectedReportSlotId] = useState(null);
+  const [slotReportData, setSlotReportData] = useState(null);
+  const [isReportLoading, setIsReportLoading] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
@@ -2167,27 +2182,38 @@ export default function AdminDashboard() {
                           </div>
                         </td>
                         <td>
-                          <button 
-                            type="button" 
-                            className="sa-btn sa-btn-sm sa-btn-ghost" 
-                            style={{ color: "#ef4444", padding: "8px" }}
-                            title="Delete Slot"
-                            onClick={async () => {
-                              if (!window.confirm("Are you sure you want to delete this slot?")) return;
-                              try {
-                                const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${row.id}`, {
-                                  method: "DELETE"
-                                });
-                                const data = await res.json();
-                                if (!res.ok) throw new Error(data.message || "Delete failed");
-                                setAssessmentSlots(prev => prev.filter(s => s.id !== row.id));
-                              } catch (err) {
-                                alert(err.message);
-                              }
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <button 
+                              type="button" 
+                              className="sa-btn sa-btn-sm sa-btn-ghost" 
+                              style={{ color: "#3b82f6", padding: "8px" }}
+                              title="View Report"
+                              onClick={() => navigate(`/admin/assessment-slots/${row.id}/report`)}
+                            >
+                              <BarChart3 size={16} />
+                            </button>
+                            <button 
+                              type="button" 
+                              className="sa-btn sa-btn-sm sa-btn-ghost" 
+                              style={{ color: "#ef4444", padding: "8px" }}
+                              title="Delete Slot"
+                              onClick={async () => {
+                                if (!window.confirm("Are you sure you want to delete this slot?")) return;
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${row.id}`, {
+                                    method: "DELETE"
+                                  });
+                                  const data = await res.json();
+                                  if (!res.ok) throw new Error(data.message || "Delete failed");
+                                  setAssessmentSlots(prev => prev.filter(s => s.id !== row.id));
+                                } catch (err) {
+                                  alert(err.message);
+                                }
+                              }}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -2205,6 +2231,13 @@ export default function AdminDashboard() {
                 </table>
               </div>
             </div>
+          )}
+
+          {activeSub === "assessment-slot-report" && selectedReportSlotId && (
+            <SlotReportView 
+              slotId={selectedReportSlotId} 
+              onBack={() => navigate("/admin/assessment-slots")} 
+            />
           )}
 
           {/* Leaves: Leave Flow (create new leave types with flow) */}
@@ -2535,20 +2568,14 @@ export default function AdminDashboard() {
                   ); })}
                 </tbody>
               </table>
-              {facultyAssignments.length === 0 && <p className="sa-muted">No assignments yet. Select a user and course above to assign.</p>}
+              {facultyAssignments.length === 0 && (
+                <p className="sa-muted">No assignments yet. Select a user and course above to assign.</p>
+              )}
               {facultyAssignments.length > 0 && sortedFacultyAssignments.length === 0 && (
                 <p className="sa-muted">No assignments match your search.</p>
               )}
             </div>
           )}
-
-          <ChatModal
-            open={chatOpen}
-            onClose={() => { setChatOpen(false); setChatWithUserId(null); setChatWithUserName(""); }}
-            otherUserId={chatWithUserId}
-            otherUserName={chatWithUserName}
-            title={chatWithUserName ? `Chat with ${chatWithUserName}` : ""}
-          />
 
           {activeSub === "code-students" && (
             <div className="dashboard-card">
@@ -3686,6 +3713,40 @@ export default function AdminDashboard() {
                         ))}
                     </select>
                   </div>
+                  <div className="sa-form-group">
+                    <label>Bus Number</label>
+                    <input
+                      type="text"
+                      value={editModal.item.busNumber || ""}
+                      onChange={(e) => setEditField("busNumber", e.target.value)}
+                      placeholder="e.g. B101"
+                    />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Route</label>
+                    <input
+                      type="text"
+                      value={editModal.item.route || ""}
+                      onChange={(e) => setEditField("route", e.target.value)}
+                      placeholder="e.g. Coimbatore - BITS"
+                    />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Incharge Staff</label>
+                    <select
+                      value={editModal.item.incharge_id?._id || editModal.item.incharge_id || ""}
+                      onChange={(e) => setEditField("incharge_id", e.target.value)}
+                    >
+                      <option value="">Select Incharge staff</option>
+                      {usersList
+                        .filter((u) => !(u.roles || []).some((r) => String(r).toLowerCase() === "student"))
+                        .map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.name || u.email}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
                 </>
               )}
             </div>
@@ -3696,6 +3757,347 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+      {chatOpen && (
+        <ChatModal
+          onClose={() => setChatOpen(false)}
+          withUserId={chatWithUserId}
+          withUserName={chatWithUserName}
+        />
+      )}
+    </div>
+  );
+}
+
+// --- SLOT REPORT VIEW COMPONENT (FULL-PAGE) ---
+function SlotReportView({ slotId, onBack }) {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedAnswers, setSelectedAnswers] = useState(null);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+
+  useEffect(() => {
+    const fetchReport = async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${slotId}/report`);
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.message || "Failed to fetch report");
+        setData(json);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchReport();
+  }, [slotId]);
+
+  if (loading) return (
+    <div className="dashboard-card" style={{ textAlign: "center", padding: "100px 40px" }}>
+      <div className="sa-spinner" style={{ margin: "0 auto 20px" }}></div>
+      <p style={{ color: "#64748b", fontWeight: "600" }}>Generating slot assessment report...</p>
+    </div>
+  );
+
+  if (error) return (
+    <div className="dashboard-card" style={{ padding: "40px", textAlign: "center" }}>
+      <h3 style={{ color: "#ef4444", marginBottom: "12px" }}>Error</h3>
+      <p style={{ color: "#64748b", marginBottom: "24px" }}>{error}</p>
+      <button className="sa-btn sa-btn-primary" onClick={onBack}>Go Back</button>
+    </div>
+  );
+
+  const { summary, students } = data;
+  const filteredStudents = students.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.registerNo.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  return (
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+      
+      {/* Dynamic Header Section */}
+      <div className="dashboard-card" style={{ padding: 0, overflow: 'hidden', borderRadius: '24px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -1px rgba(0,0,0,0.03)' }}>
+        <div style={{ background: "linear-gradient(135deg, #1e293b 0%, #0f172a 100%)", padding: "40px", color: "#fff", position: "relative" }}>
+          <button 
+            onClick={onBack}
+            className="group flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl transition-all border border-white/10"
+            style={{ marginBottom: '24px' }}
+          >
+            <ChevronRight size={18} style={{ transform: 'rotate(180deg)' }} />
+            <span className="text-sm font-bold">Back to Slots</span>
+          </button>
+          
+          <div style={{ display: "flex", alignItems: "center", gap: "24px" }}>
+            <div style={{ padding: "16px", borderRadius: "20px", backgroundColor: "rgba(99, 102, 241, 0.2)", border: "1px solid rgba(99, 102, 241, 0.2)" }}>
+              <CalendarCheck size={32} style={{ color: "#818cf8" }} />
+            </div>
+            <div className="flex-1">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                <span className="px-3 py-1 bg-indigo-500/20 text-indigo-300 text-[10px] font-black uppercase tracking-[0.2em] rounded-full border border-indigo-500/30">Official Assessment</span>
+                <span className="text-white/40">•</span>
+                <span className="text-white/60 text-xs font-bold">{new Date(summary.date).toLocaleDateString("en-GB", { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+              </div>
+              <h2 style={{ fontSize: "32px", fontWeight: "900", color: "#fff", marginBottom: "4px", letterSpacing: "-0.04em" }}>Assessment Report</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '20px', color: '#94a3b8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><MapPin size={16} /> <span className="text-sm font-bold uppercase tracking-wider">{summary.venueName}</span></div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Clock size={16} /> <span className="text-sm font-bold uppercase tracking-wider">{summary.timeLabel}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Aggregate Metrics Grid */}
+        <div style={{ padding: "32px", backgroundColor: "#fff", display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "20px" }}>
+          <div className="p-6 bg-slate-50/50 rounded-2xl border border-slate-100/50 hover:shadow-lg hover:shadow-indigo-500/5 transition-all duration-300">
+            <span style={{ fontSize: "11px", color: "#64748b", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em" }}>Booking Capacity</span>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px', marginTop: '12px' }}>
+              <div style={{ fontSize: "36px", fontWeight: "900", color: "#1e293b", letterSpacing: '-0.02em' }}>{summary.totalBooked}</div>
+              <div style={{ fontSize: "16px", color: "#94a3b8", fontWeight: "600" }}>/ {summary.capacity}</div>
+            </div>
+          </div>
+          <div className="p-6 bg-blue-50/50 rounded-2xl border border-blue-100/50 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300">
+            <span style={{ fontSize: "11px", color: "#3b82f6", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em" }}>Attended Count</span>
+            <div style={{ fontSize: "36px", fontWeight: "900", color: "#1d4ed8", marginTop: "12px", letterSpacing: '-0.02em' }}>{summary.attended}</div>
+          </div>
+          <div className="p-6 bg-emerald-50/50 rounded-2xl border border-emerald-100/50 hover:shadow-lg hover:shadow-emerald-500/5 transition-all duration-300">
+            <span style={{ fontSize: "11px", color: "#059669", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em" }}>Students Cleared</span>
+            <div style={{ fontSize: "36px", fontWeight: "900", color: "#047857", marginTop: "12px", letterSpacing: '-0.02em' }}>{summary.passed}</div>
+          </div>
+          <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-100/50 hover:shadow-lg hover:shadow-rose-500/5 transition-all duration-300">
+            <span style={{ fontSize: "11px", color: "#e11d48", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em" }}>Students Failed</span>
+            <div style={{ fontSize: "36px", fontWeight: "900", color: "#be123c", marginTop: "12px", letterSpacing: '-0.02em' }}>{summary.failed}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Analysis Section */}
+      <div className="dashboard-card" style={{ marginTop: '24px', padding: "32px" }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '32px' }}>
+          <div>
+            <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' }}>Registered Candidates</h3>
+            <p style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>Individual performance metrics for current slot session.</p>
+          </div>
+          <div style={{ position: "relative", width: '400px' }}>
+            <Search size={18} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+            <input 
+              type="text" 
+              placeholder="Filter by name or register no..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{ width: "100%", padding: "14px 14px 14px 48px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "14px", fontWeight: "600", backgroundColor: "#f8fafc", outline: "none", transition: 'all 0.2s ease' }}
+            />
+          </div>
+        </div>
+
+        <div className="sa-table-wrap" style={{ borderRadius: "20px", border: "1px solid #f1f5f9", overflow: 'hidden', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+          <table className="sa-table">
+            <thead>
+              <tr style={{ backgroundColor: '#f8fafc' }}>
+                <th style={{ padding: "24px", color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Student Information</th>
+                <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Exam Status</th>
+                <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Focus / Switches</th>
+                <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score Achieved</th>
+                <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Result</th>
+                <th style={{ textAlign: 'right', paddingRight: '24px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Verification</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredStudents.map((s) => (
+                <tr key={s.registrationId} className="hover:bg-slate-50/50 transition-colors">
+                  <td style={{ padding: "20px 24px" }}>
+                    <div style={{ fontWeight: "800", color: "#1e293b", fontSize: '15px' }}>{s.name}</div>
+                    <div style={{ fontSize: "12px", color: "#94a3b8", fontWeight: '700', letterSpacing: '0.05em' }}>{s.registerNo}</div>
+                  </td>
+                  <td>
+                    <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                      s.isAttempted 
+                        ? "bg-indigo-50 text-indigo-600 border-indigo-100" 
+                        : "bg-slate-50 text-slate-400 border-slate-100"
+                    }`}>
+                      {s.isAttempted ? "Attempted" : "Absent"}
+                    </span>
+                  </td>
+                  <td>
+                    {s.isAttempted ? (
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[13px] font-black ${s.tabSwitches > 5 ? "text-rose-600" : s.tabSwitches > 0 ? "text-amber-600" : "text-emerald-600"}`}>
+                          {s.tabSwitches || 0} switches
+                        </span>
+                        {s.tabSwitches > 0 && (
+                          <div className={`w-1.5 h-1.5 rounded-full ${s.tabSwitches > 5 ? "bg-rose-500 animate-pulse" : "bg-amber-500"}`}></div>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="text-slate-300 font-bold">—</span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px', fontWeight: "900", color: s.isAttempted ? "#1e293b" : "#cbd5e1" }}>{s.isAttempted ? s.score : "—"}</span>
+                      {s.isAttempted && <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>PTS</span>}
+                    </div>
+                  </td>
+                  <td>
+                    {s.isAttempted ? (
+                      s.isPassed ? (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#ecfdf5', color: '#059669', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>
+                          <UserCheck size={14} /> <span>PASSED</span>
+                        </div>
+                      ) : (
+                        <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#fff1f2', color: '#e11d48', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>
+                          <X size={14} /> <span>FAILED</span>
+                        </div>
+                      )
+                    ) : (
+                      <span style={{ color: "#cbd5e1", fontWeight: '700' }}>—</span>
+                    )}
+                  </td>
+                  <td style={{ textAlign: 'right', paddingRight: '24px' }}>
+                    <button 
+                      className="group inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-all border border-indigo-100 font-bold text-xs"
+                      disabled={!s.isAttempted}
+                      onClick={() => {
+                        setSelectedAnswers(s.answers || []);
+                        setSelectedStudent(s);
+                      }}
+                    >
+                      <span>Review Answers</span>
+                      <ChevronRight size={14} className="group-hover:translate-x-0.5 transition-transform" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {filteredStudents.length === 0 && (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: "center", padding: "80px", color: "#94a3b8" }}>
+                    <div className="flex flex-col items-center gap-2">
+                      <Search size={40} className="opacity-10 mb-2" />
+                      <p className="font-bold">No candidates found matching your search</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {selectedAnswers && selectedStudent && (
+        <ReviewAnswersModal 
+          student={selectedStudent} 
+          answers={selectedAnswers} 
+          onClose={() => {
+            setSelectedAnswers(null);
+            setSelectedStudent(null);
+          }} 
+        />
+      )}
+    </div>
+  );
+}
+
+function ReviewAnswersModal({ student, answers, onClose }) {
+  const [activeIdx, setActiveIdx] = useState(0);
+  const currentAnswer = (answers || [])[activeIdx];
+
+  const renderValue = (val) => {
+    if (!val) return <span style={{ color: "#94a3b8" }}>No response provided.</span>;
+
+    let content = val;
+    if (typeof val === 'object' && val !== null) {
+      const keys = Object.keys(val);
+      if (keys.length > 0) {
+        const topKey = keys[0];
+        if (typeof val[topKey] === 'object' && val[topKey] !== null && 'code' in val[topKey]) {
+           content = val[topKey].code;
+        } else if (typeof val[topKey] === 'string') {
+           content = val[topKey];
+        } else {
+           return <pre style={{ padding: "16px", backgroundColor: "#f8fafc", borderRadius: "10px", fontSize: "13px", color: "#475569", overflow: "auto" }}>{JSON.stringify(val, null, 2)}</pre>;
+        }
+      }
+    }
+
+    return (
+      <div style={{ backgroundColor: "#1e293b", padding: "24px", borderRadius: "16px", border: "1px solid #334155", fontFamily: "'JetBrains Mono', 'Fira Code', monospace", color: "#f1f5f9", fontSize: "14px", lineHeight: "1.6", overflowX: "auto", position: "relative" }}>
+        <div style={{ position: "absolute", right: "12px", top: "12px", fontSize: "10px", color: "#94a3b8", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.1em" }}>Submission View</div>
+        <pre style={{ margin: 0 }}>{content}</pre>
+      </div>
+    );
+  };
+
+  return (
+    <div style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "rgba(15, 23, 42, 0.4)", backdropFilter: "blur(8px)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px" }}>
+      <div style={{ width: "100%", maxWidth: "1000px", height: "85vh", backgroundColor: "#fff", borderRadius: "32px", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}>
+        <div style={{ padding: "24px 32px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#f8fafc" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "16px", backgroundColor: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5" }}>
+              <UserCheck size={24} />
+            </div>
+            <div>
+              <h3 style={{ fontSize: "18px", fontWeight: "900", color: "#1e293b", margin: 0 }}>{student.name}</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: "12px", color: "#64748b", marginTop: '4px', fontWeight: "600" }}>
+                <span>{student.registerNo}</span>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span style={{ color: '#10b981' }}>{student.score} PTS</span>
+                <span style={{ color: '#cbd5e1' }}>•</span>
+                <span style={{ color: student.tabSwitches > 5 ? "#ef4444" : student.tabSwitches > 0 ? "#f59e0b" : "#10b981" }}>{student.tabSwitches} Switches</span>
+              </div>
+            </div>
+          </div>
+          <button onClick={onClose} style={{ padding: "12px", borderRadius: "12px", backgroundColor: "#fff", border: "1px solid #e2e8f0", color: "#64748b", cursor: "pointer" }} className="hover:bg-rose-50 hover:text-rose-600 transition-colors">
+            <X size={20} />
+          </button>
+        </div>
+
+        <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+          <div style={{ width: "240px", borderRight: "1px solid #f1f5f9", overflowY: "auto", padding: "20px", display: "flex", flexDirection: "column", gap: "8px", backgroundColor: "#fcfdfe" }}>
+            <span style={{ fontSize: "10px", fontWeight: "900", color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: "8px", paddingLeft: "12px" }}>Questions</span>
+            {(answers || []).map((ans, i) => (
+              <button 
+                key={ans.questionNumber}
+                onClick={() => setActiveIdx(i)}
+                style={{ 
+                  width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: "14px", fontSize: "13px", fontWeight: "800", transition: "all 0.2s",
+                  backgroundColor: activeIdx === i ? "#4f46e5" : "transparent",
+                  color: activeIdx === i ? "#fff" : "#475569",
+                  border: "none", cursor: "pointer",
+                  boxShadow: activeIdx === i ? "0 10px 15px -3px rgba(79, 70, 229, 0.2)" : "none"
+                }}
+              >
+                Question {ans.questionNumber}
+              </button>
+            ))}
+          </div>
+
+          <div style={{ flex: 1, overflowY: "auto", padding: "40px", backgroundColor: "#fff" }}>
+            {currentAnswer ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <div style={{ padding: '8px', backgroundColor: '#f5f3ff', borderRadius: '8px', color: '#7c3aed' }}>
+                    <Terminal size={20} />
+                  </div>
+                  <h4 style={{ fontSize: "18px", fontWeight: "900", color: "#1e293b", margin: 0 }}>Submission Detail</h4>
+                </div>
+                
+                <div style={{ padding: '16px', backgroundColor: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '13px', color: '#64748b' }}>
+                  <span style={{ fontWeight: '800', color: '#475569' }}>Template ID:</span> {currentAnswer.template_id}
+                </div>
+
+                {renderValue(currentAnswer.value)}
+              </div>
+            ) : (
+              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#94a3b8", gap: "16px" }}>
+                <Code size={48} style={{ opacity: 0.1 }} />
+                <p style={{ fontWeight: '600' }}>No detailed response found for this question index.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

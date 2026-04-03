@@ -1,3 +1,4 @@
+const mongoose = require("mongoose");
 const Role = require("../models/Role");
 const User = require("../models/User");
 const AdminCourse = require("../models/AdminCourse");
@@ -10,6 +11,10 @@ const LeaveType = require("../models/LeaveType");
 const LeaveWorkflow = require("../models/LeaveWorkflow");
 const AdminSettings = require("../models/AdminSettings");
 const Slot = require("../models/Slot");
+const Student = require("../models/Student");
+const StudentSlotRegistration = require("../models/StudentSlotRegistration");
+const CourseSlotBooking = require("../models/CourseSlotBooking");
+const StudentExamAttempt = require("../models/StudentExamAttempt");
 const bcrypt = require("bcryptjs");
 
 const DEFAULT_PASSWORD = "Password@123";
@@ -719,4 +724,123 @@ exports.deleteAssessmentSlot = async (req, res) => {
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
+
+// ——— Slot Reports ———
+exports.getSlotReport = async (req, res) => {
+  try {
+    const { id } = req.params; // slotId
+    
+    // 1. Find the Slot basics
+    const slotObjectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
+    const slot = await Slot.findById(id)
+      .populate("allowed_courses.course_id", "name")
+      .populate("venue_id", "name")
+      .populate("time_slot_id", "startTime endTime")
+      .lean();
+    if (!slot) return res.status(404).json({ message: "Slot not found" });
+
+    // 2. Build a flexible query for both ObjectId and String forms of the slot_id
+    const slotQuery = slotObjectId ? { $or: [{ slot_id: slotObjectId }, { slot_id: id }] } : { slot_id: id };
+
+    // 3. Find all registrations from BOTH collections
+    const [bookings, registrations] = await Promise.all([
+      CourseSlotBooking.find(slotQuery).lean(),
+      StudentSlotRegistration.find(slotQuery).populate("student_id").lean()
+    ]);
+
+    // 4. Unify registrations by register_no
+    const unifiedRegs = new Map();
+    
+    bookings.forEach(b => {
+      unifiedRegs.set(b.register_no, {
+        source: 'booking',
+        id: b._id.toString(),
+        registerNo: b.register_no,
+        name: b.student_name,
+        processed: b.processed
+      });
+    });
+    
+    registrations.forEach(r => {
+      const regNo = r.student_id?.register_no || "N/A";
+      if (!unifiedRegs.has(regNo)) {
+        unifiedRegs.set(regNo, {
+          source: 'registration',
+          id: r._id.toString(),
+          registerNo: regNo,
+          name: r.student_id?.name || "Unknown",
+          processed: r.status === 'attended'
+        });
+      }
+    });
+
+    const activeRegNos = Array.from(unifiedRegs.keys());
+    const allowedCourseIds = (slot.allowed_courses || []).map(ac => (ac.course_id?._id || ac.course_id));
+    
+    // 5. Broad Search for Attempts: Find ANY attempt for these courses on this date
+    const dateStart = new Date(slot.date);
+    dateStart.setHours(0, 0, 0, 0);
+    const dateEnd = new Date(slot.date);
+    dateEnd.setHours(23, 59, 59, 999);
+
+    const attempts = await StudentExamAttempt.find({ 
+      course_id: { $in: allowedCourseIds },
+      submitted_at: { $gte: dateStart, $lte: dateEnd }
+    }).lean();
+
+    // 6. Final Student Records fetching (to ensure accurate names)
+    const allRegNos = Array.from(new Set([...activeRegNos, ...attempts.map(a => a.register_no)]));
+    const studentsList = await Student.find({ register_no: { $in: allRegNos } }).lean();
+
+    // 7. Aggregate everything: Ensure any student with an attempt appears
+    attempts.forEach(a => {
+      if (!unifiedRegs.has(a.register_no)) {
+        const student = studentsList.find(s => s.register_no === a.register_no) || {};
+        unifiedRegs.set(a.register_no, {
+          source: 'attempt_only',
+          id: a._id.toString(),
+          registerNo: a.register_no,
+          name: student.name || "Unknown",
+          processed: true
+        });
+      }
+    });
+
+    const reportData = Array.from(unifiedRegs.values()).map(reg => {
+      const student = studentsList.find(s => s.register_no === reg.registerNo) || {};
+      const attempt = attempts.find(a => a.register_no === reg.registerNo);
+      
+      return {
+        registrationId: reg.id,
+        studentId: student._id || "N/A",
+        name: student.name || reg.name || "Unknown",
+        registerNo: reg.registerNo,
+        status: (reg.processed || !!attempt) ? 'attended' : 'registered', 
+        isAttempted: !!attempt,
+        score: attempt ? attempt.score : 0,
+        tabSwitches: attempt ? attempt.tab_switches : 0,
+        isPassed: attempt ? attempt.isPassed : false,
+        submittedAt: attempt ? attempt.submitted_at : null,
+        answers: attempt ? attempt.questions : []
+      };
+    });
+
+    // 8. Summary
+    const summary = {
+      totalBooked: reportData.length,
+      attended: reportData.filter(r => r.status === 'attended' || r.isAttempted).length,
+      passed: reportData.filter(r => r.isPassed).length,
+      failed: reportData.filter(r => r.isAttempted && !r.isPassed).length,
+      capacity: slot.capacity,
+      venueName: slot.venue_id?.name || "N/A",
+      timeLabel: slot.time_slot_id ? `${slot.time_slot_id.startTime} – ${slot.time_slot_id.endTime}` : "N/A",
+      date: slot.date
+    };
+
+    res.json({ summary, students: reportData });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+
 };

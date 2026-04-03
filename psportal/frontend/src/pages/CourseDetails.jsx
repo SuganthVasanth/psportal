@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useParams, useLocation } from "react-router-dom";
+import { useParams, useLocation, useNavigate } from "react-router-dom";
 import StudentLayout from "../components/StudentLayout";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
 import LeetCodePortal from "../components/renderer/LeetCodePortal";
@@ -22,6 +22,7 @@ const getLevelActionLabel = (courseName, level, index) => {
 };
 
 export default function CourseDetails() {
+  const navigate = useNavigate();
   const { id } = useParams();
   const courseId = id;
   const [course, setCourse] = useState(null);
@@ -440,6 +441,7 @@ export default function CourseDetails() {
           course_id: courseId,
           booking_id: bookingId,
           questions,
+          tab_switches: tabSwitchCount,
         }),
       });
       const data = await res.json();
@@ -452,6 +454,10 @@ export default function CourseDetails() {
       setCourseAttempts((prev) => prev + 1);
       localStorage.removeItem(proctorKey); // Clear tracking on successful submit
       localStorage.removeItem(draftKey); // Clear draft on successful submit
+      
+      setTimeout(() => {
+        navigate("/courses-available");
+      }, 1500); // Small delay to let the user see a success message if any
     } catch (e) {
       setExamError(e.message || "Submit failed");
     } finally {
@@ -485,10 +491,22 @@ export default function CourseDetails() {
         myBookings.find((b) => String(b.course_id) === String(courseId)) ||
         (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
 
+      const currentLevelIndex = progress.findIndex(p => !p.completed);
+      const currentLevel = course?.levels?.[currentLevelIndex >= 0 ? currentLevelIndex : 0];
+      const durationMinutes = currentLevel?.durationMinutes || 60;
+
       let assessmentEndTime = null;
       if (activeBooking && activeBooking.date) {
+        const startStr = activeBooking.startTime;
         const endStr = activeBooking.endTime || activeBooking.slot_end_time;
-        if (endStr) {
+        
+        if (startStr) {
+          const [h, m] = startStr.split(":").map(Number);
+          assessmentEndTime = new Date(activeBooking.date);
+          assessmentEndTime.setHours(h, m, 0, 0);
+          // Add duration minutes
+          assessmentEndTime.setMinutes(assessmentEndTime.getMinutes() + durationMinutes);
+        } else if (endStr) {
           const [h, m] = endStr.split(":").map(Number);
           assessmentEndTime = new Date(activeBooking.date);
           assessmentEndTime.setHours(h, m, 0, 0);
@@ -527,6 +545,27 @@ export default function CourseDetails() {
               <h1 className="cd-exam-title">Portal – {course?.name || courseName}</h1>
             </div>
             
+            {examLoading && (
+              <div className="cd-questions-list">
+                <p className="cd-content-placeholder">Loading questions…</p>
+              </div>
+            )}
+
+            {examError && (
+              <div className="cd-questions-list">
+                <p className="cd-modal-error">{examError}</p>
+                <div style={{ marginTop: 12 }}>
+                  <button type="button" className="cd-btn-secondary" onClick={handleLaunchPortal}>Retry</button>
+                </div>
+              </div>
+            )}
+
+            {!examLoading && !examError && examQuestions.length === 0 && !examSubmitted && (
+              <div className="cd-questions-list">
+                <p className="cd-content-placeholder">No questions available for this course yet.</p>
+              </div>
+            )}
+
             {!examLoading && !examError && examQuestions.length > 0 && !examSubmitted && (
                 <>
                   <div className="cd-questions-list">

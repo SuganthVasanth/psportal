@@ -1,0 +1,193 @@
+[
+  {
+    "_id": "69b2d36d975c331e58302d42",
+    "key": "mcq",
+    "__v": 0,
+    "config": {
+      "numberOfOptions": 4,
+      "allowMultipleCorrect": false
+    },
+    "createdAt": "2026-03-12T14:53:33.228Z",
+    "description": "Standard MCQ template",
+    "isDefault": true,
+    "layout": [
+      {
+        "id": "q",
+        "type": "question_text",
+        "x": 120,
+        "y": 40,
+        "width": 640,
+        "height": 120,
+        "properties": {
+          "label": "Question",
+          "required": true,
+          "placeholder": "Question here"
+        }
+      },
+      {
+        "id": "mcq",
+        "type": "multiple_choice",
+        "x": 120,
+        "y": 200,
+        "width": 520,
+        "height": 260,
+        "properties": {
+          "label": "Options",
+          "required": true,
+          "numberOfOptions": 4
+        }
+      }
+    ],
+    "name": "Multiple Choice Question",
+    "updatedAt": "2026-04-03T08:23:35.598Z"
+  },
+  {
+    "_id": "69b2d36d975c331e58302d40",
+    "key": "match_following",
+    "__v": 0,
+    "config": {
+      "numberOfPairs": 4
+    },
+    "createdAt": "2026-03-12T14:53:33.229Z",
+    "description": "Match left and right columns",
+    "isDefault": true,
+    "layout": [
+      {
+        "id": "q",
+        "type": "question_text",
+        "x": 120,
+        "y": 40,
+        "width": 640,
+        "height": 120,
+        "properties": {
+          "label": "Question",
+          "required": true,
+          "placeholder": "Question here"
+        }
+      },
+      {
+        "id": "pairs",
+        "type": "match_pairs",
+        "x": 120,
+        "y": 200,
+        "width": 740,
+        "height": 320,
+        "properties": {
+          "label": "Pairs",
+          "required": true,
+          "pairs": 4
+        }
+      }
+    ],
+    "name": "Match the Following",
+    "updatedAt": "2026-04-03T08:23:35.601Z"
+  },
+  {
+    "_id": "69b2d36d975c331e58302d3f",
+    "key": "programming",
+    "__v": 0,
+    "config": {
+      "numberOfTestCases": 3
+    },
+    "createdAt": "2026-03-12T14:53:33.229Z",
+    "description": "Coding problem with test cases",
+    "isDefault": true,
+    "layout": [
+      {
+        "id": "ps",
+        "type": "question_text",
+        "x": 120,
+        "y": 40,
+        "width": 720,
+        "height": 140,
+        "properties": {
+          "label": "Problem statement",
+          "required": true,
+          "placeholder": "Describe the problem..."
+        }
+      },
+      {
+        "id": "in",
+        "type": "paragraph",
+        "x": 120,
+        "y": 210,
+        "width": 360,
+        "height": 56,
+        "properties": {
+          "label": "Input format",
+          "required": false,
+          "placeholder": "Describe input format..."
+        }
+      },
+      {
+        "id": "out",
+        "type": "paragraph",
+        "x": 500,
+        "y": 210,
+        "width": 360,
+        "height": 56,
+        "properties": {
+          "label": "Output format",
+          "required": false,
+          "placeholder": "Describe output format..."
+        }
+      },
+      {
+        "id": "tc",
+        "type": "drag_drop_area",
+        "x": 120,
+        "y": 290,
+        "width": 740,
+        "height": 260,
+        "properties": {
+          "label": "Test cases",
+          "required": false,
+          "placeholder": "Add test cases (Input / Output)"
+        }
+      }
+    ],
+    "name": "Programming Question",
+    "updatedAt": "2026-04-03T08:23:35.600Z"
+  },
+  {
+    "_id": "69b2d36d975c331e58302d41",
+    "key": "fill_blank",
+    "__v": 0,
+    "config": {
+      "numberOfBlanks": 1
+    },
+    "createdAt": "2026-03-12T14:53:33.229Z",
+    "description": "Sentence with blanks",
+    "isDefault": true,
+    "layout": [
+      {
+        "id": "q",
+        "type": "question_text",
+        "x": 120,
+        "y": 40,
+        "width": 640,
+        "height": 120,
+        "properties": {
+          "label": "Sentence",
+          "required": true,
+          "placeholder": "Write the sentence with blanks"
+        }
+      },
+      {
+        "id": "ans",
+        "type": "input_field",
+        "x": 120,
+        "y": 200,
+        "width": 360,
+        "height": 56,
+        "properties": {
+          "label": "Correct answer",
+          "required": true,
+          "placeholder": "Answer"
+        }
+      }
+    ],
+    "name": "Fill in the Blank",
+    "updatedAt": "2026-04-03T08:23:35.600Z"
+  }
+]
