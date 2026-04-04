@@ -405,6 +405,9 @@ export default function CourseDetails() {
     setBookingLoading(true);
     setBookingError("");
     try {
+      const activeEnrollment = progress.find(p => p.status === "enrolled");
+      const currentLevelIndex = activeEnrollment ? activeEnrollment.level_index : 0;
+
       const res = await fetch(`${API_BASE}/api/book-slot`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -413,6 +416,7 @@ export default function CourseDetails() {
           student_name: studentName,
           course_id: courseId,
           course_name: courseName,
+          level_index: currentLevelIndex,
           slot_id: slot.id,
           venue_label: slot.venueLabel || "",
           time_label: slot.timeLabel || "",

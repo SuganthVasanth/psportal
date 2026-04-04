@@ -459,22 +459,28 @@ exports.getFacultyAssignments = async (req, res) => {
     const { user_id } = req.query;
     const filter = user_id ? { user_id } : {};
     const list = await FacultyCourseAssignment.find(filter)
-      .populate("course_id", "name status")
+      .populate("course_id", "name status levels")
       .populate("user_id", "email name")
       .populate("template_id", "name key")
       .lean();
-    res.json(list.map((a) => ({
-      id: a._id.toString(),
-      user_id: a.user_id?._id?.toString(),
-      user_email: a.user_id?.email,
-      user_name: a.user_id?.name,
-      course_id: a.course_id?._id?.toString(),
-      course_name: a.course_id?.name,
-      course_status: a.course_id?.status,
-      template_id: a.template_id?._id?.toString() || null,
-      template_name: a.template_id?.name || "",
-      question_count: a.question_count || 0,
-    })));
+    res.json(list.map((a) => {
+      const levels = a.course_id?.levels || [];
+      const levelName = levels[a.level_index]?.name || `Level ${(a.level_index || 0) + 1}`;
+      return {
+        id: a._id.toString(),
+        user_id: a.user_id?._id?.toString(),
+        user_email: a.user_id?.email,
+        user_name: a.user_id?.name,
+        course_id: a.course_id?._id?.toString(),
+        course_name: a.course_id?.name,
+        course_status: a.course_id?.status,
+        level_index: a.level_index || 0,
+        level_name: levelName,
+        template_id: a.template_id?._id?.toString() || null,
+        template_name: a.template_id?.name || "",
+        question_count: a.question_count || 0,
+      };
+    }));
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
@@ -482,7 +488,7 @@ exports.getFacultyAssignments = async (req, res) => {
 
 exports.assignFacultyToCourse = async (req, res) => {
   try {
-    const { user_id, course_id, template_id, question_count } = req.body;
+    const { user_id, course_id, level_index, template_id, question_count } = req.body;
     if (!user_id || !course_id) return res.status(400).json({ message: "user_id and course_id required" });
     const targetUser = await User.findById(user_id).populate("roles", "role_name").lean();
     if (!targetUser) return res.status(404).json({ message: "User not found" });
@@ -494,25 +500,32 @@ exports.assignFacultyToCourse = async (req, res) => {
       });
     }
     const doc = await FacultyCourseAssignment.findOneAndUpdate(
-      { user_id, course_id },
+      { user_id, course_id, level_index: level_index || 0 },
       {
         user_id,
         course_id,
+        level_index: level_index || 0,
         ...(template_id ? { template_id } : {}),
         ...(question_count != null ? { question_count } : {}),
       },
       { new: true, upsert: true }
     );
     const populated = await FacultyCourseAssignment.findById(doc._id)
-      .populate("course_id", "name")
+      .populate("course_id", "name levels")
       .populate("user_id", "email name")
       .populate("template_id", "name key")
       .lean();
+    
+    const levels = populated.course_id?.levels || [];
+    const levelName = levels[populated.level_index]?.name || `Level ${(populated.level_index || 0) + 1}`;
+
     res.status(201).json({
       id: populated._id.toString(),
       user_id: populated.user_id?._id?.toString(),
       course_id: populated.course_id?._id?.toString(),
       course_name: populated.course_id?.name,
+      level_index: populated.level_index || 0,
+      level_name: levelName,
       template_id: populated.template_id?._id?.toString() || null,
       template_name: populated.template_id?.name || "",
       question_count: populated.question_count || 0,
@@ -539,15 +552,21 @@ exports.getQuestionBankSubmissionById = async (req, res) => {
   try {
     const { id } = req.params;
     const doc = await QuestionBankSubmission.findById(id)
-      .populate("course_id", "name status")
+      .populate("course_id", "name status levels")
       .populate("user_id", "name email")
       .populate("questions.template_id", "name key")
       .lean();
     if (!doc) return res.status(404).json({ message: "Submission not found" });
+
+    const levels = doc.course_id?.levels || [];
+    const levelName = levels[doc.level_index]?.name || `Level ${(doc.level_index || 0) + 1}`;
+
     res.json({
       id: doc._id.toString(),
       course_id: doc.course_id?._id?.toString(),
       course_name: doc.course_id?.name,
+      level_index: doc.level_index || 0,
+      level_name: levelName,
       faculty_name: doc.user_id?.name,
       faculty_email: doc.user_id?.email,
       user_id: doc.user_id?._id?.toString(),
@@ -576,26 +595,32 @@ exports.getQuestionBankSubmissions = async (req, res) => {
     const { course_id } = req.query;
     const filter = course_id ? { course_id } : {};
     const list = await QuestionBankSubmission.find(filter)
-      .populate("course_id", "name status")
+      .populate("course_id", "name status levels")
       .populate("user_id", "name email")
       .sort({ updatedAt: -1 })
       .lean();
     res.json(
-      list.map((s) => ({
-        id: s._id.toString(),
-        course_id: s.course_id?._id?.toString(),
-        course_name: s.course_id?.name,
-        faculty_name: s.user_id?.name,
-        faculty_email: s.user_id?.email,
-        user_id: s.user_id?._id?.toString(),
-        status: s.status,
-        title: s.title,
-        content: s.content,
-        file_url: s.file_url,
-        submitted_at: s.submitted_at,
-        reviewed_at: s.reviewed_at,
-        review_remarks: s.review_remarks,
-      }))
+      list.map((s) => {
+        const levels = s.course_id?.levels || [];
+        const levelName = levels[s.level_index]?.name || `Level ${(s.level_index || 0) + 1}`;
+        return {
+          id: s._id.toString(),
+          course_id: s.course_id?._id?.toString(),
+          course_name: s.course_id?.name,
+          level_index: s.level_index || 0,
+          level_name: levelName,
+          faculty_name: s.user_id?.name,
+          faculty_email: s.user_id?.email,
+          user_id: s.user_id?._id?.toString(),
+          status: s.status,
+          title: s.title,
+          content: s.content,
+          file_url: s.file_url,
+          submitted_at: s.submitted_at,
+          reviewed_at: s.reviewed_at,
+          review_remarks: s.review_remarks,
+        };
+      })
     );
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -822,17 +847,21 @@ exports.getSlotReport = async (req, res) => {
     });
 
     // 7.1 Fetch Question Bank Metadata to populate problem statements in the report
-    const courseIdsUsed = Array.from(new Set(attempts.map(a => a.course_id.toString())));
-    const questionBanks = await mongoose.model("QuestionBankSubmission").find({
-      course_id: { $in: courseIdsUsed },
-      status: "approved"
-    }).populate("questions.template_id").lean();
+    const courseLevelPairs = Array.from(new Set(attempts.map(a => `${a.course_id}_${a.level_index || 0}`)));
+    const qbQuery = { $or: courseLevelPairs.map(cp => {
+      const [cid, lidx] = cp.split("_");
+      return { course_id: cid, level_index: Number(lidx), status: "approved" };
+    })};
+    
+    const questionBanks = await mongoose.model("QuestionBankSubmission").find(qbQuery)
+      .populate("questions.template_id").lean();
 
     const questionMetadataMap = new Map();
     questionBanks.forEach(bank => {
       const cid = bank.course_id.toString();
+      const lidx = bank.level_index || 0;
       (bank.questions || []).forEach(q => {
-        const key = `${cid}_${q.questionNumber}`;
+        const key = `${cid}_${lidx}_${q.questionNumber}`;
         // If multiple banks exist, we might already have an entry. 
         // We'll prefer the one that actually has content.
         const existing = questionMetadataMap.get(key);
@@ -862,7 +891,7 @@ exports.getSlotReport = async (req, res) => {
       if (attempt && Array.isArray(attempt.questions)) {
         enrichedAnswers = attempt.questions.map(q => {
           const qObj = typeof q.toObject === 'function' ? q.toObject() : q;
-          const metaKey = `${attempt.course_id.toString()}_${qObj.questionNumber}`;
+          const metaKey = `${attempt.course_id.toString()}_${attempt.level_index || 0}_${qObj.questionNumber}`;
           const bankMeta = questionMetadataMap.get(metaKey) || {};
           
           return {

@@ -131,7 +131,7 @@ exports.getActiveSlots = async (req, res) => {
 
 exports.bookSlot = async (req, res) => {
   try {
-    const { register_no, student_name, course_id, course_name, slot_id, venue_label, time_label } = req.body;
+    const { register_no, student_name, course_id, level_index, course_name, slot_id, venue_label, time_label } = req.body;
     
     if (!register_no || !course_id || !slot_id) {
       return res.status(400).json({ message: "register_no, course_id, and slot_id are required" });
@@ -167,9 +167,13 @@ exports.bookSlot = async (req, res) => {
 
     // 2.5 Ensure approved question bank exists before booking
     const QuestionBankSubmission = require('../models/QuestionBankSubmission');
-    const qb = await QuestionBankSubmission.findOne({ course_id, status: "approved" }).lean();
+    const qb = await QuestionBankSubmission.findOne({ 
+      course_id, 
+      level_index: level_index || 0,
+      status: "approved" 
+    }).lean();
     if (!qb || !Array.isArray(qb.questions) || qb.questions.length === 0) {
-      return res.status(400).json({ message: "Assessment questions are not yet available for this course. Please contact support or check back later." });
+      return res.status(400).json({ message: "Assessment questions are not yet available for this course level. Please contact support or check back later." });
     }
 
     // 3. Create booking

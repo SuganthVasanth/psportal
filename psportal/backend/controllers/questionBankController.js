@@ -16,25 +16,36 @@ exports.getMyTasks = async (req, res) => {
     const currentUser = await User.findById(userId).lean();
     const userName = (currentUser?.name || "").trim();
 
+    // 1. Get explicit assignments via FacultyCourseAssignment
     const assignments = await FacultyCourseAssignment.find({ user_id: userId })
-      .populate("course_id", "name status")
+      .populate("course_id", "name status levels")
       .populate("template_id", "name key")
       .lean();
-    const courseMap = new Map();
+
+    const taskMap = new Map(); // Key: courseId_levelIndex
+    
     assignments.forEach((a) => {
       const cid = a.course_id?._id?.toString();
-      if (cid) {
-        courseMap.set(cid, {
-          name: a.course_id?.name,
-          status: a.course_id?.status,
-          template_id: a.template_id?._id?.toString() || null,
-          template_name: a.template_id?.name || "",
-          question_count: a.question_count ?? 0,
-          assigned_at: a.updatedAt || a.createdAt || null,
-        });
-      }
+      if (!cid) return;
+      const levels = a.course_id?.levels || [];
+      const levelIndex = a.level_index || 0;
+      const levelName = levels[levelIndex]?.name || `Level ${levelIndex + 1}`;
+      const key = `${cid}_${levelIndex}`;
+      
+      taskMap.set(key, {
+        course_id: cid,
+        course_name: a.course_id?.name,
+        course_status: a.course_id?.status,
+        level_index: levelIndex,
+        level_name: levelName,
+        template_id: a.template_id?._id?.toString() || null,
+        template_name: a.template_id?.name || "",
+        question_count: a.question_count ?? 0,
+        assigned_at: a.updatedAt || a.createdAt || null,
+      });
     });
 
+    // 2. Get implicit assignments via AdminCourse 'faculty' field (default to level 0)
     if (userName) {
       const coursesByFaculty = await AdminCourse.find({
         faculty: new RegExp(`^${userName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
@@ -42,32 +53,50 @@ exports.getMyTasks = async (req, res) => {
       }).lean();
       coursesByFaculty.forEach((c) => {
         const cid = c._id.toString();
-        if (!courseMap.has(cid)) courseMap.set(cid, { name: c.name, status: c.status || "Active" });
+        const key = `${cid}_0`;
+        if (!taskMap.has(key)) {
+          taskMap.set(key, { 
+            course_id: cid, 
+            course_name: c.name, 
+            course_status: c.status || "Active",
+            level_index: 0,
+            level_name: (c.levels && c.levels[0]?.name) || "Level 1",
+            template_id: null,
+            template_name: "",
+            question_count: 0,
+            assigned_at: null
+          });
+        }
       });
     }
 
-    const courseIds = Array.from(courseMap.keys());
+    const taskKeys = Array.from(taskMap.keys());
+    const courseIds = Array.from(new Set(Array.from(taskMap.values()).map(t => t.course_id)));
 
+    // 3. Get existing submissions for these courses
     const submissions = await QuestionBankSubmission.find({
       user_id: userId,
       course_id: { $in: courseIds },
-    })
-      .populate("course_id", "name status")
-      .lean();
+    }).lean();
 
-    const submissionByCourse = new Map();
-    submissions.forEach((s) => submissionByCourse.set(s.course_id?._id?.toString(), s));
+    const submissionMap = new Map(); // Key: courseId_levelIndex
+    submissions.forEach((s) => {
+      submissionMap.set(`${s.course_id.toString()}_${s.level_index || 0}`, s);
+    });
 
-    const tasks = courseIds.map((cid) => {
-      const meta = courseMap.get(cid);
-      const sub = submissionByCourse.get(cid);
+    // 4. Build final task list
+    const tasks = taskKeys.map((key) => {
+      const meta = taskMap.get(key);
+      const sub = submissionMap.get(key);
+      
       const assignedAtMs = meta?.assigned_at ? new Date(meta.assigned_at).getTime() : 0;
       const submissionUpdatedMs = sub?.updatedAt ? new Date(sub.updatedAt).getTime() : 0;
       const isReviewed = sub?.status === "approved" || sub?.status === "rejected";
-      // If admin re-assigned this course after the previous reviewed submission,
-      // treat it as a fresh task so it appears under Pending.
+      
+      // If admin re-assigned this specific level after the previous reviewed submission
       const shouldResetByReassignment =
         !!sub && isReviewed && assignedAtMs > 0 && submissionUpdatedMs > 0 && assignedAtMs > submissionUpdatedMs;
+      
       const effectiveSub = shouldResetByReassignment ? null : sub;
       const questions = (effectiveSub?.questions || []).map((q) => ({
         questionNumber: q.questionNumber,
@@ -75,11 +104,14 @@ exports.getMyTasks = async (req, res) => {
         value: q.value || {},
         correctAnswerKey: q.correctAnswerKey ?? "",
       }));
+
       return {
         id: effectiveSub?._id?.toString(),
-        course_id: cid,
-        course_name: meta?.name,
-        course_status: meta?.status,
+        course_id: meta.course_id,
+        course_name: meta.course_name,
+        course_status: meta.course_status,
+        level_index: meta.level_index,
+        level_name: meta.level_name,
         status: effectiveSub?.status || "not_started",
         title: effectiveSub?.title || "",
         content: effectiveSub?.content || "",
@@ -87,9 +119,9 @@ exports.getMyTasks = async (req, res) => {
         submitted_at: effectiveSub?.submitted_at,
         reviewed_at: effectiveSub?.reviewed_at,
         review_remarks: effectiveSub?.review_remarks || "",
-        template_id: meta?.template_id || null,
-        template_name: meta?.template_name || "",
-        question_count: meta?.question_count ?? 0,
+        template_id: meta.template_id,
+        template_name: meta.template_name,
+        question_count: meta.question_count,
         questions,
       };
     });
@@ -107,19 +139,27 @@ exports.upsertSubmission = async (req, res) => {
     const userId = req.user?.userId || req.user?.id;
     if (!userId) return res.status(401).json({ message: "Unauthorized" });
 
-    const { course_id, title, content, file_url, file_name, action, questions } = req.body;
+    const { course_id, level_index, title, content, file_url, file_name, action, questions } = req.body;
     if (!course_id) return res.status(400).json({ message: "course_id required" });
 
-    const assigned = await FacultyCourseAssignment.findOne({ user_id: userId, course_id });
+    const levelIndex = Number(level_index || 0);
+
+    const assigned = await FacultyCourseAssignment.findOne({ user_id: userId, course_id, level_index: levelIndex });
     const currentUser = await User.findById(userId).lean();
     const userName = (currentUser?.name || "").trim();
-    const courseByFaculty = userName
+    
+    // Only check default faculty matching if level_index is 0 or if explicitly assigned
+    const courseByFaculty = (userName && levelIndex === 0)
       ? await AdminCourse.findOne({ _id: course_id, faculty: new RegExp(`^${userName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).lean()
       : null;
-    if (!assigned && !courseByFaculty) return res.status(403).json({ message: "You are not assigned to this course" });
+
+    if (!assigned && !courseByFaculty) return res.status(403).json({ message: "You are not assigned to this course level" });
 
     const isSubmit = action === "submit";
     const update = {
+      course_id,
+      user_id: userId,
+      level_index: levelIndex,
       title: title ?? "",
       content: content ?? "",
       file_url: file_url ?? "",
@@ -130,7 +170,6 @@ exports.upsertSubmission = async (req, res) => {
     };
 
     // ONLY update questions if they are explicitly sent in the request.
-    // If they are missing (e.g. saving from the summary view), we MUST NOT touch the existing questions.
     if (Array.isArray(questions) && questions.length > 0) {
       update.questions = questions.map((q) => ({
         questionNumber: q.questionNumber,
@@ -141,8 +180,8 @@ exports.upsertSubmission = async (req, res) => {
     }
 
     const doc = await QuestionBankSubmission.findOneAndUpdate(
-      { course_id, user_id: userId },
-      { $set: update }, // Using $set to only update provided fields
+      { course_id, user_id: userId, level_index: levelIndex },
+      { $set: update },
       { new: true, upsert: true }
     )
       .populate("course_id", "name")
@@ -208,11 +247,18 @@ exports.getAttemptForBooking = async (req, res) => {
 exports.getApprovedQuestionsForCourse = async (req, res) => {
   try {
     const { courseId } = req.params;
+    const { level_index } = req.query;
     if (!courseId) return res.status(400).json({ message: "courseId required" });
-    const doc = await QuestionBankSubmission.findOne({
+    
+    const filter = {
       course_id: courseId,
       status: "approved",
-    })
+    };
+    if (level_index !== undefined) {
+      filter.level_index = Number(level_index);
+    }
+
+    const doc = await QuestionBankSubmission.findOne(filter)
       .populate("course_id", "name")
       .populate("questions.template_id", "name key layout")
       .lean();

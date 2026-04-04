@@ -3,6 +3,7 @@ const mongoose = require("mongoose");
 const questionBankSubmissionSchema = new mongoose.Schema({
   course_id: { type: mongoose.Schema.Types.ObjectId, ref: "AdminCourse", required: true },
   user_id: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
+  level_index: { type: Number, default: 0 },
   status: {
     type: String,
     enum: ["draft", "submitted", "approved", "rejected"],
@@ -25,6 +26,6 @@ const questionBankSubmissionSchema = new mongoose.Schema({
   }],
 }, { timestamps: true });
 
-questionBankSubmissionSchema.index({ course_id: 1, user_id: 1 }, { unique: true });
+questionBankSubmissionSchema.index({ course_id: 1, user_id: 1, level_index: 1 }, { unique: true });
 
 module.exports = mongoose.model("QuestionBankSubmission", questionBankSubmissionSchema);

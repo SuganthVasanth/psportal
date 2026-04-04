@@ -42,24 +42,24 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
   const showFaculty = has("faculty.courses_assigned") || has("faculty.question_bank") || (assigned_courses?.length > 0) || isTechFaculty;
 
   const qbBasePath = "/dashboard/faculty/question-banks";
-  const qbEditorPathFor = (courseId, templateId) =>
-    `${qbBasePath}/${encodeURIComponent(String(courseId || ""))}/${encodeURIComponent(String(templateId || ""))}`;
+  const qbEditorPathFor = (courseId, levelIndex, templateId) =>
+    `${qbBasePath}/${encodeURIComponent(String(courseId || ""))}/${encodeURIComponent(String(levelIndex || 0))}/${encodeURIComponent(String(templateId || ""))}`;
 
   const qbRoute = useMemo(() => {
     const path = (location.pathname || "").replace(/\/+$/, "");
     if (!path.startsWith(qbBasePath)) return null;
     const rest = path.slice(qbBasePath.length).split("/").filter(Boolean);
-    if (rest.length < 2) return { mode: "list" };
-    const [courseId, templateId] = rest;
+    if (rest.length < 3) return { mode: "list" };
+    const [courseId, levelIndex, templateId] = rest;
     const sp = new URLSearchParams(location.search || "");
     const q = Number(sp.get("q") || "1");
     const questionIndex = Number.isFinite(q) && q > 0 ? Math.floor(q) : 1;
-    return { mode: "editor", courseId: decodeURIComponent(courseId), templateId: decodeURIComponent(templateId), questionIndex };
+    return { mode: "editor", courseId: decodeURIComponent(courseId), levelIndex: Number(decodeURIComponent(levelIndex) || 0), templateId: decodeURIComponent(templateId), questionIndex };
   }, [location.pathname, location.search]);
 
-  const getDraftStorageKey = (courseId, templateId) => {
+  const getDraftStorageKey = (courseId, levelIndex, templateId) => {
     const userId = data?.user?.id || "unknown";
-    return `qbDraft:${userId}:${courseId}:${templateId || "no_template"}`;
+    return `qbDraft:${userId}:${courseId}:${levelIndex || 0}:${templateId || "no_template"}`;
   };
 
   const loadDraftFromStorage = (key) => {
@@ -117,21 +117,24 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
     // This prevents falling back to empty 'assigned_courses' and wiping work.
     if (loadingTasks) return;
 
-    const { courseId, templateId, questionIndex } = qbRoute;
+    const { courseId, levelIndex, templateId, questionIndex } = qbRoute;
     const allTasksNow =
       questionBankTasks?.length
         ? questionBankTasks
-        : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, status: "not_started" }));
+        : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, level_index: 0, status: "not_started" }));
     
     const task =
-      allTasksNow.find((t) => String(t.course_id) === String(courseId) && String(t.template_id) === String(templateId)) ||
-      null;
+      allTasksNow.find((t) => 
+        String(t.course_id) === String(courseId) && 
+        Number(t.level_index || 0) === Number(levelIndex || 0) &&
+        String(t.template_id) === String(templateId)
+      ) || null;
     
     if (!task) return; 
 
     setFullScreenTask(task);
     setFullScreenQuestionIndex(Math.max(1, questionIndex || 1));
-    const storageKey = getDraftStorageKey(task.course_id, task.template_id);
+    const storageKey = getDraftStorageKey(task.course_id, task.level_index, task.template_id);
     setFullScreenDraftStorageKey(storageKey);
 
     const fromSaved = (task.questions || []).reduce((acc, q) => {
@@ -159,7 +162,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
   ]);
 
   const openTaskForm = (task) => {
-    const id = task.id || task.course_id;
+    const id = task.id || `${task.course_id}_${task.level_index || 0}`;
     if (expandTaskId === id) {
       setExpandTaskId(null);
     } else {
@@ -168,7 +171,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
     }
   };
 
-  const allTasks = questionBankTasks?.length ? questionBankTasks : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, status: "not_started" }));
+  const allTasks = questionBankTasks?.length ? questionBankTasks : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, level_index: 0, status: "not_started" }));
 
   const isCompleted = (task) => task.status === "approved" || task.status === "rejected";
   const pendingTasks = useMemo(() => allTasks.filter((t) => !isCompleted(t)), [allTasks]);
@@ -329,18 +332,22 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                     <div className="ud-task-head-left">
                       {canEdit && (isExpanded ? <ChevronDown size={18} color="#64748b" /> : <ChevronRight size={18} color="#64748b" />)}
                       <span className="ud-task-name">{task.course_name}</span>
+                      <span className="ud-badge" style={{ backgroundColor: "#f1f5f9", color: "#475569", marginLeft: 8 }}>
+                        {task.level_name || (task.level_index !== undefined ? `Level ${task.level_index + 1}` : "Level 1")}
+                      </span>
                       {task.template_name && (
                         <span className="ud-task-meta" style={{ marginLeft: 8 }}>({task.template_name})</span>
                       )}
-                      <span className={`ud-badge ${statusClass}`}>{statusLabel}</span>
+                      <span className={`ud-badge ${statusClass}`} style={{ marginLeft: 8 }}>{statusLabel}</span>
                       {task.submitted_at && (
-                        <span className="ud-task-meta">Submitted {new Date(task.submitted_at).toLocaleDateString()}</span>
+                        <span className="ud-task-meta" style={{ marginLeft: 8 }}>Submitted {new Date(task.submitted_at).toLocaleDateString()}</span>
                       )}
                       <button
                         type="button"
                         className="ud-chat-icon-btn"
                         onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}
                         title="View messages from admin"
+                        style={{ marginLeft: 8 }}
                       >
                         <MessageCircle size={18} />
                       </button>
@@ -352,7 +359,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                           className="ud-btn-primary"
                           style={{ marginRight: 8 }}
                           onClick={() => {
-                            navigate(`${qbEditorPathFor(task.course_id, task.template_id)}?q=1`);
+                            navigate(`${qbEditorPathFor(task.course_id, task.level_index, task.template_id)}?q=1`);
                           }}
                         >
                           <Maximize2 size={16} style={{ marginRight: 4, verticalAlign: "middle" }} />
@@ -437,6 +444,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                                 headers: { "Content-Type": "application/json", ...authHeaders },
                                 body: JSON.stringify({
                                   course_id: task.course_id,
+                                  level_index: task.level_index || 0,
                                   title: taskForm.title,
                                   content: taskForm.content,
                                   file_url: file_url || taskForm.file_url,
@@ -446,7 +454,11 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                               });
                               const result = await res.json();
                               if (!res.ok) throw new Error(result.message || "Submit failed");
-                              setQuestionBankTasks((prev) => prev.map((t) => (t.course_id === task.course_id ? { ...t, ...result, status: "submitted" } : t)));
+                              const taskId = task.id || `${task.course_id}_${task.level_index || 0}`;
+                              setQuestionBankTasks((prev) => prev.map((t) => {
+                                const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                                return currentId === taskId ? { ...t, ...result, status: "submitted" } : t;
+                              }));
                               setExpandTaskId(null);
                               setTaskForm({ title: "", content: "", file_url: "" });
                               setTaskFile(null);
@@ -479,6 +491,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                                 headers: { "Content-Type": "application/json", ...authHeaders },
                                 body: JSON.stringify({
                                   course_id: task.course_id,
+                                  level_index: task.level_index || 0,
                                   title: taskForm.title,
                                   content: taskForm.content,
                                   file_url: file_url || taskForm.file_url,
@@ -487,7 +500,11 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                               });
                               const result = await res.json();
                               if (!res.ok) throw new Error(result.message || "Save failed");
-                              setQuestionBankTasks((prev) => prev.map((t) => (t.course_id === task.course_id ? { ...t, ...result, status: "draft" } : t)));
+                              const taskId = task.id || `${task.course_id}_${task.level_index || 0}`;
+                              setQuestionBankTasks((prev) => prev.map((t) => {
+                                const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                                return currentId === taskId ? { ...t, ...result, status: "draft" } : t;
+                              }));
                               setExpandTaskId(null);
                               setTaskForm({ title: "", content: "", file_url: "" });
                               setTaskFile(null);
@@ -537,7 +554,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
             }}
           >
             <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#1e293b" }}>
-              {fullScreenTask.course_name} — Question bank ({fullScreenTask.template_name || "Template"})
+              {fullScreenTask.course_name} — {fullScreenTask.level_name || (fullScreenTask.level_index !== undefined ? `Level ${fullScreenTask.level_index + 1}` : "")} ({fullScreenTask.template_name || "Template"})
             </h2>
             <button
               type="button"
@@ -714,6 +731,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                     headers: { "Content-Type": "application/json", ...authHeaders },
                     body: JSON.stringify({
                       course_id: fullScreenTask.course_id,
+                      level_index: fullScreenTask.level_index || 0,
                       title: fullScreenTask.course_name,
                       content: "",
                       action: "draft",
@@ -722,8 +740,12 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                   });
                   const result = await res.json();
                   if (!res.ok) throw new Error(result.message || "Save failed");
-                  setQuestionBankTasks((prev) => prev.map((t) => (t.course_id === fullScreenTask.course_id ? { ...t, ...result, status: "draft", questions } : t)));
-                  setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
+                  const tid = fullScreenTask.id || `${fullScreenTask.course_id}_${fullScreenTask.level_index || 0}`;
+                  setQuestionBankTasks((prev) => prev.map((t) => {
+                    const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                    return currentId === tid ? { ...t, ...result, status: "draft", questions } : t;
+                  }));
+                  setDraftQuestionValuesByCourse((prev) => ({ ...prev, [tid]: fullScreenQuestionValues }));
                   saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
                   alert("Draft saved. You can continue editing or submit when ready.");
                 } catch (e) {
@@ -762,6 +784,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                     headers: { "Content-Type": "application/json", ...authHeaders },
                     body: JSON.stringify({
                       course_id: fullScreenTask.course_id,
+                      level_index: fullScreenTask.level_index || 0,
                       title: fullScreenTask.course_name,
                       content: "",
                       action: "submit",
@@ -770,10 +793,14 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                   });
                   const result = await res.json();
                   if (!res.ok) throw new Error(result.message || "Submit failed");
-                  setQuestionBankTasks((prev) => prev.map((t) => (t.course_id === fullScreenTask.course_id ? { ...t, ...result, status: "submitted", questions } : t)));
+                  const tid = fullScreenTask.id || `${fullScreenTask.course_id}_${fullScreenTask.level_index || 0}`;
+                  setQuestionBankTasks((prev) => prev.map((t) => {
+                    const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                    return currentId === tid ? { ...t, ...result, status: "submitted", questions } : t;
+                  }));
                   setDraftQuestionValuesByCourse((prev) => {
                     const next = { ...prev };
-                    delete next[fullScreenTask.course_id];
+                    delete next[tid];
                     return next;
                   });
                   clearDraftInStorage(fullScreenDraftStorageKey);

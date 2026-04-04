@@ -299,6 +299,7 @@ export default function AdminDashboard() {
   const [facultyAssignments, setFacultyAssignments] = useState([]);
   const [facultyAssignUserId, setFacultyAssignUserId] = useState("");
   const [facultyAssignCourseId, setFacultyAssignCourseId] = useState("");
+  const [facultyAssignLevelIndex, setFacultyAssignLevelIndex] = useState(0);
   const [facultyAssignTemplateId, setFacultyAssignTemplateId] = useState("");
   const [facultyAssignQuestionCount, setFacultyAssignQuestionCount] = useState(10);
   const [facultyAssignSortBy, setFacultyAssignSortBy] = useState("user");
@@ -1756,6 +1757,7 @@ export default function AdminDashboard() {
                   <thead>
                     <tr>
                       <th>Course</th>
+                      <th>Level</th>
                       <th>Faculty</th>
                       <th>Title</th>
                       <th>Status</th>
@@ -1769,6 +1771,11 @@ export default function AdminDashboard() {
                       .map((s) => (
                         <tr key={s.id}>
                           <td>{s.course_name}</td>
+                          <td>
+                            <span className="sa-badge" style={{ backgroundColor: "#f1f5f9", color: "#475569" }}>
+                              {s.level_name || (s.level_index !== undefined ? `Level ${s.level_index + 1}` : "Level 1")}
+                            </span>
+                          </td>
                           <td>{s.faculty_name || s.faculty_email}</td>
                           <td>{s.title || "—"}</td>
                           <td>
@@ -2425,11 +2432,34 @@ export default function AdminDashboard() {
                 </div>
                 <div className="sa-form-group" style={{ minWidth: 200 }}>
                   <label>Course</label>
-                  <select value={facultyAssignCourseId} onChange={(e) => setFacultyAssignCourseId(e.target.value)}>
+                  <select
+                    value={facultyAssignCourseId}
+                    onChange={(e) => {
+                      setFacultyAssignCourseId(e.target.value);
+                      setFacultyAssignLevelIndex(0);
+                    }}
+                  >
                     <option value="">Select course</option>
                     {coursesList.filter((c) => c.status === "Active").map((c) => (
                       <option key={c.id} value={c.id}>{c.name}</option>
                     ))}
+                  </select>
+                </div>
+                <div className="sa-form-group" style={{ minWidth: 160 }}>
+                  <label>Level</label>
+                  <select
+                    value={facultyAssignLevelIndex}
+                    onChange={(e) => setFacultyAssignLevelIndex(Number(e.target.value))}
+                    disabled={!facultyAssignCourseId}
+                  >
+                    {(() => {
+                      const selectedCourse = coursesList.find(c => c.id === facultyAssignCourseId);
+                      const levels = selectedCourse?.levels || [];
+                      if (levels.length === 0) return <option value={0}>Standard / Level 1</option>;
+                      return levels.map((lvl, idx) => (
+                        <option key={idx} value={idx}>{lvl.name || `Level ${idx + 1}`}</option>
+                      ));
+                    })()}
                   </select>
                 </div>
                 <div className="sa-form-group" style={{ minWidth: 200 }}>
@@ -2466,6 +2496,7 @@ export default function AdminDashboard() {
                           body: JSON.stringify({
                             user_id: facultyAssignUserId,
                             course_id: facultyAssignCourseId,
+                            level_index: facultyAssignLevelIndex,
                             template_id: facultyAssignTemplateId || undefined,
                             question_count: facultyAssignTemplateId ? facultyAssignQuestionCount : undefined,
                           }),
@@ -2480,6 +2511,7 @@ export default function AdminDashboard() {
                             user_id: data.user_id,
                             course_id: data.course_id,
                             course_name: data.course_name,
+                            level_index: data.level_index,
                             user_name: u?.name,
                             user_email: u?.email,
                             template_id: data.template_id || null,
@@ -2489,6 +2521,7 @@ export default function AdminDashboard() {
                         ]);
                         setFacultyAssignUserId("");
                         setFacultyAssignCourseId("");
+                        setFacultyAssignLevelIndex(0);
                         setFacultyAssignTemplateId("");
                       } catch (e) {
                         alert(e.message || "Assign failed");
@@ -2527,7 +2560,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
               <table className="sa-table">
-                <thead><tr><th>User</th><th>Course</th><th>Question template</th><th>Qty</th><th>Actions</th></tr></thead>
+                <thead><tr><th>User</th><th>Course</th><th>Level</th><th>Question template</th><th>Qty</th><th>Actions</th></tr></thead>
                 <tbody>
                   {sortedFacultyAssignments.map((a) => {
                     const displayName = getFacultyAssignmentDisplayName(a);
@@ -2547,6 +2580,11 @@ export default function AdminDashboard() {
                         </button>
                       </td>
                       <td>{a.course_name || a.course_id}</td>
+                      <td>
+                        <span className="sa-badge" style={{ backgroundColor: "#f1f5f9", color: "#475569" }}>
+                          {a.level_name || (a.level_index !== undefined ? `Level ${a.level_index + 1}` : "Level 1")}
+                        </span>
+                      </td>
                       <td>{a.template_name || "—"}</td>
                       <td>{a.question_count || 0}</td>
                       <td>
