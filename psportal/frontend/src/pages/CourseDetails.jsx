@@ -75,26 +75,7 @@ export default function CourseDetails() {
       ? allLevels.filter((l) => (l.name || "").toLowerCase() === levelFilterName.toLowerCase())
       : allLevels;
   
-  // Stable shuffle helper
-  const getSeededRandomQuestions = (questionsPool, seed, count = 2) => {
-    if (!questionsPool || questionsPool.length <= count) return questionsPool;
-    
-    // Simple deterministic shuffle using seed (register_no)
-    const seeded = [...questionsPool];
-    let m = seeded.length, t, i;
-    
-    // Create a numeric seed from the string
-    let seedValue = 0;
-    for (let j = 0; j < seed.length; j++) seedValue += seed.charCodeAt(j);
 
-    while (m) {
-      i = Math.floor(((Math.sin(seedValue++) + 1) / 2) * m--);
-      t = seeded[m];
-      seeded[m] = seeded[i];
-      seeded[i] = t;
-    }
-    return seeded.slice(0, count);
-  };
 
   const [cooldownTimeLeft, setCooldownTimeLeft] = useState(null);
 
@@ -133,29 +114,26 @@ export default function CourseDetails() {
     setExamSubmitted(false);
     setExamLoading(true);
     setExamView(true);
-    fetch(`${API_BASE}/api/question-banks/approved-for-course/${courseId}`)
+
+    const activeBooking = myBookings.find((b) => String(b.course_id?._id || b.course_id) === String(courseId)) ||
+      (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
+    
+    const bookingId = activeBooking?.id || activeBooking?._id;
+
+    if (!bookingId) {
+      setExamError("Active booking slot not found. Please ensure you have booked a slot.");
+      setExamLoading(false);
+      return;
+    }
+
+    fetch(`${API_BASE}/api/question-banks/my-attempt/${bookingId}?register_no=${encodeURIComponent(registerNo)}`)
       .then((r) => {
-        if (!r.ok) throw new Error("No approved questions for this course.");
+        if (!r.ok) throw new Error("Pre-assigned questions not found. Please contact support.");
         return r.json();
       })
       .then((data) => {
-        let qs = Array.isArray(data.questions) ? data.questions : [];
+        const qs = Array.isArray(data.questions) ? data.questions : [];
         
-        // Identify the CURRENT level the student is attempting (the one they are enrolled in)
-        const enrolledLevel = levels.find((l, idx) => enrolledLevelIndices.has(idx));
-        const assessmentType = enrolledLevel?.assessmentType?.toLowerCase() || "";
-        
-        // Determine number of questions (default to 2 for programming, 5 for others)
-        let numQuestions = enrolledLevel?.questionsPerAssessment;
-        if (!numQuestions) {
-          const isProgrammingType = assessmentType.includes("programming") || course?.type?.toLowerCase().includes("programming");
-          numQuestions = isProgrammingType ? 2 : 5;
-        }
-        
-        if (qs.length > numQuestions) {
-          qs = getSeededRandomQuestions(qs, registerNo, numQuestions);
-        }
-
         const draft = localStorage.getItem(draftKey);
         if (draft) {
           try {
@@ -176,7 +154,7 @@ export default function CourseDetails() {
         setExamQuestions([]);
         setExamLoading(false);
       });
-  }, [courseId, course, levels, enrolledLevelIndices, registerNo, draftKey, cooldownTimeLeft]);
+  }, [courseId, registerNo, draftKey, cooldownTimeLeft, myBookings, bookedSlot]);
 
   useEffect(() => {
     if (!id) {

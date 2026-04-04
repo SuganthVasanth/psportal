@@ -787,15 +787,19 @@ exports.getSlotReport = async (req, res) => {
     const activeRegNos = Array.from(unifiedRegs.keys());
     const allowedCourseIds = (slot.allowed_courses || []).map(ac => (ac.course_id?._id || ac.course_id));
     
-    // 5. Broad Search for Attempts: Find ANY attempt for these courses on this date
-    const dateStart = new Date(slot.date);
-    dateStart.setHours(0, 0, 0, 0);
-    const dateEnd = new Date(slot.date);
-    dateEnd.setHours(23, 59, 59, 999);
+    // 5. Fetch Attempts: Prioritize attempts linked to these specific bookings
+    const bookingIds = Array.from(unifiedRegs.values())
+      .filter(r => r.source === 'course_booking')
+      .map(r => r.id);
 
     const attempts = await StudentExamAttempt.find({ 
-      course_id: { $in: allowedCourseIds },
-      submitted_at: { $gte: dateStart, $lte: dateEnd }
+      $or: [
+        { booking_id: { $in: bookingIds } },
+        { 
+          course_id: { $in: allowedCourseIds },
+          register_no: { $in: activeRegNos }
+        }
+      ]
     }).lean();
 
     // 6. Final Student Records fetching (to ensure accurate names)
@@ -804,6 +808,7 @@ exports.getSlotReport = async (req, res) => {
 
     // 7. Aggregate everything: Ensure any student with an attempt appears
     attempts.forEach(a => {
+      // If we have an attempt but no matching booking was found in unifiedRegs yet
       if (!unifiedRegs.has(a.register_no)) {
         const student = studentsList.find(s => s.register_no === a.register_no) || {};
         unifiedRegs.set(a.register_no, {
@@ -847,7 +852,11 @@ exports.getSlotReport = async (req, res) => {
 
     const reportData = Array.from(unifiedRegs.values()).map(reg => {
       const student = studentsList.find(s => s.register_no === reg.registerNo) || {};
-      const attempt = attempts.find(a => a.register_no === reg.registerNo);
+      // Match by booking_id first (most accurate), then register_no as fallback
+      const attempt = attempts.find(a => 
+        (a.booking_id && a.booking_id === reg.id) || 
+        (!a.booking_id && a.register_no === reg.registerNo)
+      );
       
       let enrichedAnswers = [];
       if (attempt && Array.isArray(attempt.questions)) {
@@ -867,16 +876,25 @@ exports.getSlotReport = async (req, res) => {
         });
       }
       
+      let attemptPassed = false;
+      if (attempt) {
+        attemptPassed = attempt.isPassed || attempt.score >= 50;
+      }
+      
       return {
         registrationId: reg.id,
         studentId: student._id || "N/A",
         name: student.name || reg.name || "Unknown",
         registerNo: reg.registerNo,
-        status: (reg.processed || !!attempt) ? 'attended' : 'registered', 
-        isAttempted: !!attempt,
+        // Status is 'attended' only if they actually submitted or were processed
+        status: (reg.processed || (attempt && attempt.submitted_at)) ? 'attended' : 'registered', 
+        // isAttempted determines if they count towards attended/failed in the summary
+        isAttempted: !!(attempt && attempt.submitted_at),
+        // Helper to show that questions are locked in
+        hasAssignedQuestions: !!attempt,
         score: attempt ? attempt.score : 0,
         tabSwitches: attempt ? attempt.tab_switches : 0,
-        isPassed: attempt ? attempt.isPassed : false,
+        isPassed: attemptPassed,
         submittedAt: attempt ? attempt.submitted_at : null,
         answers: enrichedAnswers
       };

@@ -3093,7 +3093,7 @@ export default function AdminDashboard() {
             </div>
           )}
 
-          {!NAV.flatMap((s) => s.sub).some((s) => s.id === activeSub) && (
+          {!NAV.flatMap((s) => s.sub).some((s) => s.id === activeSub) && activeSub !== "assessment-slot-report" && activeSub !== "question-bank-submissions-view" && (
             <div className="dashboard-card">
               <p className="sa-empty">Select a section from the sidebar to view and manage content.</p>
             </div>
@@ -4228,9 +4228,10 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                     <h5 style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b', marginBottom: '12px', lineHeight: '1.4' }}>
                       {currentAnswer.title || currentAnswer.value?.title || "Untitled Question"}
                     </h5>
-                    <div style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', fontWeight: '500' }}>
-                      {currentAnswer.content || currentAnswer.value?.problemStatement || currentAnswer.value?.content || currentAnswer.value?.description || "No description provided."}
-                    </div>
+                    <div 
+                      style={{ fontSize: '14px', color: '#475569', lineHeight: '1.6', fontWeight: '500', whiteSpace: 'pre-wrap' }}
+                      dangerouslySetInnerHTML={{ __html: currentAnswer.content || currentAnswer.value?.problemStatement || currentAnswer.value?.content || currentAnswer.value?.description || "No description provided." }}
+                    />
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>

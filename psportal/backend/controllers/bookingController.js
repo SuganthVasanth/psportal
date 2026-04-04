@@ -47,9 +47,9 @@ exports.getActiveSlots = async (req, res) => {
         };
 
         // Find duration for this specific level
-        const course = await AdminCourse.findById(course_id).lean();
-        if (course && Array.isArray(course.levels)) {
-          const lvl = course.levels[parseInt(level_index)];
+        const courseDetails = await AdminCourse.findById(course_id).lean();
+        if (courseDetails && Array.isArray(courseDetails.levels)) {
+          const lvl = courseDetails.levels[parseInt(level_index)];
           if (lvl && lvl.durationMinutes) {
             studentDuration = lvl.durationMinutes;
           }
@@ -165,6 +165,13 @@ exports.bookSlot = async (req, res) => {
       return res.status(400).json({ message: "Selected slot is full. Please choose another one." });
     }
 
+    // 2.5 Ensure approved question bank exists before booking
+    const QuestionBankSubmission = require('../models/QuestionBankSubmission');
+    const qb = await QuestionBankSubmission.findOne({ course_id, status: "approved" }).lean();
+    if (!qb || !Array.isArray(qb.questions) || qb.questions.length === 0) {
+      return res.status(400).json({ message: "Assessment questions are not yet available for this course. Please contact support or check back later." });
+    }
+
     // 3. Create booking
     let slotTemplateId = slot.slot_template_id;
     if (!slotTemplateId) {
@@ -182,6 +189,35 @@ exports.bookSlot = async (req, res) => {
       venue_label: venue_label || "",
       time_label: time_label || "",
     });
+
+    // 5. After successful booking, create a StudentExamAttempt with random questions (no answers)
+    const { pickRandomQuestions } = require('../utils/randomPicker');
+
+    // Use the qb we fetched in step 2.5
+    let selectedQuestions = [];
+    // Determine number of questions: default 2 for programming courses, else 5
+    const isProgramming = (course?.type?.toLowerCase?.().includes("programming")) || false;
+    const numQuestions = isProgramming ? 2 : 5;
+    selectedQuestions = pickRandomQuestions(qb.questions, numQuestions);
+
+    // Map to attempt format (no answer values)
+    const attemptQuestions = selectedQuestions.map((q) => ({
+        questionNumber: q.questionNumber,
+        template_id: q.template_id,
+        title: q.title || q.value?.title || "",
+        content: q.content || q.value?.problemStatement || q.value?.description || "",
+        // value left empty for now
+      }));
+
+      // Create attempt record linked to this booking
+      const attemptDoc = await require('../models/StudentExamAttempt').create({
+        register_no,
+        course_id,
+        booking_id: doc._id.toString(),
+        questions: attemptQuestions,
+        score: 0,
+        isPassed: false,
+      });
 
     // 4. Increment booked count
     slot.booked_count = (slot.booked_count || 0) + 1;

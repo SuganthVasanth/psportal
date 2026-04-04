@@ -164,6 +164,46 @@ exports.upsertSubmission = async (req, res) => {
   }
 };
 
+// ——— Student: get pre-assigned questions for a booking (for exam portal) ———
+exports.getAttemptForBooking = async (req, res) => {
+  try {
+    const { bookingId } = req.params;
+    const { register_no } = req.query;
+    if (!bookingId || !register_no) return res.status(400).json({ message: "bookingId and register_no required" });
+
+    // Populate template data to get UI layouts for the portal
+    const attempt = await StudentExamAttempt.findOne({ booking_id: bookingId, register_no })
+      .populate("questions.template_id", "name key layout")
+      .lean();
+
+    if (!attempt) {
+      return res.status(404).json({ message: "No pre-assigned questions found for this booking." });
+    }
+
+    const formattedQuestions = attempt.questions.map(q => {
+      const tmpl = q.template_id;
+      const rawLayout = tmpl && Array.isArray(tmpl.layout) ? tmpl.layout : [];
+      return {
+        questionNumber: q.questionNumber,
+        template_id: tmpl?._id?.toString(),
+        template_name: tmpl?.name,
+        layout: rawLayout,
+        title: q.title,
+        content: q.content,
+        value: q.value || {}, // this should be empty if not submitted
+      };
+    });
+
+    res.json({
+      course_id: attempt.course_id,
+      questions: formattedQuestions
+    });
+  } catch (err) {
+    console.error("getAttemptForBooking error:", err);
+    res.status(500).json({ message: "Failed to load pre-assigned questions" });
+  }
+};
+
 // ——— Student: get approved question bank for a course (for exam portal) ———
 exports.getApprovedQuestionsForCourse = async (req, res) => {
   try {
