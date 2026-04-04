@@ -4106,9 +4106,118 @@ function ReviewAnswersModal({ student, answers, onClose }) {
     const studentResponse = findCode(val);
     const testCases = findTestCases(val);
 
+    const findMCQSelection = (obj, targetKey) => {
+      if (!obj || typeof obj !== 'object') return null;
+      // 1. Direct match with mcqKey from Question Bank
+      if (targetKey && obj[targetKey]) return obj[targetKey];
+      
+      // 2. Search for any key that contains 'mcq' or 'multiple_choice' or matches targetKey suffix
+      for (const k in obj) {
+        if (k.toLowerCase().includes('mcq') || k.toLowerCase().includes('multiple_choice') || (targetKey && k.includes(targetKey))) {
+          if (obj[k]) return obj[k];
+        }
+      }
+      
+      // 3. Fallback: Search for component IDs
+      for (const k in obj) {
+        if (k.startsWith('component-') && obj[k]) {
+          // If the value is one of the options (we'll check this later, but for now return it)
+          const potential = obj[k];
+          if (typeof potential === 'string' || (typeof potential === 'object' && potential.text)) return potential;
+        }
+      }
+      return null;
+    };
+
+    // MCQ Detection logic
+    const options = currentAnswer.options || [];
+    const correctIdx = currentAnswer.correctIdx ?? -1;
+    const mcqKey = currentAnswer.mcqKey;
+    const studentSelection = findMCQSelection(val, mcqKey);
+    const isMcq = options.length > 0;
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        {/* 1. STUDENT ANSWER (CODE) */}
+        {/* 1. MCQ RENDERING */}
+        {isMcq && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+               <CheckCircle size={14} className="text-indigo-500" />
+               Selectable Options ({options.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {options.map((opt, idx) => {
+                const optText = (typeof opt === 'object' ? opt.text : opt)?.toString().trim();
+                const studentText = (typeof studentSelection === 'object' ? studentSelection.text : studentSelection)?.toString().trim();
+                const isSelected = studentText && optText && (studentText === optText);
+                const isCorrect = (idx === correctIdx);
+                
+                return (
+                  <div 
+                    key={idx}
+                    style={{
+                      padding: '16px 20px',
+                      borderRadius: '16px',
+                      border: isSelected 
+                        ? '2px solid #4f46e5' 
+                        : (isCorrect ? '2px solid #10b981' : '1px solid #e2e8f0'),
+                      backgroundColor: isSelected 
+                        ? '#eef2ff' 
+                        : (isCorrect ? '#f0fdf4' : '#fff'),
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      transition: 'all 0.2s ease',
+                      boxShadow: isSelected ? '0 4px 6px -1px rgba(79, 70, 229, 0.1)' : 'none'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                      <div style={{ 
+                        width: '24px', height: '24px', borderRadius: '50%', border: '2px solid',
+                        borderColor: isSelected ? '#4f46e5' : (isCorrect ? '#10b981' : '#cbd5e1'),
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        backgroundColor: isSelected ? '#4f46e5' : 'transparent',
+                        color: '#fff', fontSize: '10px', fontWeight: '900'
+                      }}>
+                        {String.fromCharCode(65 + idx)}
+                      </div>
+                      <span style={{ 
+                        fontSize: '14px', 
+                        fontWeight: (isSelected || isCorrect) ? '750' : '500',
+                        color: isSelected ? '#1e293b' : (isCorrect ? '#065f46' : '#475569')
+                      }}>
+                        {optText}
+                      </span>
+                    </div>
+                    
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {isSelected && (
+                        <div style={{ 
+                          fontSize: '9px', fontWeight: '900', letterSpacing: '0.05em', 
+                          padding: '4px 8px', borderRadius: '6px', 
+                          backgroundColor: '#4f46e5', color: '#fff' 
+                        }}>
+                          STUDENT'S SELECTION
+                        </div>
+                      )}
+                      {isCorrect && (
+                        <div style={{ 
+                          fontSize: '9px', fontWeight: '900', letterSpacing: '0.05em', 
+                          padding: '4px 8px', borderRadius: '6px', 
+                          backgroundColor: '#10b981', color: '#fff' 
+                        }}>
+                          CORRECT ANSWER
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* 2. STUDENT ANSWER (CODE) */}
         {studentResponse && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -4194,8 +4303,8 @@ function ReviewAnswersModal({ student, answers, onClose }) {
           </div>
         )}
 
-        {/* FALLBACK FOR NON-PROGRAMMING CONTENT */}
-        {!studentResponse && !testCases && (
+        {/* FALLBACK FOR NON-PROGRAMMING CONTENT (If not MCQ) */}
+        {!studentResponse && !testCases && !isMcq && (
           <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0" }}>
              <div style={{ fontSize: "9px", color: "#94a3b8", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: '12px' }}>Response Data</div>
              <pre style={{ margin: 0, fontSize: "12px", color: "#475569", overflow: "auto", fontWeight: '600', whiteSpace: 'pre-wrap' }}>

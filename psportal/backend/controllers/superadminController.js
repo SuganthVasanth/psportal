@@ -658,7 +658,7 @@ exports.reviewQuestionBankSubmission = async (req, res) => {
   }
 };
 
-// ——— Assessment Slots (Instances of SlotTemplate for a specific course/date) ———
+// ——— Assessment Slots ———
 exports.getAssessmentSlots = async (req, res) => {
   try {
     const list = await Slot.find()
@@ -692,14 +692,10 @@ exports.getAssessmentSlots = async (req, res) => {
 exports.openAssessmentSlots = async (req, res) => {
   try {
     const { date, venue_id, startTime, capacity, allowed_courses, slot_template_ids } = req.body;
-
     if (venue_id && startTime) {
       if (!date || !allowed_courses || !Array.isArray(allowed_courses)) {
         return res.status(400).json({ message: "date and allowed_courses required" });
       }
-
-      // Find or create TimeSlot for this startTime
-      // Default endTime is startTime + 1 hour (though calculated dynamically in frontend)
       let tSlot = await TimeSlot.findOne({ startTime });
       if (!tSlot) {
         const [h, m] = startTime.split(":").map(Number);
@@ -709,36 +705,16 @@ exports.openAssessmentSlots = async (req, res) => {
         const endTimeStr = `${d.getHours().toString().padStart(2, '0')}:${d.getMinutes().toString().padStart(2, '0')}`;
         tSlot = await TimeSlot.create({ startTime, endTime: endTimeStr });
       }
-
-      const newSlot = new Slot({
-        allowed_courses,
-        venue_id,
-        time_slot_id: tSlot._id,
-        date: new Date(date),
-        capacity: capacity || 30,
-        booked_count: 0
-      });
-
+      const newSlot = new Slot({ allowed_courses, venue_id, time_slot_id: tSlot._id, date: new Date(date), capacity: capacity || 30, booked_count: 0 });
       await newSlot.save();
       return res.status(201).json({ message: "Slot opened successfully" });
     }
-
     if (slot_template_ids && Array.isArray(slot_template_ids) && slot_template_ids.length > 0) {
       const templates = await SlotTemplate.find({ _id: { $in: slot_template_ids } }).lean();
-      const newSlots = templates.map((t) => ({
-        allowed_courses,
-        venue_id: t.venue_id,
-        time_slot_id: t.time_slot_id,
-        slot_template_id: t._id,
-        date: new Date(date),
-        capacity: capacity || 30,
-        booked_count: 0,
-      }));
-
+      const newSlots = templates.map((t) => ({ allowed_courses, venue_id: t.venue_id, time_slot_id: t.time_slot_id, slot_template_id: t._id, date: new Date(date), capacity: capacity || 30, booked_count: 0 }));
       const docs = await Slot.insertMany(newSlots);
       return res.status(201).json({ message: `${docs.length} slots opened successfully` });
     }
-
     res.status(400).json({ message: "Either (venue_id, startTime) or slot_template_ids required" });
   } catch (err) {
     res.status(500).json({ message: err.message });
@@ -750,9 +726,7 @@ exports.deleteAssessmentSlot = async (req, res) => {
     const { id } = req.params;
     const slot = await Slot.findById(id);
     if (!slot) return res.status(404).json({ message: "Slot not found" });
-    if (slot.booked_count > 0) {
-      return res.status(400).json({ message: "Cannot delete slot with existing bookings" });
-    }
+    if (slot.booked_count > 0) return res.status(400).json({ message: "Cannot delete slot with existing bookings" });
     await Slot.findByIdAndDelete(id);
     res.json({ message: "Slot deleted successfully" });
   } catch (err) {
@@ -763,9 +737,7 @@ exports.deleteAssessmentSlot = async (req, res) => {
 // ——— Slot Reports ———
 exports.getSlotReport = async (req, res) => {
   try {
-    const { id } = req.params; // slotId
-    
-    // 1. Find the Slot basics
+    const { id } = req.params;
     const slotObjectId = mongoose.Types.ObjectId.isValid(id) ? new mongoose.Types.ObjectId(id) : null;
     const slot = await Slot.findById(id)
       .populate("allowed_courses.course_id", "name")
@@ -773,153 +745,111 @@ exports.getSlotReport = async (req, res) => {
       .populate("time_slot_id", "startTime endTime")
       .lean();
     if (!slot) return res.status(404).json({ message: "Slot not found" });
-
-    // 2. Build a flexible query for both ObjectId and String forms of the slot_id
     const slotQuery = slotObjectId ? { $or: [{ slot_id: slotObjectId }, { slot_id: id }] } : { slot_id: id };
-
-    // 3. Find all registrations from BOTH collections
     const [bookings, registrations] = await Promise.all([
       CourseSlotBooking.find(slotQuery).lean(),
       StudentSlotRegistration.find(slotQuery).populate("student_id").lean()
     ]);
-
-    // 4. Unify registrations by register_no
     const unifiedRegs = new Map();
-    
     bookings.forEach(b => {
-      unifiedRegs.set(b.register_no, {
-        source: 'booking',
-        id: b._id.toString(),
-        registerNo: b.register_no,
-        name: b.student_name,
-        processed: b.processed
-      });
+      unifiedRegs.set(b.register_no, { source: 'booking', id: b._id.toString(), registerNo: b.register_no, name: b.student_name, processed: b.processed });
     });
-    
     registrations.forEach(r => {
       const regNo = r.student_id?.register_no || "N/A";
       if (!unifiedRegs.has(regNo)) {
-        unifiedRegs.set(regNo, {
-          source: 'registration',
-          id: r._id.toString(),
-          registerNo: regNo,
-          name: r.student_id?.name || "Unknown",
-          processed: r.status === 'attended'
-        });
+        unifiedRegs.set(regNo, { source: 'registration', id: r._id.toString(), registerNo: regNo, name: r.student_id?.name || "Unknown", processed: r.status === 'attended' });
       }
     });
-
     const activeRegNos = Array.from(unifiedRegs.keys());
     const allowedCourseIds = (slot.allowed_courses || []).map(ac => (ac.course_id?._id || ac.course_id));
-    
-    // 5. Fetch Attempts: Prioritize attempts linked to these specific bookings
-    const bookingIds = Array.from(unifiedRegs.values())
-      .filter(r => r.source === 'course_booking')
-      .map(r => r.id);
-
+    const bookingIds = Array.from(unifiedRegs.values()).filter(r => r.source === 'course_booking').map(r => r.id);
     const attempts = await StudentExamAttempt.find({ 
-      $or: [
-        { booking_id: { $in: bookingIds } },
-        { 
-          course_id: { $in: allowedCourseIds },
-          register_no: { $in: activeRegNos }
-        }
-      ]
+      $or: [{ booking_id: { $in: bookingIds } }, { course_id: { $in: allowedCourseIds }, register_no: { $in: activeRegNos } }]
     }).lean();
-
-    // 6. Final Student Records fetching (to ensure accurate names)
     const allRegNos = Array.from(new Set([...activeRegNos, ...attempts.map(a => a.register_no)]));
     const studentsList = await Student.find({ register_no: { $in: allRegNos } }).lean();
 
-    // 7. Aggregate everything: Ensure any student with an attempt appears
     attempts.forEach(a => {
-      // If we have an attempt but no matching booking was found in unifiedRegs yet
       if (!unifiedRegs.has(a.register_no)) {
         const student = studentsList.find(s => s.register_no === a.register_no) || {};
-        unifiedRegs.set(a.register_no, {
-          source: 'attempt_only',
-          id: a._id.toString(),
-          registerNo: a.register_no,
-          name: student.name || "Unknown",
-          processed: true
-        });
+        unifiedRegs.set(a.register_no, { source: 'attempt_only', id: a._id.toString(), registerNo: a.register_no, name: student.name || "Unknown", processed: true });
       }
     });
 
-    // 7.1 Fetch Question Bank Metadata to populate problem statements in the report
     const courseLevelPairs = Array.from(new Set(attempts.map(a => `${a.course_id}_${a.level_index || 0}`)));
     const qbQuery = { $or: courseLevelPairs.map(cp => {
       const [cid, lidx] = cp.split("_");
       return { course_id: cid, level_index: Number(lidx), status: "approved" };
     })};
-    
-    const questionBanks = await mongoose.model("QuestionBankSubmission").find(qbQuery)
-      .populate("questions.template_id").lean();
-
+    const questionBanks = await QuestionBankSubmission.find(qbQuery).populate("questions.template_id").lean();
     const questionMetadataMap = new Map();
     questionBanks.forEach(bank => {
       const cid = bank.course_id.toString();
       const lidx = bank.level_index || 0;
       (bank.questions || []).forEach(q => {
         const key = `${cid}_${lidx}_${q.questionNumber}`;
-        // If multiple banks exist, we might already have an entry. 
-        // We'll prefer the one that actually has content.
         const existing = questionMetadataMap.get(key);
-        const title = q.value?.title || bank.title || "Question";
-        const content = q.value?.problemStatement || q.value?.content || q.value?.description || bank.content || "";
         
+        let content = q.value?.problemStatement || q.value?.content || q.value?.description || bank.content || "";
+        if (!content && q.value) {
+          const qKeys = Object.keys(q.value);
+          const tKey = qKeys.find(k => k.toLowerCase().includes('paragraph') || k.toLowerCase().includes('text') || k.toLowerCase().includes('instruction'));
+          if (tKey) content = q.value[tKey]?.value || q.value[tKey] || "";
+        }
+        if (typeof content === 'object') content = content.value || content.text || "";
+        const title = q.value?.title || bank.title || "Question";
+
         if (!existing || (!existing.content && content)) {
-          questionMetadataMap.set(key, {
-            template_name: q.template_id?.name,
-            layout: q.template_id?.layout,
-            title,
-            content
-          });
+          const qValue = q.value || {};
+          const mcqKey = Object.keys(qValue).find(k => k.toLowerCase().includes('mcq') || k.toLowerCase().includes('multiple_choice') || k.toLowerCase().includes('options'));
+          const mcqData = mcqKey ? qValue[mcqKey] : null;
+          
+          let options = [];
+          let correctIdx = -1;
+          
+          if (mcqData && Array.isArray(mcqData.options)) {
+            options = mcqData.options.map(o => (typeof o === 'object' ? (o.text || o.label || o.value) : o));
+            correctIdx = mcqData.options.findIndex(o => o.correct === true);
+          } 
+          else if (Array.isArray(qValue.options)) {
+            options = qValue.options.map(o => (typeof o === 'object' ? (o.text || o.label || o.value) : o));
+            correctIdx = qValue.options.findIndex(o => o.correct === true);
+          }
+          
+          questionMetadataMap.set(key, { template_name: q.template_id?.name, layout: q.template_id?.layout, title, content, options, correctIdx, mcqKey });
         }
       });
     });
 
     const reportData = Array.from(unifiedRegs.values()).map(reg => {
       const student = studentsList.find(s => s.register_no === reg.registerNo) || {};
-      // Match by booking_id first (most accurate), then register_no as fallback
-      const attempt = attempts.find(a => 
-        (a.booking_id && a.booking_id === reg.id) || 
-        (!a.booking_id && a.register_no === reg.registerNo)
-      );
-      
+      const attempt = attempts.find(a => (a.booking_id && a.booking_id === reg.id) || (!a.booking_id && a.register_no === reg.registerNo));
       let enrichedAnswers = [];
       if (attempt && Array.isArray(attempt.questions)) {
         enrichedAnswers = attempt.questions.map(q => {
           const qObj = typeof q.toObject === 'function' ? q.toObject() : q;
           const metaKey = `${attempt.course_id.toString()}_${attempt.level_index || 0}_${qObj.questionNumber}`;
           const bankMeta = questionMetadataMap.get(metaKey) || {};
-          
           return {
             ...qObj,
-            // Prioritize metadata stored in the attempt (immutability)
             title: qObj.title || bankMeta.title || "Question",
             content: qObj.content || bankMeta.content || "No description provided.",
             template_name: bankMeta.template_name,
-            layout: bankMeta.layout
+            layout: bankMeta.layout,
+            options: bankMeta.options,
+            correctIdx: bankMeta.correctIdx,
+            mcqKey: bankMeta.mcqKey
           };
         });
       }
-      
-      let attemptPassed = false;
-      if (attempt) {
-        attemptPassed = attempt.isPassed || attempt.score >= 50;
-      }
-      
+      let attemptPassed = attempt ? (attempt.isPassed || (attempt.score != null && attempt.score >= 50)) : false;
       return {
         registrationId: reg.id,
         studentId: student._id || "N/A",
         name: student.name || reg.name || "Unknown",
         registerNo: reg.registerNo,
-        // Status is 'attended' only if they actually submitted or were processed
         status: (reg.processed || (attempt && attempt.submitted_at)) ? 'attended' : 'registered', 
-        // isAttempted determines if they count towards attended/failed in the summary
         isAttempted: !!(attempt && attempt.submitted_at),
-        // Helper to show that questions are locked in
         hasAssignedQuestions: !!attempt,
         score: attempt ? attempt.score : 0,
         tabSwitches: attempt ? attempt.tab_switches : 0,
@@ -929,7 +859,6 @@ exports.getSlotReport = async (req, res) => {
       };
     });
 
-    // 8. Summary
     const summary = {
       totalBooked: reportData.length,
       attended: reportData.filter(r => r.status === 'attended' || r.isAttempted).length,
@@ -940,10 +869,52 @@ exports.getSlotReport = async (req, res) => {
       timeLabel: slot.time_slot_id ? `${slot.time_slot_id.startTime} – ${slot.time_slot_id.endTime}` : "N/A",
       date: slot.date
     };
-
     res.json({ summary, students: reportData });
   } catch (err) {
     res.status(500).json({ message: err.message });
   }
+};
 
+exports.getCourseLifecycleCanvas = async (req, res) => {
+  try {
+    const courses = await AdminCourse.find().lean();
+    const assignments = await FacultyCourseAssignment.find().populate("user_id", "name email").lean();
+    const submissions = await QuestionBankSubmission.find().lean();
+    const slots = await Slot.find().lean();
+    const attempts = await StudentExamAttempt.find().lean();
+
+    const result = courses.map(course => {
+      const courseAssignments = assignments.filter(a => a.course_id.toString() === course._id.toString());
+      const courseSubmissions = submissions.filter(s => s.course_id.toString() === course._id.toString());
+      const courseSlots = slots.filter(s => s.allowed_courses.some(ac => ac.course_id.toString() === course._id.toString()));
+      const courseAttempts = attempts.filter(a => a.course_id.toString() === course._id.toString());
+
+      let stage = "definition";
+      if (courseAssignments.length > 0) stage = "development";
+      if (courseSubmissions.some(s => s.status === "submitted")) stage = "review";
+      if (courseSlots.some(s => new Date(s.date) >= new Date())) stage = "live";
+      if (courseAttempts.length > 10) stage = "analyzed";
+
+      const numLevels = course.levels?.length || 1;
+      const completedLevels = courseSubmissions.filter(s => s.status === "approved").length;
+      const contentProgress = Math.min(100, Math.round((completedLevels / numLevels) * 100));
+
+      return {
+        id: course._id.toString(),
+        name: course.name,
+        status: course.status,
+        logo: course.course_logo,
+        stage,
+        assignments: courseAssignments.map(a => ({ facultyName: a.user_id?.name || "Unknown", levelIndex: a.level_index, targetCount: a.question_count || 0 })),
+        contentProgress,
+        stats: {
+          totalStudents: courseAttempts.length,
+          passRate: courseAttempts.length > 0 ? Math.round((courseAttempts.filter(a => a.score >= 50).length / courseAttempts.length) * 100) : 0
+        }
+      };
+    });
+    res.json(result);
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
 };

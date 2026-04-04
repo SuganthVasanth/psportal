@@ -420,10 +420,12 @@ exports.runAssessmentCode = async (req, res) => {
 // ——— Student: submit individual question for grading (Assessment Portal) ———
 exports.submitAssessmentQuestion = async (req, res) => {
   try {
-    const { register_no, course_id, booking_id, questionNumber, code, language, language_id } = req.body;
-    if (!register_no || !course_id || !questionNumber || !code) {
-      return res.status(400).json({ message: "register_no, course_id, questionNumber, and code are required" });
+    const { register_no, course_id, booking_id, questionNumber, code, language, language_id, value } = req.body;
+    if (!register_no || !course_id || !questionNumber) {
+      return res.status(400).json({ message: "register_no, course_id, and questionNumber are required" });
     }
+
+    const isProgramming = !!code;
 
     const judge0Service = require("../services/judge0Service");
     const testCaseGenerator = require("../services/testCaseGenerator");
@@ -436,39 +438,86 @@ exports.submitAssessmentQuestion = async (req, res) => {
     if (!question) return res.status(404).json({ message: "Question not found in bank" });
 
     const qValue = question.value || {};
-    // Unwrap component key wrapper: value may be { "component-xxxxx": { problemStatement, testCases } }
-    const componentKey = Object.keys(qValue).find(k => k.startsWith('component-'));
-    const innerValue = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
-    // Support both camelCase (ProgrammingQuestion) and lowercase field names
-    const testcases = innerValue.testCases || innerValue.testcases || [];
-    if (!Array.isArray(testcases) || testcases.length === 0) {
-      return res.status(400).json({ message: "No testcases defined for this question" });
-    }
-
-    // 2. Execute against each testcase
     let passedCount = 0;
-    const detailedResults = [];
+    let detailedResults = [];
+    let score = 0;
+    let finalUpdateValue = value || { omni_code: code, language };
 
-    for (const tc of testcases) {
-      const runResult = await judge0Service.runCode({
-        source_code: code,
-        stdin: tc.input || tc.input_format || "",
-        language_id: language_id || judge0Service.DEFAULT_LANGUAGE_ID,
-      });
+    if (isProgramming) {
+      const judge0Service = require("../services/judge0Service");
+      const testCaseGenerator = require("../services/testCaseGenerator");
 
-      // Support both expectedOutput (ProgrammingQuestion) and output/output_format
-      const expected = tc.expectedOutput || tc.output || tc.output_format || "";
-      const isPassed = runResult.success && testCaseGenerator.compareOutput(runResult.stdout, expected);
-      if (isPassed) passedCount++;
+      // Unwrap component key wrapper: value may be { "component-xxxxx": { problemStatement, testCases } }
+      const componentKey = Object.keys(qValue).find(k => k.startsWith('component-'));
+      const innerValue = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
+      
+      const testcases = innerValue.testCases || innerValue.testcases || [];
+      if (!Array.isArray(testcases) || testcases.length === 0) {
+        return res.status(400).json({ message: "No testcases defined for this programming question" });
+      }
 
-      detailedResults.push({
-         passed: isPassed,
-         error: !runResult.success ? (runResult.stderr || runResult.compile_output) : null
-      });
+      // Execute against each testcase
+      for (const tc of testcases) {
+        const runResult = await judge0Service.runCode({
+          source_code: code,
+          stdin: tc.input || tc.input_format || "",
+          language_id: language_id || judge0Service.DEFAULT_LANGUAGE_ID,
+        });
+
+        const expected = tc.expectedOutput || tc.output || tc.output_format || "";
+        const isPassed = runResult.success && testCaseGenerator.compareOutput(runResult.stdout, expected);
+        if (isPassed) passedCount++;
+
+        detailedResults.push({
+           passed: isPassed,
+           error: !runResult.success ? (runResult.stderr || runResult.compile_output) : null,
+           input: tc.input || tc.input_format || "",
+           expectedOutput: expected,
+           actual: runResult.stdout || "",
+           hidden: tc.hidden !== false
+        });
+      }
+
+      score = (passedCount / testcases.length) * 50;
+      finalUpdateValue = { 
+        omni_code: code, 
+        language, 
+        testCases: detailedResults 
+      };
+    } else {
+      // Handle MCQ / Template Form auto-save
+      if (!value || Object.keys(value).length === 0) {
+        // Clearing answer (unattended)
+        score = 0;
+        finalUpdateValue = {}; 
+      } else {
+        // Basic Grading for MCQs
+        let isCorrect = false;
+        
+        // Strategy 1: Find 'mcq' or 'multiple_choice' component and compare selection
+        const mcqKey = Object.keys(qValue).find(k => k.toLowerCase().includes('mcq') || k.toLowerCase().includes('multiple_choice'));
+        if (mcqKey) {
+          const bankMcq = qValue[mcqKey];
+          const studentSelection = value[mcqKey]; // This is the text or object selected
+
+          if (Array.isArray(bankMcq.options)) {
+            const correctOption = bankMcq.options.find(opt => opt.correct === true);
+            if (correctOption) {
+              const studentText = typeof studentSelection === 'string' ? studentSelection : studentSelection?.text;
+              isCorrect = (studentText === correctOption.text);
+            }
+          }
+        }
+        
+        // Strategy 2: Check correctAnswerKey
+        if (!isCorrect && question.correctAnswerKey && value.hasOwnProperty(question.correctAnswerKey)) {
+           // Direct key matching if applicable
+        }
+
+        score = isCorrect ? 50 : 0; // Each question is worth up to 50 in this schema
+        finalUpdateValue = value;
+      }
     }
-
-    // 3. Calculate score (out of 50)
-    const score = (passedCount / testcases.length) * 50;
 
     // 4. Update/Create StudentExamAttempt
     let attempt = await StudentExamAttempt.findOne({ register_no, course_id, booking_id });
@@ -478,19 +527,19 @@ exports.submitAssessmentQuestion = async (req, res) => {
 
     // Update specific question in attempt
     const qIndex = attempt.questions.findIndex(q => q.questionNumber === Number(questionNumber));
-    const qTitle = innerValue.title || innerValue.problem_title || "Question";
-    const qContent = innerValue.problemStatement || innerValue.content || innerValue.description || "";
+    
+    // Determine title/content for archival
+    const componentKey = Object.keys(qValue).find(k => k.startsWith('component-'));
+    const innerValue = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
+    const qTitle = innerValue.title || innerValue.problem_title || question.title || "Question";
+    const qContent = innerValue.problemStatement || innerValue.content || innerValue.description || question.content || "";
+
     const questionData = {
       questionNumber: Number(questionNumber),
       template_id: question.template_id,
       title: qTitle,
       content: qContent,
-      value: { omni_code: code, language, testCases: detailedResults.map((r, i) => ({
-        input: testcases[i]?.input || testcases[i]?.input_format || "",
-        expectedOutput: testcases[i]?.expectedOutput || testcases[i]?.output || testcases[i]?.output_format || "",
-        passed: r.passed,
-        hidden: testcases[i]?.hidden !== false
-      })) },
+      value: finalUpdateValue,
       score: score
     };
 
@@ -500,18 +549,16 @@ exports.submitAssessmentQuestion = async (req, res) => {
        attempt.questions.push(questionData);
     }
 
-    // Recalculate overall score (optional here, but good for consistency)
+    // Recalculate overall score
     attempt.score = attempt.questions.reduce((sum, q) => sum + (q.score || 0), 0);
-    // Note: isPassed stays false until final submit potentially, or we can update it if they cross threshold.
-    
     await attempt.save();
 
     res.json({
       success: true,
       passedCount,
-      totalCount: testcases.length,
+      totalCount: isProgramming ? detailedResults.length : 1,
       score,
-      results: detailedResults
+      results: isProgramming ? detailedResults : []
     });
 
   } catch (err) {

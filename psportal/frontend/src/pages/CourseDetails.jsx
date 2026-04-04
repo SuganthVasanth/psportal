@@ -111,6 +111,17 @@ export default function CourseDetails() {
 
   const handleLaunchPortal = useCallback(() => {
     if (cooldownTimeLeft > 0) return;
+
+    // Fullscreen request (MUST be in user-gesture handler)
+    const docElm = document.documentElement;
+    if (docElm.requestFullscreen) {
+      docElm.requestFullscreen().catch((err) => console.warn("Fullscreen failed:", err));
+    } else if (docElm.webkitRequestFullscreen) {
+      docElm.webkitRequestFullscreen().catch((err) => console.warn(err));
+    } else if (docElm.msRequestFullscreen) {
+      docElm.msRequestFullscreen().catch((err) => console.warn(err));
+    }
+
     setExamError("");
     setExamSubmitted(false);
     setExamLoading(true);
@@ -225,29 +236,19 @@ export default function CourseDetails() {
   }, [id, registerNo, courseId, myBookings, bookedSlot]);
 
 
-  // Auto fullscreen
+  // Cleanup fullscreen when exiting exam
   useEffect(() => {
-    if (examView) {
-      const docElm = document.documentElement;
-      if (docElm.requestFullscreen) {
-        docElm.requestFullscreen().catch((err) => console.warn("Fullscreen failed:", err));
-      } else if (docElm.webkitRequestFullscreen) {
-        docElm.webkitRequestFullscreen().catch((err) => console.warn(err));
-      } else if (docElm.msRequestFullscreen) {
-        docElm.msRequestFullscreen().catch((err) => console.warn(err));
-      }
-
-      return () => {
-        if (document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement) {
-          if (document.exitFullscreen) {
-            document.exitFullscreen().catch((err) => console.warn(err));
-          } else if (document.webkitExitFullscreen) {
-            document.webkitExitFullscreen().catch((err) => console.warn(err));
-          } else if (document.msExitFullscreen) {
-            document.msExitFullscreen().catch((err) => console.warn(err));
-          }
+    if (!examView) {
+      const isFull = document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      if (isFull) {
+        if (document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        } else if (document.webkitExitFullscreen) {
+          document.webkitExitFullscreen().catch(() => {});
+        } else if (document.msExitFullscreen) {
+          document.msExitFullscreen().catch(() => {});
         }
-      };
+      }
     }
   }, [examView]);
 

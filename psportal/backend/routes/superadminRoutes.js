@@ -66,4 +66,7 @@ router.post("/assessment-slots", ctrl.openAssessmentSlots);
 router.delete("/assessment-slots/:id", ctrl.deleteAssessmentSlot);
 router.get("/assessment-slots/:id/report", ctrl.getSlotReport);
 
+// Course Lifecycle Canvas
+router.get("/lifecycle-canvas", ctrl.getCourseLifecycleCanvas);
+
 module.exports = router;

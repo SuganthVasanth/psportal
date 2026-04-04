@@ -231,6 +231,7 @@ export default function LockedTemplateRenderer({
                   value={val}
                   onChange={(v) => updateField(item.id, v)}
                   readOnly={itemReadOnly}
+                  studentMode={studentMode}
                   lockOptionCount={!studentMode}
                 />
               )}

@@ -222,9 +222,13 @@ export default function BookSlots() {
                       </div>
 
                       {(() => {
-                        const existingBooking = myBookings.find(b => String(b.course_id) === String(course.id));
-                        if (existingBooking && !isSlotExpired(existingBooking.date, existingBooking.endTime)) {
-                          const isActive = isSlotActiveNow(existingBooking.startTime, existingBooking.endTime, existingBooking.date);
+                        const activeBooking = myBookings.find(b => 
+                          String(b.course_id) === String(course.id) && 
+                          !isSlotExpired(b.date, b.endTime || b.time_label?.split(" – ")[1])
+                        );
+
+                        if (activeBooking) {
+                          const isActive = isSlotActiveNow(activeBooking.startTime, activeBooking.endTime, activeBooking.date);
                           return (
                             <div className="booked-slot-details-premium anim-fade-in">
                                 <div className="booked-status-header">
@@ -234,15 +238,15 @@ export default function BookSlots() {
                                 <div className="booked-info-grid">
                                     <div className="booked-info-item">
                                         <span className="booked-info-label">Venue</span>
-                                        <span className="booked-info-value">{existingBooking.venue_label}</span>
+                                        <span className="booked-info-value">{activeBooking.venue_label}</span>
                                     </div>
                                     <div className="booked-info-item">
                                         <span className="booked-info-label">Time</span>
-                                        <span className="booked-info-value">{existingBooking.time_label}</span>
+                                        <span className="booked-info-value">{activeBooking.time_label}</span>
                                     </div>
                                     <div className="booked-info-item">
                                         <span className="booked-info-label">Date</span>
-                                        <span className="booked-info-value">{new Date(existingBooking.date).toLocaleDateString()}</span>
+                                        <span className="booked-info-value">{new Date(activeBooking.date).toLocaleDateString()}</span>
                                     </div>
                                 </div>
                                 {isActive && (
@@ -259,81 +263,81 @@ export default function BookSlots() {
                         }
 
                         return (
-                          <div className="custom-dropdown-container">
-                            <button 
-                                className={`dropdown-trigger-premium ${selection ? 'has-selection' : ''}`}
-                                onClick={() => handleDropdownToggle(course.id)}
-                                disabled={isLoading}
-                            >
-                                {isLoading ? (
-                                  <Loader2 size={18} className="animate-spin" />
-                                ) : (
-                                  <>
-                                    <span>{selection ? `${selection.venueLabel} (${new Date(selection.date).toLocaleDateString()})` : "Select Assessment Slot"}</span>
-                                    <ChevronDown size={18} className={`chevron-icon ${openDropdown === course.id ? 'open' : ''}`} />
-                                  </>
-                                )}
-                            </button>
+                          <>
+                            <div className="custom-dropdown-container">
+                              <button 
+                                  className={`dropdown-trigger-premium ${selection ? 'has-selection' : ''}`}
+                                  onClick={() => handleDropdownToggle(course.id)}
+                                  disabled={isLoading}
+                              >
+                                  {isLoading ? (
+                                    <Loader2 size={18} className="animate-spin" />
+                                  ) : (
+                                    <>
+                                      <span>{selection ? `${selection.venueLabel} (${new Date(selection.date).toLocaleDateString()})` : "Select Assessment Slot"}</span>
+                                      <ChevronDown size={18} className={`chevron-icon ${openDropdown === course.id ? 'open' : ''}`} />
+                                    </>
+                                  )}
+                              </button>
 
-                            {openDropdown === course.id && (
-                                <div className="dropdown-menu-premium anim-fade-in">
-                                    <div className="dropdown-options-list">
-                                        {(() => {
-                                          const slotsData = courseSlots[course.id] || [];
-                                          if (slotsData.cooldown) {
-                                            return (
-                                              <div className="dropdown-option-premium disabled" style={{ color: '#e11d48', backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px' }}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', fontSize: '12px', marginBottom: '4px' }}>
-                                                  <AlertCircle size={14} /> COOLDOWN ACTIVE
+                              {openDropdown === course.id && (
+                                  <div className="dropdown-menu-premium anim-fade-in">
+                                      <div className="dropdown-options-list">
+                                          {(() => {
+                                            const slotsData = courseSlots[course.id] || [];
+                                            if (slotsData.cooldown) {
+                                              return (
+                                                <div className="dropdown-option-premium disabled" style={{ color: '#e11d48', backgroundColor: '#fff1f2', border: '1px solid #ffe4e6', padding: '12px' }}>
+                                                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: '800', fontSize: '12px', marginBottom: '4px' }}>
+                                                    <AlertCircle size={14} /> COOLDOWN ACTIVE
+                                                  </div>
+                                                  <div style={{ fontSize: '11px', fontWeight: '600', opacity: 0.8 }}>
+                                                    {slotsData.message}
+                                                  </div>
                                                 </div>
-                                                <div style={{ fontSize: '11px', fontWeight: '600', opacity: 0.8 }}>
-                                                  {slotsData.message}
+                                              );
+                                            }
+                                            const slots = Array.isArray(slotsData) ? slotsData : [];
+                                            const filteredSlots = slots.filter(s => {
+                                              const endStr = s.endTime || s.timeLabel.split(" – ")[1]?.trim();
+                                              return !isSlotExpired(s.date, endStr);
+                                            });
+                                            if (filteredSlots.length === 0) return <div className="dropdown-option-premium disabled">No slots opened for this course yet</div>;
+                                            return filteredSlots.map((slot) => (
+                                                <div 
+                                                    key={slot.id} 
+                                                    className={`dropdown-option-premium ${selection?.id === slot.id ? 'active' : ''} ${!slot.available ? 'disabled' : ''}`}
+                                                    onClick={() => handleSlotSelect(course.id, slot)}
+                                                    style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px", padding: "10px 12px" }}
+                                                >
+                                                    <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontWeight: "600" }}>
+                                                        <span>{slot.venueLabel}</span>
+                                                        {selection?.id === slot.id && <CheckCircle2 size={14} className="check-icon" />}
+                                                    </div>
+                                                    <div style={{ fontSize: "12px", opacity: 0.8 }}>
+                                                        {new Date(slot.date).toLocaleDateString()} | {slot.timeLabel}
+                                                    </div>
+                                                    <div style={{ fontSize: "11px", marginTop: "4px", color: slot.available ? "#10b981" : "#ef4444" }}>
+                                                        {slot.available ? `${slot.capacity - slot.bookedCount} seats left` : "Slot full"}
+                                                    </div>
                                                 </div>
-                                              </div>
-                                            );
-                                          }
-                                          const slots = Array.isArray(slotsData) ? slotsData : [];
-                                          const filteredSlots = slots.filter(s => {
-                                            const endStr = s.endTime || s.timeLabel.split(" – ")[1]?.trim();
-                                            return !isSlotExpired(s.date, endStr);
-                                          });
-                                          if (filteredSlots.length === 0) return <div className="dropdown-option-premium disabled">No slots opened for this course yet</div>;
-                                          return filteredSlots.map((slot) => (
-                                              <div 
-                                                  key={slot.id} 
-                                                  className={`dropdown-option-premium ${selection?.id === slot.id ? 'active' : ''} ${!slot.available ? 'disabled' : ''}`}
-                                                  onClick={() => handleSlotSelect(course.id, slot)}
-                                                  style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: "2px", padding: "10px 12px" }}
-                                              >
-                                                  <div style={{ display: "flex", justifyContent: "space-between", width: "100%", fontWeight: "600" }}>
-                                                      <span>{slot.venueLabel}</span>
-                                                      {selection?.id === slot.id && <CheckCircle2 size={14} className="check-icon" />}
-                                                  </div>
-                                                  <div style={{ fontSize: "12px", opacity: 0.8 }}>
-                                                      {new Date(slot.date).toLocaleDateString()} | {slot.timeLabel}
-                                                  </div>
-                                                  <div style={{ fontSize: "11px", marginTop: "4px", color: slot.available ? "#10b981" : "#ef4444" }}>
-                                                      {slot.available ? `${slot.capacity - slot.bookedCount} seats left` : "Slot full"}
-                                                  </div>
-                                              </div>
-                                          ));
-                                        })()}
-                                    </div>
-                                </div>
-                            )}
-                          </div>
+                                            ));
+                                          })()}
+                                      </div>
+                                  </div>
+                              )}
+                            </div>
+
+                            <button 
+                                className="confirm-booking-btn-premium"
+                                disabled={!selection || submitting}
+                                onClick={() => handleConfirm(course)}
+                            >
+                                {submitting ? "CONFIRMING..." : "CONFIRM BOOKING"}
+                            </button>
+                          </>
                         );
                       })()}
-
-                      {!myBookings.find(b => String(b.course_id) === String(course.id)) && (
-                        <button 
-                            className="confirm-booking-btn-premium"
-                            disabled={!selection || submitting}
-                            onClick={() => handleConfirm(course)}
-                        >
-                            {submitting ? "CONFIRMING..." : "CONFIRM BOOKING"}
-                        </button>
-                      )}
                   </div>
                 </div>
               );
