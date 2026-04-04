@@ -40,6 +40,7 @@ exports.getMyTasks = async (req, res) => {
         level_name: levelName,
         template_id: a.template_id?._id?.toString() || null,
         template_name: a.template_id?.name || "",
+        template_key: a.template_id?.key || "",
         question_count: a.question_count ?? 0,
         assigned_at: a.updatedAt || a.createdAt || null,
       });

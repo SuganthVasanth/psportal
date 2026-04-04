@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from "react-router-dom";
 import StudentLayout from "../components/StudentLayout";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
 import LeetCodePortal from "../components/renderer/LeetCodePortal";
+import ProfessionalPortal from "../components/renderer/ProfessionalPortal";
 import { BookOpen, Award, ChevronDown, X, Play, ArrowLeft, AlertCircle } from "lucide-react";
 import { isBookingAssessmentActive } from "../lib/assessmentWindow";
 import "./CourseDetails.css";
@@ -515,36 +516,35 @@ export default function CourseDetails() {
       (course?.type?.toLowerCase().includes("programming")) || 
       (levels.some(l => l.assessmentType?.toLowerCase().includes("programming")));
 
-    if (isProgrammingTest) {
-      const activeBooking =
-        myBookings.find((b) => String(b.course_id) === String(courseId)) ||
-        (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
+    const activeBooking =
+      myBookings.find((b) => String(b.course_id?._id || b.course_id) === String(courseId)) ||
+      (bookedSlot && String(bookedSlot.course_id) === String(courseId) ? bookedSlot : null);
 
+    let assessmentEndTime = null;
+    if (activeBooking && activeBooking.date) {
       const currentLevelIndex = progress.findIndex(p => !p.completed);
       const currentLevel = course?.levels?.[currentLevelIndex >= 0 ? currentLevelIndex : 0];
       const durationMinutes = currentLevel?.durationMinutes || 60;
-
-      let assessmentEndTime = null;
-      if (activeBooking && activeBooking.date) {
-        const startStr = activeBooking.startTime;
-        const endStr = activeBooking.endTime || activeBooking.slot_end_time;
-        
-        if (startStr) {
-          const [h, m] = startStr.split(":").map(Number);
-          assessmentEndTime = new Date(activeBooking.date);
-          assessmentEndTime.setHours(h, m, 0, 0);
-          // Add duration minutes
-          assessmentEndTime.setMinutes(assessmentEndTime.getMinutes() + durationMinutes);
-        } else if (endStr) {
-          const [h, m] = endStr.split(":").map(Number);
-          assessmentEndTime = new Date(activeBooking.date);
-          assessmentEndTime.setHours(h, m, 0, 0);
-        }
+      
+      const startStr = activeBooking.startTime;
+      const endStr = activeBooking.endTime || activeBooking.slot_end_time;
+      
+      if (startStr) {
+        const [h, m] = startStr.split(":").map(Number);
+        assessmentEndTime = new Date(activeBooking.date);
+        assessmentEndTime.setHours(h, m, 0, 0);
+        assessmentEndTime.setMinutes(assessmentEndTime.getMinutes() + durationMinutes);
+      } else if (endStr) {
+        const [h, m] = endStr.split(":").map(Number);
+        assessmentEndTime = new Date(activeBooking.date);
+        assessmentEndTime.setHours(h, m, 0, 0);
       }
+    }
 
+    if (isProgrammingTest) {
       return (
         <div className="cd-portal-takeover anim-fade-in" style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "#1a1a1a", overflow: "hidden" }}>
-          <LeetCodePortal
+          <ProfessionalPortal
             questions={examQuestions}
             answers={examAnswers}
             onAnswerChange={handleExamAnswerChange}
@@ -552,80 +552,29 @@ export default function CourseDetails() {
             submitting={examSubmitting}
             onBack={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}
             course={course}
-            bookingId={activeBooking?.id || ""}
+            bookingId={activeBooking?.id || activeBooking?._id || ""}
             proctorStats={{ tabSwitchCount, proctorWarning }}
             assessmentEndTime={assessmentEndTime}
           />
-          {/* {proctorWarning && (
-            <div style={{ position: "absolute", bottom: 20, right: 20, zIndex: 10001, backgroundColor: "#fee2e2", color: "#991b1b", padding: "8px 16px", borderRadius: "8px", border: "1px solid #f87171", fontSize: "12px", boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}>
-              {proctorWarning}
-            </div>
-          )} */}
         </div>
       );
     }
 
     return (
-      <StudentLayout hideNav={true}>
-        <div className="cd-container cd-main">
-            <div className="cd-exam-header">
-              <button type="button" className="cd-back-btn" onClick={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}>
-                <ArrowLeft size={18} /> Back to course
-              </button>
-              <h1 className="cd-exam-title">Portal – {course?.name || courseName}</h1>
-            </div>
-            
-            {examLoading && (
-              <div className="cd-questions-list">
-                <p className="cd-content-placeholder">Loading questions…</p>
-              </div>
-            )}
-
-            {examError && (
-              <div className="cd-questions-list">
-                <p className="cd-modal-error">{examError}</p>
-                <div style={{ marginTop: 12 }}>
-                  <button type="button" className="cd-btn-secondary" onClick={handleLaunchPortal}>Retry</button>
-                </div>
-              </div>
-            )}
-
-            {!examLoading && !examError && examQuestions.length === 0 && !examSubmitted && (
-              <div className="cd-questions-list">
-                <p className="cd-content-placeholder">No questions available for this course yet.</p>
-              </div>
-            )}
-
-            {!examLoading && !examError && examQuestions.length > 0 && !examSubmitted && (
-                <>
-                  <div className="cd-questions-list">
-                    {examQuestions.map((q) => (
-                      <div key={q.questionNumber} className="cd-question-block">
-                        <h3 className="cd-question-heading">Question {q.questionNumber}</h3>
-                        <TemplateQuestionForm
-                          templateId={q.template_id}
-                          layout={q.layout}
-                          value={{ ...(q.value || {}), ...(examAnswers[q.questionNumber] || {}) }}
-                          onChange={(value) => handleExamAnswerChange(q.questionNumber, value)}
-                          studentMode={true}
-                        />
-                      </div>
-                    ))}
-                  </div>
-                  <div className="cd-exam-footer">
-                    <button
-                      type="button"
-                      className="cd-btn-primary"
-                      onClick={handleSubmitAttempt}
-                      disabled={examSubmitting}
-                    >
-                      {examSubmitting ? "Submitting…" : "Submit attempt"}
-                    </button>
-                  </div>
-                </>
-            )}
-        </div>
-      </StudentLayout>
+      <div className="cd-portal-takeover anim-fade-in" style={{ position: "fixed", inset: 0, zIndex: 9999, backgroundColor: "#f8fafc", overflow: "hidden" }}>
+        <ProfessionalPortal
+          questions={examQuestions}
+          answers={examAnswers}
+          onAnswerChange={handleExamAnswerChange}
+          onSubmitAttempt={handleSubmitAttempt}
+          submitting={examSubmitting}
+          onBack={() => { setExamView(false); setExamError(""); setExamSubmitted(false); }}
+          course={course}
+          bookingId={activeBooking?.id || activeBooking?._id || ""}
+          proctorStats={{ tabSwitchCount, proctorWarning }}
+          assessmentEndTime={assessmentEndTime}
+        />
+      </div>
     );
   }
 

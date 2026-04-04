@@ -24,8 +24,8 @@ exports.getActiveSlots = async (req, res) => {
           const timeSinceFail = Date.now() - new Date(progress.last_failed_at).getTime();
           if (timeSinceFail < cooldownMs) {
             const remainingHours = Math.ceil((cooldownMs - timeSinceFail) / (60 * 60 * 1000));
-            return res.status(200).json({ 
-              cooldownActive: true, 
+            return res.status(200).json({
+              cooldownActive: true,
               message: `A 48-hour cooldown is active after a failed attempt. Please try again in approximately ${remainingHours} hours.`,
               remainingMs: cooldownMs - timeSinceFail
             });
@@ -62,11 +62,11 @@ exports.getActiveSlots = async (req, res) => {
     // Fetch slots that are scheduled for the future (or today / late yesterday) and have capacity
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    
+
     // Include yesterday to catch slots that span past midnight
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     filter.date = { $gte: yesterday };
 
     const list = await Slot.find(filter)
@@ -111,15 +111,15 @@ exports.getActiveSlots = async (req, res) => {
     const finalFiltered = mapped.filter((s) => {
       if (!s.date || !s.startTime) return true; // Keep if data is missing to be safe
       const [h, m] = s.startTime.split(":").map(Number);
-      
+
       // Calculate active window based on actual slot date + startTime
       const slotStart = new Date(s.date);
       slotStart.setHours(h, m, 0, 0);
 
       const slotEnd = new Date(slotStart);
       // Window remains open until startTime + duration + buffer
-      slotEnd.setMinutes(slotEnd.getMinutes() + studentDuration + 15); 
-      
+      slotEnd.setMinutes(slotEnd.getMinutes() + studentDuration + 15);
+
       return now < slotEnd;
     });
 
@@ -132,7 +132,7 @@ exports.getActiveSlots = async (req, res) => {
 exports.bookSlot = async (req, res) => {
   try {
     const { register_no, student_name, course_id, level_index, course_name, slot_id, venue_label, time_label } = req.body;
-    
+
     if (!register_no || !course_id || !slot_id) {
       return res.status(400).json({ message: "register_no, course_id, and slot_id are required" });
     }
@@ -160,17 +160,17 @@ exports.bookSlot = async (req, res) => {
     // 2. Check slot existence and capacity
     const slot = await Slot.findById(slot_id);
     if (!slot) return res.status(404).json({ message: "Assessment slot not found" });
-    
+
     if (slot.booked_count >= slot.capacity) {
       return res.status(400).json({ message: "Selected slot is full. Please choose another one." });
     }
 
     // 2.5 Ensure approved question bank exists before booking
     const QuestionBankSubmission = require('../models/QuestionBankSubmission');
-    const qb = await QuestionBankSubmission.findOne({ 
-      course_id, 
+    const qb = await QuestionBankSubmission.findOne({
+      course_id,
       level_index: level_index || 0,
-      status: "approved" 
+      status: "approved"
     }).lean();
     if (!qb || !Array.isArray(qb.questions) || qb.questions.length === 0) {
       return res.status(400).json({ message: "Assessment questions are not yet available for this course level. Please contact support or check back later." });
@@ -189,7 +189,7 @@ exports.bookSlot = async (req, res) => {
       course_id,
       course_name,
       slot_id,
-      slot_template_id: slotTemplateId, 
+      slot_template_id: slotTemplateId,
       venue_label: venue_label || "",
       time_label: time_label || "",
     });
@@ -199,29 +199,49 @@ exports.bookSlot = async (req, res) => {
 
     // Use the qb we fetched in step 2.5
     let selectedQuestions = [];
-    // Determine number of questions: default 2 for programming courses, else 5
-    const isProgramming = (course?.type?.toLowerCase?.().includes("programming")) || false;
-    const numQuestions = isProgramming ? 2 : 5;
+    
+    // Determine level settings: default to level 0 if not provided
+    const lvlIdx = parseInt(level_index || 0);
+    const level = (course?.levels && course.levels[lvlIdx]) || {};
+    
+    // Determine number of questions and type from the level config
+    const isProgramming = (level.assessmentType?.toLowerCase() === "programming");
+    const numQuestions = level.questionsPerAssessment || (isProgramming ? 2 : 5);
+    
     selectedQuestions = pickRandomQuestions(qb.questions, numQuestions);
 
-    // Map to attempt format (no answer values)
-    const attemptQuestions = selectedQuestions.map((q) => ({
+    // Map to attempt format (WITH values, but stripping correctness to prevent cheating)
+    const attemptQuestions = selectedQuestions.map((q) => {
+      const valueClone = JSON.parse(JSON.stringify(q.value || {}));
+      
+      // Security: Strip 'correct' property from any MCQ options
+      Object.keys(valueClone).forEach(key => {
+        const comp = valueClone[key];
+        if (comp && Array.isArray(comp.options)) {
+          comp.options.forEach(opt => {
+            if (opt && typeof opt === 'object') delete opt.correct;
+          });
+        }
+      });
+
+      return {
         questionNumber: q.questionNumber,
         template_id: q.template_id,
         title: q.title || q.value?.title || "",
         content: q.content || q.value?.problemStatement || q.value?.description || "",
-        // value left empty for now
-      }));
+        value: valueClone,
+      };
+    });
 
-      // Create attempt record linked to this booking
-      const attemptDoc = await require('../models/StudentExamAttempt').create({
-        register_no,
-        course_id,
-        booking_id: doc._id.toString(),
-        questions: attemptQuestions,
-        score: 0,
-        isPassed: false,
-      });
+    // Create attempt record linked to this booking
+    const attemptDoc = await require('../models/StudentExamAttempt').create({
+      register_no,
+      course_id,
+      booking_id: doc._id.toString(),
+      questions: attemptQuestions,
+      score: 0,
+      isPassed: false,
+    });
 
     // 4. Increment booked count
     slot.booked_count = (slot.booked_count || 0) + 1;
@@ -245,15 +265,15 @@ exports.getMyBookings = async (req, res) => {
   try {
     const { register_no } = req.query;
     if (!register_no) return res.status(400).json({ message: "register_no required" });
-    
+
     // Only return active (unprocessed) bookings
     const list = await CourseSlotBooking.find({ register_no, processed: { $ne: true } })
-      .populate({ 
-        path: "slot_id", 
+      .populate({
+        path: "slot_id",
         populate: [
           { path: "venue_id" },
           { path: "time_slot_id" }
-        ] 
+        ]
       })
       .sort({ booked_at: -1 })
       .lean();

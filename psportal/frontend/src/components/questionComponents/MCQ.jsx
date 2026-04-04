@@ -79,38 +79,41 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
                   setCorrect(idx);
                 }
               }}
-              className="flex items-center gap-3 rounded-xl border-2 p-3 transition-all min-h-[52px] cursor-pointer"
-              style={{
-                backgroundColor: isCorrect ? "#e0e7ff" : pastel,
-                borderColor: isCorrect ? "#8b5cf6" : "rgba(226, 232, 240, 0.9)",
-              }}
+              className={`flex items-center gap-5 transition-all min-h-[64px] cursor-pointer group ${
+                isStudent ? "rounded-xl border bg-white p-4 hover:border-slate-200 hover:shadow-sm" : "rounded-xl border-2 p-3"
+              }`}
+              style={
+                isStudent
+                  ? {
+                      borderColor: isCorrect ? "#e2e8f0" : "#f1f5f9",
+                      background: isCorrect ? "#fff" : "#fff",
+                    }
+                  : {
+                      backgroundColor: isCorrect ? "#e0e7ff" : pastel,
+                      borderColor: isCorrect ? "#8b5cf6" : "rgba(226, 232, 240, 0.9)",
+                    }
+              }
             >
-              <label
-                className={`mcq-option-radio flex items-center justify-center shrink-0 w-10 h-10 rounded-full border-2 cursor-pointer transition-colors select-none ${isStudent ? "pointer-events-none" : "hover:border-[#8b5cf6] hover:bg-[#ddd6fe]/80"}`}
-                style={{
-                  borderColor: isCorrect ? "#8b5cf6" : "#c7d2fe",
-                  backgroundColor: isCorrect ? "#8b5cf6" : "rgba(255,255,255,0.7)",
-                  visibility: isStudent ? "hidden" : "visible",
-                  width: isStudent ? 0 : 40,
-                  marginRight: isStudent ? -12 : 0
-                }}
-                title="Mark as correct answer"
-                onClick={(e) => e.stopPropagation()}
+              <div
+                className={`flex items-center justify-center shrink-0 w-8 h-8 rounded-full border transition-all ${
+                  isCorrect ? "border-slate-900 shadow-sm" : "border-slate-200 bg-white"
+                }`}
               >
-                <input
-                  type="radio"
-                  name={radioName}
-                  checked={isCorrect}
-                  onChange={() => setCorrect(idx)}
-                  className="sr-only"
-                  aria-label={`Option ${idx + 1} correct`}
-                  disabled={isDisabled && !isStudent}
-                />
-                {isCorrect ? <Check size={20} className="text-white" strokeWidth={2.5} /> : null}
-              </label>
+                <div className={`w-3.5 h-3.5 rounded-full transition-all ${isCorrect ? "bg-slate-900 border-[3px] border-white" : "bg-transparent"}`} />
+              </div>
+
+              {isStudent && (
+                 <div className="w-7 h-7 rounded-md bg-slate-100/50 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0">
+                    {["A", "B", "C", "D", "E", "F"][idx] || (idx + 1)}
+                 </div>
+              )}
               
               {isStudent || readOnly ? (
-                <span className="flex-1 text-sm text-[#1a202c] font-medium">{opt.text}</span>
+                <span className={`flex-1 font-bold leading-relaxed transition-colors ${
+                    isCorrect ? "text-slate-900" : "text-slate-800"
+                } ${isStudent ? "text-[15px]" : "text-sm"}`}>
+                    {opt.text}
+                </span>
               ) : (
                 <input
                   type="text"

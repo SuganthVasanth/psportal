@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, MessageCircle, X, Maximize2, Search, History, ListTodo } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, MessageCircle, X, Maximize2, Search, History, ListTodo, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 import ChatModal from "../components/ChatModal";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
 
@@ -35,6 +36,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
   const [taskSearch, setTaskSearch] = useState("");
   const [taskSort, setTaskSort] = useState(SORT_RECENT);
   const [loadingTasks, setLoadingTasks] = useState(false);
+  const excelInputRef = useRef(null);
 
   const { user, assigned_courses } = data || {};
   const normalizedRoles = (user?.roles || []).map(r => String(r).toLowerCase().replace(/\s+/g, "_"));
@@ -77,14 +79,14 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
     if (!key) return;
     try {
       localStorage.setItem(key, JSON.stringify(value || {}));
-    } catch (_) {}
+    } catch (_) { }
   };
 
   const clearDraftInStorage = (key) => {
     if (!key) return;
     try {
       localStorage.removeItem(key);
-    } catch (_) {}
+    } catch (_) { }
   };
 
   useEffect(() => {
@@ -112,7 +114,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
       }
       return;
     }
-    
+
     // If we're still loading actual tasks from the server, wait first.
     // This prevents falling back to empty 'assigned_courses' and wiping work.
     if (loadingTasks) return;
@@ -122,15 +124,15 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
       questionBankTasks?.length
         ? questionBankTasks
         : (assigned_courses || []).map((c) => ({ course_id: c.id, course_name: c.name, level_index: 0, status: "not_started" }));
-    
+
     const task =
-      allTasksNow.find((t) => 
-        String(t.course_id) === String(courseId) && 
+      allTasksNow.find((t) =>
+        String(t.course_id) === String(courseId) &&
         Number(t.level_index || 0) === Number(levelIndex || 0) &&
         String(t.template_id) === String(templateId)
       ) || null;
-    
-    if (!task) return; 
+
+    if (!task) return;
 
     setFullScreenTask(task);
     setFullScreenQuestionIndex(Math.max(1, questionIndex || 1));
@@ -141,15 +143,15 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
       acc[q.questionNumber] = q.value || {};
       return acc;
     }, {});
-    
+
     const draft = draftQuestionValuesByCourse[task.course_id];
     const fromStorage = loadDraftFromStorage(storageKey);
-    
+
     // Priority: Local Storage (Active Draft) -> Component State Draft -> Backend Data
     const finalValues = (fromStorage && Object.keys(fromStorage).length > 0)
       ? fromStorage
       : (draft && Object.keys(draft).length > 0 ? draft : fromSaved);
-      
+
     setFullScreenQuestionValues(finalValues);
   }, [
     qbRoute,
@@ -160,6 +162,75 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
     fullScreenTask,
     data?.user?.id,
   ]);
+
+  const handleExcelUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !fullScreenTask) return;
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const data = new Uint8Array(event.target.result);
+        const workbook = XLSX.read(data, { type: "array" });
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+        // Expectations (Screenshot format): 
+        // Col 0: Q.No
+        // Col 1: Question, Col 2: Option 1, Col 3: Marks 1 (1.00 = correct),
+        // Col 4: Option 2, Col 5: Marks 2,
+        // Col 6: Option 3, Col 7: Marks 3,
+        // Col 8: Option 4, Col 9: Marks 4
+        const questionsValues = {};
+        let qCount = 0;
+
+        // Skip headers if first row has "question" or "q.n"
+        const startRow = (jsonData[0] && (String(jsonData[0][1]).toLowerCase().includes("question") || String(jsonData[0][0]).toLowerCase().includes("q.n"))) ? 1 : 0;
+
+        for (let i = startRow; i < jsonData.length; i++) {
+          const row = jsonData[i];
+          if (!row || row.length < 3) continue; // Skip empty rows
+
+          qCount++;
+          const questionRaw = String(row[1] || "");
+          // Clean the question text: trim "Q1:", "Q2:", "1.", etc.
+          const questionText = questionRaw.replace(/^Q?\d+[:.)]\s*/i, "").trim() || questionRaw;
+
+          const options = [
+            { text: String(row[2] || ""), correct: Number(row[3]) === 1 }, // Option 1 + Marks 1
+            { text: String(row[4] || ""), correct: Number(row[5]) === 1 }, // Option 2 + Marks 2
+            { text: String(row[6] || ""), correct: Number(row[7]) === 1 }, // Option 3 + Marks 3
+            { text: String(row[8] || ""), correct: Number(row[9]) === 1 }, // Option 4 + Marks 4
+          ].filter(o => o.text.trim() !== "");
+
+          // Fallback if no correct option (marks) specified
+          if (!options.some(o => o.correct)) {
+             if (options.length > 0) options[0].correct = true;
+          }
+
+          questionsValues[qCount] = {
+            q: { value: questionText },
+            mcq: { options }
+          };
+        }
+
+        if (qCount > 0) {
+          setFullScreenQuestionValues(questionsValues);
+          setFullScreenTask(prev => ({ ...prev, question_count: qCount }));
+          saveDraftToStorage(fullScreenDraftStorageKey, questionsValues);
+          alert(`Success! Loaded ${qCount} questions from Excel Matching your Format.`);
+        } else {
+          alert("No questions found in the Excel file. Please ensure the format matches the requirements.");
+        }
+      } catch (error) {
+        console.error("Excel parsing error:", error);
+        alert("Failed to parse Excel file. Please ensure it's a valid XLSX/XLS file.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    e.target.value = null; // reset for same file re-upload
+  };
 
   const openTaskForm = (task) => {
     const id = task.id || `${task.course_id}_${task.level_index || 0}`;
@@ -316,214 +387,214 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
               </div>
             </div>
             <div className="ud-task-list">
-            {sortedTasks.length === 0 ? (
-              <p className="ud-empty">
-                {taskSearch.trim() ? "No tasks match your search." : taskTab === TASK_TAB_HISTORY ? "No completed or rejected tasks yet." : "No pending tasks."}
-              </p>
-            ) : (
-            sortedTasks.map((task) => {
-              const statusLabel = task.status === "approved" ? "Completed" : task.status === "rejected" ? "Rejected" : task.status === "submitted" || task.status === "draft" ? "Pending" : "Not started";
-              const statusClass = task.status === "approved" ? "ud-badge-success" : task.status === "rejected" ? "ud-badge-danger" : "ud-badge-warning";
-              const isExpanded = expandTaskId === (task.id || task.course_id);
-              const canEdit = task.status !== "approved" && task.status !== "rejected";
-              return (
-                <div key={task.id || task.course_id} className="ud-task-card">
-                  <div className="ud-task-head" onClick={() => canEdit && openTaskForm(task)}>
-                    <div className="ud-task-head-left">
-                      {canEdit && (isExpanded ? <ChevronDown size={18} color="#64748b" /> : <ChevronRight size={18} color="#64748b" />)}
-                      <span className="ud-task-name">{task.course_name}</span>
-                      <span className="ud-badge" style={{ backgroundColor: "#f1f5f9", color: "#475569", marginLeft: 8 }}>
-                        {task.level_name || (task.level_index !== undefined ? `Level ${task.level_index + 1}` : "Level 1")}
-                      </span>
-                      {task.template_name && (
-                        <span className="ud-task-meta" style={{ marginLeft: 8 }}>({task.template_name})</span>
-                      )}
-                      <span className={`ud-badge ${statusClass}`} style={{ marginLeft: 8 }}>{statusLabel}</span>
-                      {task.submitted_at && (
-                        <span className="ud-task-meta" style={{ marginLeft: 8 }}>Submitted {new Date(task.submitted_at).toLocaleDateString()}</span>
-                      )}
-                      <button
-                        type="button"
-                        className="ud-chat-icon-btn"
-                        onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}
-                        title="View messages from admin"
-                        style={{ marginLeft: 8 }}
-                      >
-                        <MessageCircle size={18} />
-                      </button>
-                    </div>
-                    <div className="ud-task-head-right" onClick={(e) => e.stopPropagation()}>
-                      {canEdit && task.template_id && (
-                        <button
-                          type="button"
-                          className="ud-btn-primary"
-                          style={{ marginRight: 8 }}
-                          onClick={() => {
-                            navigate(`${qbEditorPathFor(task.course_id, task.level_index, task.template_id)}?q=1`);
-                          }}
-                        >
-                          <Maximize2 size={16} style={{ marginRight: 4, verticalAlign: "middle" }} />
-                          Work on question bank
-                        </button>
-                      )}
-                      {canEdit && <span className="ud-task-cta">{isExpanded ? "Close" : "Complete / Import & post"}</span>}
-                    </div>
-                  </div>
-                  {isExpanded && canEdit && (
-                    <div className="ud-task-body">
-                      <div className="ud-form-group">
-                        <label>Document (drag & drop or click)</label>
-                        <div
-                          className={`ud-dropzone ${dragOver ? "ud-dropzone-active" : ""}`}
-                          onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                          onDragLeave={() => setDragOver(false)}
-                          onDrop={(e) => {
-                            e.preventDefault();
-                            setDragOver(false);
-                            const file = e.dataTransfer?.files?.[0];
-                            if (file) setTaskFile(file);
-                          }}
-                          onClick={() => document.getElementById(`task-file-${task.course_id}`)?.click()}
-                        >
-                          <input
-                            id={`task-file-${task.course_id}`}
-                            type="file"
-                            accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
-                            style={{ display: "none" }}
-                            onChange={(e) => setTaskFile(e.target.files?.[0] || null)}
-                          />
-                          {taskFile ? (
-                            <span className="ud-dropzone-file">{taskFile.name}</span>
-                          ) : (
-                            <span className="ud-dropzone-placeholder">Drop your question bank document here or click to choose</span>
+              {sortedTasks.length === 0 ? (
+                <p className="ud-empty">
+                  {taskSearch.trim() ? "No tasks match your search." : taskTab === TASK_TAB_HISTORY ? "No completed or rejected tasks yet." : "No pending tasks."}
+                </p>
+              ) : (
+                sortedTasks.map((task) => {
+                  const statusLabel = task.status === "approved" ? "Completed" : task.status === "rejected" ? "Rejected" : task.status === "submitted" || task.status === "draft" ? "Pending" : "Not started";
+                  const statusClass = task.status === "approved" ? "ud-badge-success" : task.status === "rejected" ? "ud-badge-danger" : "ud-badge-warning";
+                  const isExpanded = expandTaskId === (task.id || task.course_id);
+                  const canEdit = task.status !== "approved" && task.status !== "rejected";
+                  return (
+                    <div key={task.id || task.course_id} className="ud-task-card">
+                      <div className="ud-task-head" onClick={() => canEdit && openTaskForm(task)}>
+                        <div className="ud-task-head-left">
+                          {canEdit && (isExpanded ? <ChevronDown size={18} color="#64748b" /> : <ChevronRight size={18} color="#64748b" />)}
+                          <span className="ud-task-name">{task.course_name}</span>
+                          <span className="ud-badge" style={{ backgroundColor: "#f1f5f9", color: "#475569", marginLeft: 8 }}>
+                            {task.level_name || (task.level_index !== undefined ? `Level ${task.level_index + 1}` : "Level 1")}
+                          </span>
+                          {task.template_name && (
+                            <span className="ud-task-meta" style={{ marginLeft: 8 }}>({task.template_name})</span>
                           )}
+                          <span className={`ud-badge ${statusClass}`} style={{ marginLeft: 8 }}>{statusLabel}</span>
+                          {task.submitted_at && (
+                            <span className="ud-task-meta" style={{ marginLeft: 8 }}>Submitted {new Date(task.submitted_at).toLocaleDateString()}</span>
+                          )}
+                          <button
+                            type="button"
+                            className="ud-chat-icon-btn"
+                            onClick={(e) => { e.stopPropagation(); setChatOpen(true); }}
+                            title="View messages from admin"
+                            style={{ marginLeft: 8 }}
+                          >
+                            <MessageCircle size={18} />
+                          </button>
+                        </div>
+                        <div className="ud-task-head-right" onClick={(e) => e.stopPropagation()}>
+                          {canEdit && task.template_id && (
+                            <button
+                              type="button"
+                              className="ud-btn-primary"
+                              style={{ marginRight: 8 }}
+                              onClick={() => {
+                                navigate(`${qbEditorPathFor(task.course_id, task.level_index, task.template_id)}?q=1`);
+                              }}
+                            >
+                              <Maximize2 size={16} style={{ marginRight: 4, verticalAlign: "middle" }} />
+                              Work on question bank
+                            </button>
+                          )}
+                          {canEdit && <span className="ud-task-cta">{isExpanded ? "Close" : "Complete / Import & post"}</span>}
                         </div>
                       </div>
-                      <div className="ud-form-group">
-                        <label>Title (optional)</label>
-                        <input
-                          type="text"
-                          value={taskForm.title}
-                          onChange={(e) => setTaskForm((f) => ({ ...f, title: e.target.value }))}
-                          placeholder="e.g. Unit 1 Question Bank"
-                        />
-                      </div>
-                      <div className="ud-form-group">
-                        <label>Notes / description (optional)</label>
-                        <textarea
-                          rows={2}
-                          value={taskForm.content}
-                          onChange={(e) => setTaskForm((f) => ({ ...f, content: e.target.value }))}
-                          placeholder="Brief notes or paste text..."
-                        />
-                      </div>
-                      <div className="ud-btn-row">
-                        <button
-                          type="button"
-                          className="ud-btn-primary"
-                          disabled={submittingTaskId !== null}
-                          onClick={async () => {
-                            let file_url = taskForm.file_url;
-                            let file_name = "";
-                            if (taskFile) {
-                              const form = new FormData();
-                              form.append("file", taskFile);
-                              const up = await fetch(`${API_BASE}/api/upload`, { method: "POST", headers: authHeaders, body: form });
-                              const upData = await up.json();
-                              if (!up.ok) {
-                                alert(upData.message || "File upload failed");
-                                return;
-                              }
-                              file_url = upData.url?.startsWith("http") ? upData.url : `${API_BASE}${upData.url}`;
-                              file_name = upData.file_name || taskFile.name;
-                            }
-                            setSubmittingTaskId(task.course_id);
-                            try {
-                              const res = await fetch(`${API_BASE}/api/question-banks`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json", ...authHeaders },
-                                body: JSON.stringify({
-                                  course_id: task.course_id,
-                                  level_index: task.level_index || 0,
-                                  title: taskForm.title,
-                                  content: taskForm.content,
-                                  file_url: file_url || taskForm.file_url,
-                                  file_name: file_name || undefined,
-                                  action: "submit",
-                                }),
-                              });
-                              const result = await res.json();
-                              if (!res.ok) throw new Error(result.message || "Submit failed");
-                              const taskId = task.id || `${task.course_id}_${task.level_index || 0}`;
-                              setQuestionBankTasks((prev) => prev.map((t) => {
-                                const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
-                                return currentId === taskId ? { ...t, ...result, status: "submitted" } : t;
-                              }));
-                              setExpandTaskId(null);
-                              setTaskForm({ title: "", content: "", file_url: "" });
-                              setTaskFile(null);
-                            } catch (e) {
-                              alert(e.message || "Failed to submit");
-                            } finally {
-                              setSubmittingTaskId(null);
-                            }
-                          }}
-                        >
-                          {submittingTaskId === task.course_id ? "Submitting…" : "Import & post (submit to admin)"}
-                        </button>
-                        <button
-                          type="button"
-                          className="ud-btn-secondary"
-                          disabled={submittingTaskId !== null}
-                          onClick={async () => {
-                            setSubmittingTaskId(task.course_id);
-                            let file_url = taskForm.file_url;
-                            if (taskFile) {
-                              const form = new FormData();
-                              form.append("file", taskFile);
-                              const up = await fetch(`${API_BASE}/api/upload`, { method: "POST", headers: authHeaders, body: form });
-                              const upData = await up.json();
-                              if (up.ok) file_url = upData.url?.startsWith("http") ? upData.url : `${API_BASE}${upData.url}`;
-                            }
-                            try {
-                              const res = await fetch(`${API_BASE}/api/question-banks`, {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json", ...authHeaders },
-                                body: JSON.stringify({
-                                  course_id: task.course_id,
-                                  level_index: task.level_index || 0,
-                                  title: taskForm.title,
-                                  content: taskForm.content,
-                                  file_url: file_url || taskForm.file_url,
-                                  action: "draft",
-                                }),
-                              });
-                              const result = await res.json();
-                              if (!res.ok) throw new Error(result.message || "Save failed");
-                              const taskId = task.id || `${task.course_id}_${task.level_index || 0}`;
-                              setQuestionBankTasks((prev) => prev.map((t) => {
-                                const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
-                                return currentId === taskId ? { ...t, ...result, status: "draft" } : t;
-                              }));
-                              setExpandTaskId(null);
-                              setTaskForm({ title: "", content: "", file_url: "" });
-                              setTaskFile(null);
-                            } catch (e) {
-                              alert(e.message || "Failed to save draft");
-                            } finally {
-                              setSubmittingTaskId(null);
-                            }
-                          }}
-                        >
-                          Save as draft
-                        </button>
-                      </div>
+                      {isExpanded && canEdit && (
+                        <div className="ud-task-body">
+                          <div className="ud-form-group">
+                            <label>Document (drag & drop or click)</label>
+                            <div
+                              className={`ud-dropzone ${dragOver ? "ud-dropzone-active" : ""}`}
+                              onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+                              onDragLeave={() => setDragOver(false)}
+                              onDrop={(e) => {
+                                e.preventDefault();
+                                setDragOver(false);
+                                const file = e.dataTransfer?.files?.[0];
+                                if (file) setTaskFile(file);
+                              }}
+                              onClick={() => document.getElementById(`task-file-${task.course_id}`)?.click()}
+                            >
+                              <input
+                                id={`task-file-${task.course_id}`}
+                                type="file"
+                                accept=".pdf,.doc,.docx,.txt,.xls,.xlsx"
+                                style={{ display: "none" }}
+                                onChange={(e) => setTaskFile(e.target.files?.[0] || null)}
+                              />
+                              {taskFile ? (
+                                <span className="ud-dropzone-file">{taskFile.name}</span>
+                              ) : (
+                                <span className="ud-dropzone-placeholder">Drop your question bank document here or click to choose</span>
+                              )}
+                            </div>
+                          </div>
+                          <div className="ud-form-group">
+                            <label>Title (optional)</label>
+                            <input
+                              type="text"
+                              value={taskForm.title}
+                              onChange={(e) => setTaskForm((f) => ({ ...f, title: e.target.value }))}
+                              placeholder="e.g. Unit 1 Question Bank"
+                            />
+                          </div>
+                          <div className="ud-form-group">
+                            <label>Notes / description (optional)</label>
+                            <textarea
+                              rows={2}
+                              value={taskForm.content}
+                              onChange={(e) => setTaskForm((f) => ({ ...f, content: e.target.value }))}
+                              placeholder="Brief notes or paste text..."
+                            />
+                          </div>
+                          <div className="ud-btn-row">
+                            <button
+                              type="button"
+                              className="ud-btn-primary"
+                              disabled={submittingTaskId !== null}
+                              onClick={async () => {
+                                let file_url = taskForm.file_url;
+                                let file_name = "";
+                                if (taskFile) {
+                                  const form = new FormData();
+                                  form.append("file", taskFile);
+                                  const up = await fetch(`${API_BASE}/api/upload`, { method: "POST", headers: authHeaders, body: form });
+                                  const upData = await up.json();
+                                  if (!up.ok) {
+                                    alert(upData.message || "File upload failed");
+                                    return;
+                                  }
+                                  file_url = upData.url?.startsWith("http") ? upData.url : `${API_BASE}${upData.url}`;
+                                  file_name = upData.file_name || taskFile.name;
+                                }
+                                setSubmittingTaskId(task.course_id);
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/question-banks`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", ...authHeaders },
+                                    body: JSON.stringify({
+                                      course_id: task.course_id,
+                                      level_index: task.level_index || 0,
+                                      title: taskForm.title,
+                                      content: taskForm.content,
+                                      file_url: file_url || taskForm.file_url,
+                                      file_name: file_name || undefined,
+                                      action: "submit",
+                                    }),
+                                  });
+                                  const result = await res.json();
+                                  if (!res.ok) throw new Error(result.message || "Submit failed");
+                                  const taskId = task.id || `${task.course_id}_${task.level_index || 0}`;
+                                  setQuestionBankTasks((prev) => prev.map((t) => {
+                                    const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                                    return currentId === taskId ? { ...t, ...result, status: "submitted" } : t;
+                                  }));
+                                  setExpandTaskId(null);
+                                  setTaskForm({ title: "", content: "", file_url: "" });
+                                  setTaskFile(null);
+                                } catch (e) {
+                                  alert(e.message || "Failed to submit");
+                                } finally {
+                                  setSubmittingTaskId(null);
+                                }
+                              }}
+                            >
+                              {submittingTaskId === task.course_id ? "Submitting…" : "Import & post (submit to admin)"}
+                            </button>
+                            <button
+                              type="button"
+                              className="ud-btn-secondary"
+                              disabled={submittingTaskId !== null}
+                              onClick={async () => {
+                                setSubmittingTaskId(task.course_id);
+                                let file_url = taskForm.file_url;
+                                if (taskFile) {
+                                  const form = new FormData();
+                                  form.append("file", taskFile);
+                                  const up = await fetch(`${API_BASE}/api/upload`, { method: "POST", headers: authHeaders, body: form });
+                                  const upData = await up.json();
+                                  if (up.ok) file_url = upData.url?.startsWith("http") ? upData.url : `${API_BASE}${upData.url}`;
+                                }
+                                try {
+                                  const res = await fetch(`${API_BASE}/api/question-banks`, {
+                                    method: "POST",
+                                    headers: { "Content-Type": "application/json", ...authHeaders },
+                                    body: JSON.stringify({
+                                      course_id: task.course_id,
+                                      level_index: task.level_index || 0,
+                                      title: taskForm.title,
+                                      content: taskForm.content,
+                                      file_url: file_url || taskForm.file_url,
+                                      action: "draft",
+                                    }),
+                                  });
+                                  const result = await res.json();
+                                  if (!res.ok) throw new Error(result.message || "Save failed");
+                                  const taskId = task.id || `${task.course_id}_${task.level_index || 0}`;
+                                  setQuestionBankTasks((prev) => prev.map((t) => {
+                                    const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                                    return currentId === taskId ? { ...t, ...result, status: "draft" } : t;
+                                  }));
+                                  setExpandTaskId(null);
+                                  setTaskForm({ title: "", content: "", file_url: "" });
+                                  setTaskFile(null);
+                                } catch (e) {
+                                  alert(e.message || "Failed to save draft");
+                                } finally {
+                                  setSubmittingTaskId(null);
+                                }
+                              }}
+                            >
+                              Save as draft
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
-                </div>
-              );
-            }) )}
-          </div>
+                  );
+                }))}
+            </div>
           </>
         )}
       </section>
@@ -556,30 +627,61 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
             <h2 style={{ margin: 0, fontSize: "18px", fontWeight: 600, color: "#1e293b" }}>
               {fullScreenTask.course_name} — {fullScreenTask.level_name || (fullScreenTask.level_index !== undefined ? `Level ${fullScreenTask.level_index + 1}` : "")} ({fullScreenTask.template_name || "Template"})
             </h2>
-            <button
-              type="button"
-              onClick={() => {
-                if (fullScreenTask?.course_id) {
-                  setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
-                }
-                saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
-                navigate(qbBasePath);
-              }}
-              style={{
-                display: "inline-flex",
-                alignItems: "center",
-                gap: 6,
-                padding: "8px 16px",
-                borderRadius: 8,
-                border: "1px solid #e2e8f0",
-                background: "#fff",
-                cursor: "pointer",
-                fontWeight: 600,
-                color: "#475569",
-              }}
-            >
-              <X size={18} /> Close
-            </button>
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              {(fullScreenTask.template_key === "mcq" || (fullScreenTask.template_name || "").toLowerCase().includes("multiple choice")) && (
+                <>
+                  <input
+                    type="file"
+                    ref={excelInputRef}
+                    style={{ display: "none" }}
+                    accept=".xlsx, .xls"
+                    onChange={handleExcelUpload}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => excelInputRef.current?.click()}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 6,
+                      padding: "8px 16px",
+                      borderRadius: 8,
+                      border: "1px solid #6366f1",
+                      background: "#f5f3ff",
+                      cursor: "pointer",
+                      fontWeight: 600,
+                      color: "#6366f1",
+                    }}
+                  >
+                    <FileSpreadsheet size={18} /> Upload Questions (Excel)
+                  </button>
+                </>
+              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (fullScreenTask?.course_id) {
+                    setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
+                  }
+                  saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
+                  navigate(qbBasePath);
+                }}
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 6,
+                  padding: "8px 16px",
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                  color: "#475569",
+                }}
+              >
+                <X size={18} /> Close
+              </button>
+            </div>
           </header>
           <div
             style={{
@@ -694,129 +796,131 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
               </button>
             </div>
             <div style={{ display: "flex", gap: 8 }}>
-            <button
-              type="button"
-              onClick={() => {
-                if (fullScreenTask?.course_id) {
-                  setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
-                }
-                saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
-                navigate(qbBasePath);
-              }}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 8,
-                border: "1px solid #e2e8f0",
-                background: "#fff",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={fullScreenSaving || fullScreenSubmitting}
-              onClick={async () => {
-                if (!fullScreenTask?.course_id || !authHeaders?.Authorization) return;
-                setFullScreenSaving(true);
-                try {
-                  const questions = Array.from({ length: Math.max(1, fullScreenTask.question_count || 1) }, (_, i) => i + 1).map((num) => ({
-                    questionNumber: num,
-                    template_id: fullScreenTask.template_id,
-                    value: fullScreenQuestionValues[num] || {},
-                  }));
-                  const res = await fetch(`${API_BASE}/api/question-banks`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", ...authHeaders },
-                    body: JSON.stringify({
-                      course_id: fullScreenTask.course_id,
-                      level_index: fullScreenTask.level_index || 0,
-                      title: fullScreenTask.course_name,
-                      content: "",
-                      action: "draft",
-                      questions,
-                    }),
-                  });
-                  const result = await res.json();
-                  if (!res.ok) throw new Error(result.message || "Save failed");
-                  const tid = fullScreenTask.id || `${fullScreenTask.course_id}_${fullScreenTask.level_index || 0}`;
-                  setQuestionBankTasks((prev) => prev.map((t) => {
-                    const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
-                    return currentId === tid ? { ...t, ...result, status: "draft", questions } : t;
-                  }));
-                  setDraftQuestionValuesByCourse((prev) => ({ ...prev, [tid]: fullScreenQuestionValues }));
+              <button
+                type="button"
+                onClick={() => {
+                  if (fullScreenTask?.course_id) {
+                    setDraftQuestionValuesByCourse((prev) => ({ ...prev, [fullScreenTask.course_id]: fullScreenQuestionValues }));
+                  }
                   saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
-                  alert("Draft saved. You can continue editing or submit when ready.");
-                } catch (e) {
-                  alert(e.message || "Failed to save draft");
-                } finally {
-                  setFullScreenSaving(false);
-                }
-              }}
-              style={{
-                padding: "10px 20px",
-                borderRadius: 8,
-                border: "1px solid #64748b",
-                background: "#fff",
-                cursor: fullScreenSaving || fullScreenSubmitting ? "not-allowed" : "pointer",
-                fontWeight: 600,
-                color: "#475569",
-              }}
-            >
-              {fullScreenSaving ? "Saving…" : "Save draft"}
-            </button>
-            <button
-              type="button"
-              className="ud-btn-primary"
-              disabled={fullScreenSaving || fullScreenSubmitting}
-              onClick={async () => {
-                if (!fullScreenTask?.course_id || !authHeaders?.Authorization) return;
-                setFullScreenSubmitting(true);
-                try {
-                  const questions = Array.from({ length: Math.max(1, fullScreenTask.question_count || 1) }, (_, i) => i + 1).map((num) => ({
-                    questionNumber: num,
-                    template_id: fullScreenTask.template_id,
-                    value: fullScreenQuestionValues[num] || {},
-                  }));
-                  const res = await fetch(`${API_BASE}/api/question-banks`, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", ...authHeaders },
-                    body: JSON.stringify({
-                      course_id: fullScreenTask.course_id,
-                      level_index: fullScreenTask.level_index || 0,
-                      title: fullScreenTask.course_name,
-                      content: "",
-                      action: "submit",
-                      questions,
-                    }),
-                  });
-                  const result = await res.json();
-                  if (!res.ok) throw new Error(result.message || "Submit failed");
-                  const tid = fullScreenTask.id || `${fullScreenTask.course_id}_${fullScreenTask.level_index || 0}`;
-                  setQuestionBankTasks((prev) => prev.map((t) => {
-                    const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
-                    return currentId === tid ? { ...t, ...result, status: "submitted", questions } : t;
-                  }));
-                  setDraftQuestionValuesByCourse((prev) => {
-                    const next = { ...prev };
-                    delete next[tid];
-                    return next;
-                  });
-                  clearDraftInStorage(fullScreenDraftStorageKey);
-                  setFullScreenTask(null);
-                  setFullScreenQuestionValues({});
-                  setFullScreenQuestionIndex(1);
-                  setFullScreenDraftStorageKey("");
-                } catch (e) {
-                  alert(e.message || "Failed to submit");
-                } finally {
-                  setFullScreenSubmitting(false);
-                }
-              }}
-            >
-              {fullScreenSubmitting ? "Submitting…" : "Submit to admin"}
-            </button>
+                  navigate(qbBasePath);
+                }}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 8,
+                  border: "1px solid #e2e8f0",
+                  background: "#fff",
+                  cursor: "pointer",
+                  fontWeight: 600,
+                }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={fullScreenSaving || fullScreenSubmitting}
+                onClick={async () => {
+                  if (!fullScreenTask?.course_id || !authHeaders?.Authorization) return;
+                  setFullScreenSaving(true);
+                  try {
+                    const qNumbers = Object.keys(fullScreenQuestionValues).map(Number).sort((a, b) => a - b);
+                    const questions = qNumbers.map((num) => ({
+                      questionNumber: num,
+                      template_id: fullScreenTask.template_id,
+                      value: fullScreenQuestionValues[num] || {},
+                    }));
+                    const res = await fetch(`${API_BASE}/api/question-banks`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", ...authHeaders },
+                      body: JSON.stringify({
+                        course_id: fullScreenTask.course_id,
+                        level_index: fullScreenTask.level_index || 0,
+                        title: fullScreenTask.course_name,
+                        content: "",
+                        action: "draft",
+                        questions,
+                      }),
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || "Save failed");
+                    const tid = fullScreenTask.id || `${fullScreenTask.course_id}_${fullScreenTask.level_index || 0}`;
+                    setQuestionBankTasks((prev) => prev.map((t) => {
+                      const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                      return currentId === tid ? { ...t, ...result, status: "draft", questions } : t;
+                    }));
+                    setDraftQuestionValuesByCourse((prev) => ({ ...prev, [tid]: fullScreenQuestionValues }));
+                    saveDraftToStorage(fullScreenDraftStorageKey, fullScreenQuestionValues);
+                    alert("Draft saved. You can continue editing or submit when ready.");
+                  } catch (e) {
+                    alert(e.message || "Failed to save draft");
+                  } finally {
+                    setFullScreenSaving(false);
+                  }
+                }}
+                style={{
+                  padding: "10px 20px",
+                  borderRadius: 8,
+                  border: "1px solid #64748b",
+                  background: "#fff",
+                  cursor: fullScreenSaving || fullScreenSubmitting ? "not-allowed" : "pointer",
+                  fontWeight: 600,
+                  color: "#475569",
+                }}
+              >
+                {fullScreenSaving ? "Saving…" : "Save draft"}
+              </button>
+              <button
+                type="button"
+                className="ud-btn-primary"
+                disabled={fullScreenSaving || fullScreenSubmitting}
+                onClick={async () => {
+                  if (!fullScreenTask?.course_id || !authHeaders?.Authorization) return;
+                  setFullScreenSubmitting(true);
+                  try {
+                    const qNumbers = Object.keys(fullScreenQuestionValues).map(Number).sort((a, b) => a - b);
+                    const questions = qNumbers.map((num) => ({
+                      questionNumber: num,
+                      template_id: fullScreenTask.template_id,
+                      value: fullScreenQuestionValues[num] || {},
+                    }));
+                    const res = await fetch(`${API_BASE}/api/question-banks`, {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json", ...authHeaders },
+                      body: JSON.stringify({
+                        course_id: fullScreenTask.course_id,
+                        level_index: fullScreenTask.level_index || 0,
+                        title: fullScreenTask.course_name,
+                        content: "",
+                        action: "submit",
+                        questions,
+                      }),
+                    });
+                    const result = await res.json();
+                    if (!res.ok) throw new Error(result.message || "Submit failed");
+                    const tid = fullScreenTask.id || `${fullScreenTask.course_id}_${fullScreenTask.level_index || 0}`;
+                    setQuestionBankTasks((prev) => prev.map((t) => {
+                      const currentId = t.id || `${t.course_id}_${t.level_index || 0}`;
+                      return currentId === tid ? { ...t, ...result, status: "submitted", questions } : t;
+                    }));
+                    setDraftQuestionValuesByCourse((prev) => {
+                      const next = { ...prev };
+                      delete next[tid];
+                      return next;
+                    });
+                    clearDraftInStorage(fullScreenDraftStorageKey);
+                    setFullScreenTask(null);
+                    setFullScreenQuestionValues({});
+                    setFullScreenQuestionIndex(1);
+                    setFullScreenDraftStorageKey("");
+                  } catch (e) {
+                    alert(e.message || "Failed to submit");
+                  } finally {
+                    setFullScreenSubmitting(false);
+                  }
+                }}
+              >
+                {fullScreenSubmitting ? "Submitting…" : "Submit to admin"}
+              </button>
             </div>
           </footer>
         </div>

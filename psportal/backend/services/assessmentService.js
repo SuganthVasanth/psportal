@@ -26,7 +26,8 @@ async function processAssessmentResult(register_no, course_id, booking_id) {
     let finalScore = 0;
 
     if (attempt) {
-      let totalScore = 0;
+      let earned = 0;
+      let possible = 0;
       
       // If we have an approved question bank, we can cross-reference
       if (qb && Array.isArray(qb.questions)) {
@@ -38,19 +39,47 @@ async function processAssessmentResult(register_no, course_id, booking_id) {
             const qInfo = qbMap[aq.questionNumber];
             if (!qInfo) return;
 
-            // If it's a programming question, it likely already has a score from submitAssessmentQuestion
+            // 1. Programming question (already scored 0-50 per question)
             if (aq.score !== undefined && aq.score > 0) {
-              totalScore += aq.score;
+              earned += aq.score;
+              possible += 50; 
             } else {
-              // Fallback to MCQ/Text logic
-              const expected = qInfo.correctAnswerKey;
-              const actual = aq.value;
-              if (expected != null && actual != null) {
-                if (String(expected).trim().toLowerCase() === String(actual).trim().toLowerCase()) {
-                  // For non-programming, what is the score? 
-                  // If programming is 50, maybe MCQ is also significant.
-                  // But for now, let's say 10 points if not specified.
-                  totalScore += 10; 
+              // 2. Template-based MCQ / Text logic
+              const qbVal = qInfo.value || {};
+              const studentVal = aq.value || {};
+              
+              let questionCorrect = true;
+              let isGradable = false;
+
+              // Check for template components with options (MCQ)
+              Object.keys(qbVal).forEach(k => {
+                const qComp = qbVal[k];
+                const sComp = studentVal[k];
+                // Component has options -> it's an MCQ or similar gradable component
+                if (qComp && Array.isArray(qComp.options) && qComp.options.length > 0) {
+                  isGradable = true;
+                  const correctIdx = qComp.options.findIndex(o => o.correct === true);
+                  if (correctIdx !== -1) {
+                    // Check if student selected the correct index
+                    if (String(sComp?.value) !== String(correctIdx)) {
+                      questionCorrect = false;
+                    }
+                  }
+                }
+              });
+
+              if (isGradable) {
+                possible += 1;
+                if (questionCorrect) earned += 1;
+              } else {
+                // Final fallback: Legacy correctAnswerKey (simple string match)
+                const expected = qInfo.correctAnswerKey;
+                const actual = typeof aq.value === 'string' ? aq.value : aq.value?.value;
+                if (expected != null && actual != null) {
+                  possible += 1;
+                  if (String(expected).trim().toLowerCase() === String(actual).trim().toLowerCase()) {
+                    earned += 1;
+                  }
                 }
               }
             }
@@ -58,14 +87,11 @@ async function processAssessmentResult(register_no, course_id, booking_id) {
         }
       }
 
-      // The user wants "score" to determine pass/fail. 
-      // If they say "calculated out of 50" for each, 
-      // I'll just use the raw summed score.
-      finalScore = totalScore;
-      isPassed = finalScore >= 50; // Total 50 required to pass
+      // Calculate percentage-based final score (0-100)
+      finalScore = possible > 0 ? Math.round((earned / possible) * 100) : 0;
+      isPassed = false; // Will be determined by level threshold below
       
       attempt.score = finalScore;
-      attempt.isPassed = isPassed;
       await attempt.save();
     }
 

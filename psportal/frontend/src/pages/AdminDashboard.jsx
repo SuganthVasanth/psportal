@@ -589,7 +589,7 @@ export default function AdminDashboard() {
   const psCoursesCombinedList = useMemo(() => {
     const adminRows = (coursesList || []).map((c) => ({ ...c, _source: "Admin", _rowId: `admin-${c.id}` }));
     const psRows = (psCoursesList || []).map((c) => ({ ...c, _source: "PS", _rowId: `ps-${c.id}` }));
-    return [...adminRows, ...psRows];
+    return [...adminRows, ...psRows].sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true }));
   }, [coursesList, psCoursesList]);
 
   const userRole = localStorage.getItem("role") || "admin";
@@ -1285,14 +1285,14 @@ export default function AdminDashboard() {
           {activeSub === "course-upload" && (
             <>
               <div className="dashboard-card sa-roles-hero">
-                <div className="sa-roles-hero-header">
+                {/* <div className="sa-roles-hero-header">
                   <div>
                     <h2 className="sa-roles-title">Admin Dashboard — Courses</h2>
                     <p className="sa-roles-subtitle">
                       Create, manage, and monitor all courses available on the portal. Update content, prerequisites, and reward structures.
                     </p>
                   </div>
-                </div>
+                </div> */}
                 <div className="sa-roles-metrics">
                   <div className="sa-roles-metric-card sa-roles-metric-total">
                     <div className="sa-roles-metric-label">Total Courses</div>
@@ -1302,14 +1302,14 @@ export default function AdminDashboard() {
                     <div className="sa-roles-metric-label">Active Courses</div>
                     <div className="sa-roles-metric-value">{coursesList.filter((c) => c.status === "Active").length}</div>
                   </div>
-                  <div className="sa-roles-metric-card sa-roles-metric-users">
+                  {/* <div className="sa-roles-metric-card sa-roles-metric-users">
                     <div className="sa-roles-metric-label">PS Courses Integration</div>
                     <div className="sa-roles-metric-value">{psCoursesList.length}</div>
-                  </div>
-                  <div className="sa-roles-metric-card sa-roles-metric-permissions">
+                  </div> */}
+                  {/* <div className="sa-roles-metric-card sa-roles-metric-permissions">
                     <div className="sa-roles-metric-label">Content Uploads</div>
                     <div className="sa-roles-metric-value">{coursesList.reduce((acc, c) => acc + (Array.isArray(c.levels) ? c.levels.length : 0), 0)} Levels</div>
-                  </div>
+                  </div> */}
                 </div>
                 <div className="sa-roles-actions-row">
                   <button
@@ -1364,6 +1364,7 @@ export default function AdminDashboard() {
                 <div className="courses-grid-premium">
                   {coursesList
                     .filter((c) => !courseOverviewSearch || (c.name || "").toLowerCase().includes(courseOverviewSearch.toLowerCase()) || (c.type || "").toLowerCase().includes(courseOverviewSearch.toLowerCase()))
+                    .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true }))
                     .map((row) => (
                     <div className="course-card-premium" key={row.id}>
                       <div className="course-card-image-wrapper">
@@ -2013,7 +2014,7 @@ export default function AdminDashboard() {
                   <div className="sa-form-group" style={{ gridColumn: "1/-1" }}>
                     <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Select Courses & Levels</label>
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px", maxHeight: "300px", overflowY: "auto", padding: "12px", border: "1px solid #cbd5e1", borderRadius: "12px", backgroundColor: "#fff" }}>
-                      {coursesList.map((course) => {
+                      {[...coursesList].sort((a,b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true })).map((course) => {
                         const isSelected = openSlotSelectedCourses[course.id];
                         const levels = Array.isArray(course.levels) ? course.levels : [];
                         return (
@@ -2440,9 +2441,12 @@ export default function AdminDashboard() {
                     }}
                   >
                     <option value="">Select course</option>
-                    {coursesList.filter((c) => c.status === "Active").map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
+                    {coursesList
+                      .filter((c) => c.status === "Active")
+                      .sort((a, b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true }))
+                      .map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
                   </select>
                 </div>
                 <div className="sa-form-group" style={{ minWidth: 160 }}>
@@ -3248,22 +3252,22 @@ export default function AdminDashboard() {
                       {editModal.itemId ? (
                         <input type="text" value={editModal.item.name || ""} readOnly disabled className="sa-input-readonly" style={{ opacity: 1, cursor: "default", background: "#f1f5f9" }} />
                       ) : (
-                        <input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)} placeholder="e.g. C Programming" />
+                        <input type="text" value={editModal.item.name || ""} onChange={(e) => setEditField("name", e.target.value)}  />
                       )}
                     </div>
-                    <div className="sa-form-group">
+                    {/* <div className="sa-form-group">
                       <label>Course type</label>
-                      <input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} placeholder="e.g. Technical, Assessment" />
-                    </div>
+                      <input type="text" value={editModal.item.type || ""} onChange={(e) => setEditField("type", e.target.value)} />
+                    </div> */}
                     <div className="sa-form-group">
                       <label>Level (category)</label>
-                      <input type="text" value={editModal.item.level || ""} onChange={(e) => setEditField("level", e.target.value)} placeholder="e.g. Beginner, Level 1" />
+                      <input type="text" value={editModal.item.level || ""} onChange={(e) => setEditField("level", e.target.value)} />
                     </div>
-                    <div className="sa-form-group">
+                    {/* <div className="sa-form-group">
                       <label>Activity points</label>
                       <input type="number" value={editModal.item.activityPoints ?? 0} onChange={(e) => setEditField("activityPoints", e.target.value)} placeholder="10" min="0" />
-                    </div>
-                    <div className="sa-form-group">
+                    </div> */}
+                    {/* <div className="sa-form-group">
                       <label>Faculty (handles questions)</label>
                       <select value={editModal.item.faculty || ""} onChange={(e) => setEditField("faculty", e.target.value)}>
                         <option value="">Select faculty</option>
@@ -3271,7 +3275,7 @@ export default function AdminDashboard() {
                           <option key={u.id} value={u.id}>{u.name || u.email}</option>
                         ))}
                       </select>
-                    </div>
+                    </div> */}
                   </div>
 
                   <div className="sa-course-section">
