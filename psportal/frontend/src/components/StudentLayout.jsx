@@ -10,7 +10,8 @@ const FALLBACK_PROFILE = {
   avatarUrl: "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
 };
 
-export default function StudentLayout({ children, hideNav = false }) {
+export default function StudentLayout({ children, hideNav = false, theme, searchPlaceholder, headerSearch }) {
+  const isBooking = theme === "booking";
   const [profile, setProfile] = useState(FALLBACK_PROFILE);
   const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
     const saved = localStorage.getItem("student_sidebar_open");
@@ -55,27 +56,48 @@ export default function StudentLayout({ children, hideNav = false }) {
   }
 
   return (
-    <div className="dashboard-layout premium-layout">
-      <StudentSidebar collapsed={!isSidebarOpen} onToggle={() => setIsSidebarOpen((v) => !v)} />
-      
+    <div className={`dashboard-layout premium-layout ${isBooking ? "layout-booking" : ""}`}>
+      <StudentSidebar
+        collapsed={!isSidebarOpen}
+        onToggle={() => setIsSidebarOpen((v) => !v)}
+        surface={isBooking ? "soft" : "dark"}
+      />
+
       <div className={`main-container-premium ${!isSidebarOpen ? "sidebar-collapsed" : ""}`}>
         <header className="top-navbar-premium">
           <div className="search-bar-premium">
             <Search size={18} className="search-icon" />
-            <input type="text" placeholder="Search for courses, practice, etc." />
+            <input
+              type="text"
+              placeholder={searchPlaceholder || "Search for courses, practice, etc."}
+              {...(headerSearch
+                ? { value: headerSearch.value, onChange: (e) => headerSearch.onChange(e.target.value) }
+                : {})}
+            />
           </div>
 
           <div className="top-nav-actions-premium">
-
-            <button className="nav-btn-premium" title="Notifications">
+            <button type="button" className="nav-btn-premium" title="Notifications">
               <Bell size={20} />
-              <span className="badge-premium"></span>
+              <span className="badge-premium" aria-hidden />
             </button>
-            
+
             <div className="header-profile-premium">
-               <div className="avatar-minimal-premium">
-                  {displayProfile.name.split(' ').map(n => n[0]).join('')}
-               </div>
+              {isBooking && displayProfile.avatarUrl ? (
+                <img
+                  src={displayProfile.avatarUrl}
+                  alt=""
+                  className="abk-top-avatar"
+                  referrerPolicy="no-referrer"
+                />
+              ) : (
+                <div className="avatar-minimal-premium">
+                  {displayProfile.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
+                </div>
+              )}
             </div>
           </div>
         </header>

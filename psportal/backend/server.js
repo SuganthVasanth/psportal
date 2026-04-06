@@ -19,10 +19,17 @@ app.set("io", io);
 
 const connectDB = require("./config/db");
 const { seedDefaultQuestionTemplates } = require("./templates/seedDefaultQuestionTemplates");
+const { ensureQuestionBankSubmissionIndexes } = require("./utils/ensureQuestionBankIndexes");
 
 connectDB()
-  .then(() => {
+  .then(async () => {
     seedDefaultQuestionTemplates();
+    try {
+      await ensureQuestionBankSubmissionIndexes();
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error("Question bank index migration failed:", e.message);
+    }
     // Start background jobs after DB connects
     require("./services/cronService");
   })

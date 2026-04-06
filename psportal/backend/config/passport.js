@@ -4,9 +4,12 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/User");
 const Student = require("../models/Student");
 
-// Must match Google Cloud Console → Authorized redirect URI exactly (no trailing slash).
-// Also add http://127.0.0.1:5000/auth/google/callback in Console if you ever open the API via 127.0.0.1.
-const callbackURL = "http://localhost:5000/auth/google/callback";
+// Must match Google Cloud Console → “Authorized redirect URIs” exactly (scheme, host, port, path — no trailing slash).
+// Override with GOOGLE_CALLBACK_URL in backend .env if your API host/port differs.
+const callbackURL = String(process.env.GOOGLE_CALLBACK_URL || "http://localhost:5000/auth/google/callback").replace(
+  /\/$/,
+  ""
+);
 async function ensureStudentRegisterNo(user) {
   let student = await Student.findOne({ user_id: user._id }).lean();
   if (student) return student.register_no;

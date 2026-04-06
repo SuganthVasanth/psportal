@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import "./Login.css";
 import { FcGoogle } from "react-icons/fc";
 
-const API_BASE = "http://localhost:5000";
+/** Must match backend host (and Google “Authorized redirect URI” uses the same host as /auth/google/callback). */
+const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || "http://localhost:5000";
 
 const inputClass =
   "w-full px-4 py-3 rounded-lg border border-gray-300 bg-white " +
@@ -65,7 +66,7 @@ export default function LoginPage() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = "http://localhost:5000/auth/google";
+    window.location.href = `${API_BASE}/auth/google`;
   };
 
   return (

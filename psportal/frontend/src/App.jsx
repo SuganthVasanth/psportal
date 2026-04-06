@@ -12,6 +12,7 @@ import MovementPass from "./pages/MovementPass";
 import MyLeaves from "./pages/MyLeaves";
 import MyAttendance from "./pages/MyAttendance";
 import AdminDashboard from "./pages/AdminDashboard";
+import FacultyQuestionBankEditorStandalone from "./pages/FacultyQuestionBankEditorStandalone";
 import DailyTasks from "./pages/practice/DailyTasks";
 import Practice from "./pages/practice/Practice";
 import PracticeProblem from "./pages/practice/PracticeProblem";
@@ -243,6 +244,16 @@ export default function App() {
           element={
             <ProtectedRoute allowedRoles={["admin", "super_admin"]}>
               <AdminDashboard />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Faculty question template editor in a new tab (no dashboard chrome) */}
+        <Route
+          path="/faculty/question-bank-editor/:courseId/:levelIndex/:templateId"
+          element={
+            <ProtectedRoute>
+              <FacultyQuestionBankEditorStandalone />
             </ProtectedRoute>
           }
         />

@@ -1,8 +1,40 @@
+const mongoose = require("mongoose");
 const QuestionBankSubmission = require("../models/QuestionBankSubmission");
 const FacultyCourseAssignment = require("../models/FacultyCourseAssignment");
 const AdminCourse = require("../models/AdminCourse");
 const User = require("../models/User");
 const StudentExamAttempt = require("../models/StudentExamAttempt");
+
+/** Clone for Mixed schema: plain objects only (no functions / circular refs). */
+function cloneForMongoMixed(value) {
+  if (value == null) return {};
+  if (typeof value !== "object") return {};
+  if (typeof structuredClone === "function") {
+    try {
+      return structuredClone(value);
+    } catch (_) {
+      /* fall through */
+    }
+  }
+  try {
+    return JSON.parse(JSON.stringify(value));
+  } catch (e) {
+    console.error("cloneForMongoMixed:", e);
+    const err = new Error("Question data could not be saved (invalid structure).");
+    err.status = 400;
+    throw err;
+  }
+}
+
+function toObjectId(id, label) {
+  const s = id != null ? String(id).trim() : "";
+  if (!s || !mongoose.Types.ObjectId.isValid(s)) {
+    const err = new Error(`Invalid ${label}`);
+    err.status = 400;
+    throw err;
+  }
+  return new mongoose.Types.ObjectId(s);
+}
 
 const API_BASE = process.env.API_BASE || "";
 
@@ -137,56 +169,84 @@ exports.getMyTasks = async (req, res) => {
 // ——— Faculty: create or update submission (draft / submit) ———
 exports.upsertSubmission = async (req, res) => {
   try {
-    const userId = req.user?.userId || req.user?.id;
-    if (!userId) return res.status(401).json({ message: "Unauthorized" });
+    const rawUser = req.user?.userId ?? req.user?.id;
+    if (rawUser == null || rawUser === "") return res.status(401).json({ message: "Unauthorized" });
 
     const { course_id, level_index, title, content, file_url, file_name, action, questions } = req.body;
     if (!course_id) return res.status(400).json({ message: "course_id required" });
 
+    const userId = toObjectId(rawUser, "user id");
+    const courseObjectId = toObjectId(course_id, "course_id");
     const levelIndex = Number(level_index || 0);
 
-    const assigned = await FacultyCourseAssignment.findOne({ user_id: userId, course_id, level_index: levelIndex });
+    const assigned = await FacultyCourseAssignment.findOne({
+      user_id: userId,
+      course_id: courseObjectId,
+      level_index: levelIndex,
+    }).lean();
     const currentUser = await User.findById(userId).lean();
     const userName = (currentUser?.name || "").trim();
-    
-    // Only check default faculty matching if level_index is 0 or if explicitly assigned
-    const courseByFaculty = (userName && levelIndex === 0)
-      ? await AdminCourse.findOne({ _id: course_id, faculty: new RegExp(`^${userName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i") }).lean()
-      : null;
 
-    if (!assigned && !courseByFaculty) return res.status(403).json({ message: "You are not assigned to this course level" });
+    const courseByFaculty =
+      userName && levelIndex === 0
+        ? await AdminCourse.findOne({
+            _id: courseObjectId,
+            faculty: new RegExp(`^${userName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$`, "i"),
+          }).lean()
+        : null;
+
+    if (!assigned && !courseByFaculty) {
+      return res.status(403).json({ message: "You are not assigned to this course level" });
+    }
 
     const isSubmit = action === "submit";
     const update = {
-      course_id,
+      course_id: courseObjectId,
       user_id: userId,
       level_index: levelIndex,
       title: title ?? "",
       content: content ?? "",
       file_url: file_url ?? "",
       file_name: file_name ?? "",
-      ...(isSubmit
-        ? { status: "submitted", submitted_at: new Date() }
-        : { status: "draft" }),
+      ...(isSubmit ? { status: "submitted", submitted_at: new Date() } : { status: "draft" }),
     };
 
-    // ONLY update questions if they are explicitly sent in the request.
     if (Array.isArray(questions) && questions.length > 0) {
-      update.questions = questions.map((q) => ({
-        questionNumber: q.questionNumber,
-        template_id: q.template_id || q.templateId,
-        value: q.value || {},
-        correctAnswerKey: q.correctAnswerKey ?? "",
-      }));
+      update.questions = questions.map((q) => {
+        const num = Number(q.questionNumber);
+        if (!Number.isFinite(num)) {
+          const err = new Error("Each question must have a valid questionNumber");
+          err.status = 400;
+          throw err;
+        }
+        const row = {
+          questionNumber: num,
+          value: cloneForMongoMixed(q.value),
+          correctAnswerKey: q.correctAnswerKey != null ? String(q.correctAnswerKey) : "",
+        };
+        const tid = q.template_id ?? q.templateId;
+        const tidStr = tid != null && tid !== "" ? String(tid).trim() : "";
+        if (tidStr && mongoose.Types.ObjectId.isValid(tidStr)) {
+          row.template_id = new mongoose.Types.ObjectId(tidStr);
+        }
+        return row;
+      });
     }
 
-    const doc = await QuestionBankSubmission.findOneAndUpdate(
-      { course_id, user_id: userId, level_index: levelIndex },
-      { $set: update },
-      { new: true, upsert: true }
-    )
+    const filter = { course_id: courseObjectId, user_id: userId, level_index: levelIndex };
+
+    const doc = await QuestionBankSubmission.findOneAndUpdate(filter, { $set: update }, {
+      new: true,
+      upsert: true,
+      runValidators: false,
+      setDefaultsOnInsert: true,
+    })
       .populate("course_id", "name")
       .lean();
+
+    if (!doc) {
+      return res.status(500).json({ message: "Save did not persist; try again." });
+    }
 
     res.json({
       id: doc._id.toString(),
@@ -200,7 +260,13 @@ exports.upsertSubmission = async (req, res) => {
     });
   } catch (err) {
     console.error("upsertSubmission error:", err);
-    res.status(500).json({ message: "Failed to save" });
+    if (err.status >= 400 && err.status < 600) {
+      return res.status(err.status).json({ message: err.message });
+    }
+    if (err.name === "CastError" || err.name === "ValidationError") {
+      return res.status(400).json({ message: err.message });
+    }
+    res.status(500).json({ message: err.message || "Failed to save" });
   }
 };
 

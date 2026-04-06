@@ -4,6 +4,7 @@ import { BookOpen, ChevronDown, ChevronRight, ChevronLeft, MessageCircle, X, Max
 import * as XLSX from "xlsx";
 import ChatModal from "../components/ChatModal";
 import TemplateQuestionForm from "../components/renderer/TemplateQuestionForm";
+import { standaloneQbEditorPath } from "./FacultyQuestionBankEditorStandalone";
 
 const API_BASE = "http://localhost:5000";
 
@@ -430,7 +431,9 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                               className="ud-btn-primary"
                               style={{ marginRight: 8 }}
                               onClick={() => {
-                                navigate(`${qbEditorPathFor(task.course_id, task.level_index, task.template_id)}?q=1`);
+                                const path = `${standaloneQbEditorPath(task.course_id, task.level_index, task.template_id)}?q=1`;
+                                const url = `${window.location.origin}${path}`;
+                                window.open(url, "_blank", "noopener,noreferrer");
                               }}
                             >
                               <Maximize2 size={16} style={{ marginRight: 4, verticalAlign: "middle" }} />
@@ -748,7 +751,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                 type="button"
                 onClick={() => {
                   const next = Math.max(1, fullScreenQuestionIndex - 1);
-                  navigate(`${qbEditorPathFor(fullScreenTask.course_id, fullScreenTask.template_id)}?q=${next}`, { replace: true });
+                  navigate(`${qbEditorPathFor(fullScreenTask.course_id, fullScreenTask.level_index, fullScreenTask.template_id)}?q=${next}`, { replace: true });
                 }}
                 disabled={fullScreenQuestionIndex <= 1}
                 style={{
@@ -775,7 +778,7 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                 onClick={() => {
                   const max = Math.max(1, fullScreenTask.question_count || 1);
                   const next = Math.min(max, fullScreenQuestionIndex + 1);
-                  navigate(`${qbEditorPathFor(fullScreenTask.course_id, fullScreenTask.template_id)}?q=${next}`, { replace: true });
+                  navigate(`${qbEditorPathFor(fullScreenTask.course_id, fullScreenTask.level_index, fullScreenTask.template_id)}?q=${next}`, { replace: true });
                 }}
                 disabled={fullScreenQuestionIndex >= Math.max(1, fullScreenTask.question_count || 1)}
                 style={{

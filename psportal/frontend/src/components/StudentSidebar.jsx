@@ -17,7 +17,7 @@ import {
 import SmartSidebar from "./SmartSidebar";
 import { USE_ASSESSMENT_HUB } from "../config/featureFlags";
 
-export default function StudentSidebar({ collapsed = false, onToggle }) {
+export default function StudentSidebar({ collapsed = false, onToggle, surface }) {
   const sections = useMemo(
     () => [
       {
@@ -73,6 +73,7 @@ export default function StudentSidebar({ collapsed = false, onToggle }) {
       profileName={localStorage.getItem("name") || "Student"}
       profileRole="Student"
       onLogout={handleLogout}
+      surface={surface || "dark"}
     />
   );
 }
