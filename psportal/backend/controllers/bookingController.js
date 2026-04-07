@@ -241,6 +241,7 @@ exports.bookSlot = async (req, res) => {
       questions: attemptQuestions,
       score: 0,
       isPassed: false,
+      submitted_at: null,
     });
 
     // 4. Increment booked count

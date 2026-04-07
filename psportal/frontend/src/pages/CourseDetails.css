@@ -203,7 +203,7 @@
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6, #a78bfa);
+  background: linear-gradient(90deg, #2563eb, #1e40af, #60a5fa);
   border-radius: 18px 18px 0 0;
 }
 
@@ -230,7 +230,7 @@
 .cd-level-number {
   width: 36px;
   height: 36px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: #fff;
   border-radius: 50%;
   display: flex;
@@ -302,7 +302,7 @@
   font-weight: 700;
   letter-spacing: 0.8px;
   text-transform: uppercase;
-  color: #6366f1;
+  color: #2563eb;
   margin-bottom: 4px;
 }
 
@@ -325,7 +325,7 @@
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #2563eb, #1e40af);
   flex-shrink: 0;
 }
 
@@ -399,7 +399,7 @@
 
 .cd-register-btn {
   width: 100%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: #fff;
   border: none;
   padding: 12px 20px;
@@ -452,7 +452,7 @@
 
 .cd-book-slot-btn {
   width: 100%;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: #fff;
   border: none;
   padding: 12px 16px;
@@ -494,7 +494,7 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: #fff;
   border: none;
   padding: 11px 22px;
@@ -613,7 +613,7 @@
 }
 
 .cd-slot-venue { flex: 0 1 auto; min-width: 0; margin-right: auto; font-weight: 500; }
-.cd-slot-time { flex: 0 0 auto; color: #6366f1; font-weight: 600; font-size: 13px; }
+.cd-slot-time { flex: 0 0 auto; color: #2563eb; font-weight: 600; font-size: 13px; }
 .cd-slot-placeholder { color: #9ca3af; }
 .cd-slot-chevron { flex-shrink: 0; margin-left: 8px; color: #6b7280; }
 
@@ -666,7 +666,7 @@
 
 /* Buttons */
 .cd-btn-primary {
-  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: #fff;
   border: none;
   padding: 10px 22px;

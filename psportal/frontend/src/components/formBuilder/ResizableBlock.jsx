@@ -36,7 +36,7 @@ export default function ResizableBlock({
       }
     >
       <div
-        className={`relative rounded-xl border-2 bg-white shadow-sm transition box-border ${selected ? "border-[#8b5cf6] ring-2 ring-[#8b5cf6]/20" : "border-gray-200 hover:border-gray-300"} ${className}`}
+        className={`relative rounded-xl border-2 bg-white shadow-sm transition box-border ${selected ? "border-[#2563eb] ring-2 ring-[#2563eb]/20" : "border-gray-200 hover:border-gray-300"} ${className}`}
         style={{ width, height, minHeight }}
         onClick={(e) => { e.stopPropagation(); onSelect?.(); }}
       >

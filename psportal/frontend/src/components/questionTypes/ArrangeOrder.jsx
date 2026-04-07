@@ -47,7 +47,7 @@ export default function ArrangeOrder({ config = {}, value = {}, onChange, readOn
             <input
               type="text"
               className={`${inputClass} flex-1`}
-              value={item}
+              value={item ?? ""}
               onChange={(e) => {
                 const next = [...items];
                 next[i] = e.target.value;

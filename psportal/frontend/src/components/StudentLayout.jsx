@@ -70,9 +70,10 @@ export default function StudentLayout({ children, hideNav = false, theme, search
             <input
               type="text"
               placeholder={searchPlaceholder || "Search for courses, practice, etc."}
-              {...(headerSearch
-                ? { value: headerSearch.value, onChange: (e) => headerSearch.onChange(e.target.value) }
-                : {})}
+              value={headerSearch?.value ?? ""}
+              onChange={(e) => headerSearch?.onChange?.(e.target.value)}
+              readOnly={!headerSearch}
+              aria-readonly={!headerSearch || undefined}
             />
           </div>
 

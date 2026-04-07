@@ -143,7 +143,13 @@ export default function LockedTemplateRenderer({
         );
 
         if (type === "question_text") {
-          const text = (typeof val === "string" ? val : val?.value) || props.placeholder || "Question here";
+          const raw = typeof val === "string" ? val : val?.value;
+          const text =
+            raw != null && typeof raw !== "object"
+              ? String(raw)
+              : (props.placeholder || "Question here");
+          const textControlled =
+            raw != null && typeof raw !== "object" ? String(raw) : "";
           return (
             <div key={item.id} className={cardClass} style={boxStyle}>
               {innerWrap(
@@ -158,7 +164,7 @@ export default function LockedTemplateRenderer({
                     className={inputClass}
                     rows={4}
                     placeholder={props.placeholder || "Question here"}
-                    value={text}
+                    value={textControlled}
                     onChange={(e) => updateField(item.id, { value: e.target.value })}
                   />
                   )}
@@ -169,7 +175,13 @@ export default function LockedTemplateRenderer({
         }
 
         if (type === "paragraph") {
-          const displayText = (typeof val === "string" ? val : val?.value) || props.placeholder || "Instruction text";
+          const rawP = typeof val === "string" ? val : val?.value;
+          const displayText =
+            rawP != null && typeof rawP !== "object"
+              ? String(rawP)
+              : (props.placeholder || "Instruction text");
+          const displayControlled =
+            rawP != null && typeof rawP !== "object" ? String(rawP) : "";
           return (
             <div key={item.id} className={cardClass} style={boxStyle}>
               {innerWrap(
@@ -182,7 +194,7 @@ export default function LockedTemplateRenderer({
                       className={`${inputClass} mt-1`}
                       rows={3}
                       placeholder={props.placeholder || "Instructions or paragraph text"}
-                      value={displayText}
+                      value={displayControlled}
                       onChange={(e) => updateField(item.id, { value: e.target.value })}
                     />
                   )}
@@ -228,7 +240,7 @@ export default function LockedTemplateRenderer({
               {innerWrap(
                 <MCQ
                   config={config}
-                  value={val}
+                  value={val ?? {}}
                   onChange={(v) => updateField(item.id, v)}
                   readOnly={itemReadOnly}
                   studentMode={studentMode}
@@ -242,7 +254,7 @@ export default function LockedTemplateRenderer({
         if (type === "checkbox_options") {
           const n = props.numberOfOptions ?? 4;
           const opts = Array.from({ length: n }, (_, i) => val?.options?.[i] ?? `Option ${i + 1}`);
-          const checked = val?.value ?? [];
+          const checked = Array.isArray(val?.value) ? val.value : [];
           return (
             <div key={item.id} className={cardClass} style={boxStyle}>
               {innerWrap(

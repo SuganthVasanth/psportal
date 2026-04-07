@@ -4,6 +4,7 @@ const FacultyCourseAssignment = require("../models/FacultyCourseAssignment");
 const AdminCourse = require("../models/AdminCourse");
 const User = require("../models/User");
 const StudentExamAttempt = require("../models/StudentExamAttempt");
+const CourseSlotBooking = require("../models/CourseSlotBooking");
 
 /** Clone for Mixed schema: plain objects only (no functions / circular refs). */
 function cloneForMongoMixed(value) {
@@ -358,25 +359,46 @@ exports.submitStudentAttempt = async (req, res) => {
     const { register_no, course_id, booking_id, questions, tab_switches } = req.body;
     if (!register_no || !course_id) return res.status(400).json({ message: "register_no and course_id required" });
 
+    const registerNo = String(register_no).trim();
     const bookingId = booking_id != null ? String(booking_id).trim() : "";
     if (!bookingId) {
       return res.status(400).json({ message: "booking_id is required to submit this assessment." });
     }
 
-    const StudentLevelProgress = require("../models/StudentLevelProgress");
-    const progress = await StudentLevelProgress.findOne({ register_no, course_id });
-    if (progress && (progress.status === "completed" || progress.status === "failed")) {
-       return res.status(403).json({ message: "You have already finalized this assessment." });
+    const courseIdStr = String(course_id).trim();
+
+    if (!mongoose.Types.ObjectId.isValid(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking id." });
     }
 
-    let doc = await StudentExamAttempt.findOne({ register_no, course_id, booking_id: bookingId });
+    const bookingDoc = await CourseSlotBooking.findOne({
+      _id: bookingId,
+      register_no: registerNo,
+    }).lean();
+    if (!bookingDoc) {
+      return res.status(404).json({ message: "Booking not found." });
+    }
+    if (String(bookingDoc.course_id || "").trim() !== courseIdStr) {
+      return res.status(400).json({ message: "This booking does not match this course." });
+    }
+    if (bookingDoc.processed) {
+      return res.status(403).json({ message: "This assessment has already been submitted for this booking." });
+    }
+
+    // Do not use attempt.submitted_at to block: legacy attempts used default Date.now at creation.
+    // Whether the slot was finalized is determined by CourseSlotBooking.processed (checked above).
+    let doc = await StudentExamAttempt.findOne({
+      register_no: registerNo,
+      course_id: courseIdStr,
+      booking_id: bookingId,
+    });
     if (!doc) {
       doc = new StudentExamAttempt({
-        register_no,
-        course_id,
+        register_no: registerNo,
+        course_id: courseIdStr,
         booking_id: bookingId,
         questions: [],
-        tab_switches: 0
+        tab_switches: 0,
       });
     }
 
@@ -420,7 +442,7 @@ exports.submitStudentAttempt = async (req, res) => {
 
     // Instant grading and progression logic
     const { processAssessmentResult } = require("../services/assessmentService");
-    const result = await processAssessmentResult(register_no, course_id, bookingId);
+    const result = await processAssessmentResult(registerNo, courseIdStr, bookingId);
 
     res.status(201).json({
       id: doc._id.toString(),
@@ -491,16 +513,49 @@ exports.submitAssessmentQuestion = async (req, res) => {
       return res.status(400).json({ message: "register_no, course_id, and questionNumber are required" });
     }
 
+    const courseIdStr = String(course_id).trim();
+    const bookingIdStr = booking_id != null ? String(booking_id).trim() : "";
+    const qNum = Number(questionNumber);
     const isProgramming = !!code;
 
     const judge0Service = require("../services/judge0Service");
     const testCaseGenerator = require("../services/testCaseGenerator");
 
-    // 1. Get all testcases from the Question Bank
-    const qb = await QuestionBankSubmission.findOne({ course_id, status: "approved" }).lean();
+    let attempt = await StudentExamAttempt.findOne({
+      register_no,
+      course_id: courseIdStr,
+      booking_id: bookingIdStr,
+    });
+    if (!attempt) {
+      attempt = new StudentExamAttempt({
+        register_no,
+        course_id: courseIdStr,
+        booking_id: bookingIdStr,
+        questions: [],
+      });
+    }
+
+    const existingSlot = attempt.questions.find((q) => q.questionNumber === qNum);
+    const templateIdForQ = existingSlot?.template_id;
+
+    const qbBaseFilter = {
+      course_id: courseIdStr,
+      status: "approved",
+      "questions.questionNumber": qNum,
+    };
+    let qb = null;
+    if (templateIdForQ) {
+      qb = await QuestionBankSubmission.findOne({
+        ...qbBaseFilter,
+        questions: { $elemMatch: { questionNumber: qNum, template_id: templateIdForQ } },
+      }).lean();
+    }
+    if (!qb) {
+      qb = await QuestionBankSubmission.findOne(qbBaseFilter).lean();
+    }
     if (!qb) return res.status(404).json({ message: "Approved Question Bank not found" });
 
-    const question = qb.questions.find(q => q.questionNumber === Number(questionNumber));
+    const question = (qb.questions || []).find((q) => q.questionNumber === qNum);
     if (!question) return res.status(404).json({ message: "Question not found in bank" });
 
     const qValue = question.value || {};
@@ -509,10 +564,26 @@ exports.submitAssessmentQuestion = async (req, res) => {
     let score = 0;
     let finalUpdateValue = value || { omni_code: code, language };
 
-    if (isProgramming) {
-      const judge0Service = require("../services/judge0Service");
-      const testCaseGenerator = require("../services/testCaseGenerator");
+    const templateFormAnswerIsEmpty = (val) => {
+      if (val == null) return true;
+      if (typeof val !== "object") return false;
+      const keys = Object.keys(val);
+      if (keys.length === 0) return true;
+      return keys.every((k) => {
+        const v = val[k];
+        if (v == null) return true;
+        if (typeof v === "string" && v.trim() === "") return true;
+        if (v && Array.isArray(v.options)) {
+          return !v.options.some((o) => o && o.correct === true);
+        }
+        if (typeof v === "object" && !Array.isArray(v)) {
+          if (v.text == null && v.value == null && v.omni_code == null) return Object.keys(v).length === 0;
+        }
+        return false;
+      });
+    };
 
+    if (isProgramming) {
       // Unwrap component key wrapper: value may be { "component-xxxxx": { problemStatement, testCases } }
       const componentKey = Object.keys(qValue).find(k => k.startsWith('component-'));
       const innerValue = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
@@ -551,57 +622,86 @@ exports.submitAssessmentQuestion = async (req, res) => {
         testCases: detailedResults 
       };
     } else {
-      // Handle MCQ / Template Form auto-save
-      if (!value || Object.keys(value).length === 0) {
-        // Clearing answer (unattended)
+      if (!value || templateFormAnswerIsEmpty(value)) {
         score = 0;
-        finalUpdateValue = {}; 
+        finalUpdateValue = {};
       } else {
-        // Basic Grading for MCQs
         let isCorrect = false;
-        
-        // Strategy 1: Find 'mcq' or 'multiple_choice' component and compare selection
-        const mcqKey = Object.keys(qValue).find(k => k.toLowerCase().includes('mcq') || k.toLowerCase().includes('multiple_choice'));
+
+        const bankMcqKey = Object.keys(qValue).find(
+          (k) => qValue[k] && Array.isArray(qValue[k].options) && qValue[k].options.length > 0
+        );
+        const legacyMcqKey = Object.keys(qValue).find(
+          (k) =>
+            k.toLowerCase().includes("mcq") ||
+            k.toLowerCase().includes("multiple_choice") ||
+            k.toLowerCase().includes("choice")
+        );
+        const mcqKey = bankMcqKey || legacyMcqKey;
+
         if (mcqKey) {
           const bankMcq = qValue[mcqKey];
-          const studentSelection = value[mcqKey]; // This is the text or object selected
+          let studentBlock = value[mcqKey];
+          if (!studentBlock && typeof value === "object") {
+            const altKey = Object.keys(value).find(
+              (k) => value[k] && Array.isArray(value[k].options)
+            );
+            if (altKey) studentBlock = value[altKey];
+          }
 
-          if (Array.isArray(bankMcq.options)) {
-            const correctOption = bankMcq.options.find(opt => opt.correct === true);
-            if (correctOption) {
-              const studentText = typeof studentSelection === 'string' ? studentSelection : studentSelection?.text;
-              isCorrect = (studentText === correctOption.text);
+          if (Array.isArray(bankMcq?.options)) {
+            const correctOption = bankMcq.options.find((opt) => opt.correct === true);
+
+            if (studentBlock && Array.isArray(studentBlock.options)) {
+              const selectedOpt = studentBlock.options.find((o) => o && o.correct === true);
+              if (selectedOpt && correctOption) {
+                const studentText = (selectedOpt.text || selectedOpt.value || "").toString().trim();
+                const ok = (correctOption.text || correctOption.value || "").toString().trim();
+                isCorrect = !!(studentText && ok && studentText === ok);
+              }
+            } else {
+              const studentSelection =
+                (typeof studentBlock === "string" ? studentBlock : null) ||
+                studentBlock?.text ||
+                studentBlock?.value ||
+                Object.values(value).find((v) => typeof v === "string" || (v && v.text));
+
+              if (correctOption && studentSelection != null) {
+                const studentText =
+                  typeof studentSelection === "string"
+                    ? studentSelection
+                    : (studentSelection?.text || studentSelection?.value);
+                isCorrect = !!(
+                  studentText &&
+                  studentText.toString().trim() === correctOption.text.toString().trim()
+                );
+              }
             }
           }
         }
-        
-        // Strategy 2: Check correctAnswerKey
+
         if (!isCorrect && question.correctAnswerKey && value.hasOwnProperty(question.correctAnswerKey)) {
-           // Direct key matching if applicable
+          isCorrect =
+            String(value[question.correctAnswerKey]).trim() ===
+            String(question.value[question.correctAnswerKey]).trim();
         }
 
-        score = isCorrect ? 50 : 0; // Each question is worth up to 50 in this schema
+        score = isCorrect ? 50 : 0;
         finalUpdateValue = value;
       }
     }
 
-    // 4. Update/Create StudentExamAttempt
-    let attempt = await StudentExamAttempt.findOne({ register_no, course_id, booking_id });
-    if (!attempt) {
-       attempt = new StudentExamAttempt({ register_no, course_id, booking_id, questions: [] });
-    }
-
     // Update specific question in attempt
-    const qIndex = attempt.questions.findIndex(q => q.questionNumber === Number(questionNumber));
+    const qIndex = attempt.questions.findIndex((q) => q.questionNumber === qNum);
     
     // Determine title/content for archival
     const componentKey = Object.keys(qValue).find(k => k.startsWith('component-'));
-    const innerValue = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
-    const qTitle = innerValue.title || innerValue.problem_title || question.title || "Question";
-    const qContent = innerValue.problemStatement || innerValue.content || innerValue.description || question.content || "";
+    const innerValueForMeta = (componentKey && typeof qValue[componentKey] === 'object') ? qValue[componentKey] : qValue;
+    const qTitle = innerValueForMeta.title || innerValueForMeta.problem_title || question.title || "Question";
+    const qContent = innerValueForMeta.problemStatement || innerValueForMeta.content || innerValueForMeta.description || question.content || "";
 
     const questionData = {
-      questionNumber: Number(questionNumber),
+      questionNumber: qNum,
       template_id: question.template_id,
       title: qTitle,
       content: qContent,
@@ -610,12 +710,17 @@ exports.submitAssessmentQuestion = async (req, res) => {
     };
 
     if (qIndex >= 0) {
-       attempt.questions[qIndex] = { ...attempt.questions[qIndex].toObject(), ...questionData };
+       // Explicitly set the fields to ensure Mongoose detects change in Mixed type
+       attempt.questions[qIndex].value = finalUpdateValue;
+       attempt.questions[qIndex].score = score;
+       attempt.questions[qIndex].title = qTitle;
+       attempt.questions[qIndex].content = qContent;
+       attempt.markModified(`questions.${qIndex}.value`);
     } else {
        attempt.questions.push(questionData);
     }
 
-    // Recalculate overall score
+    // Recalculate overall score across all questions
     attempt.score = attempt.questions.reduce((sum, q) => sum + (q.score || 0), 0);
     await attempt.save();
 

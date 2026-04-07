@@ -211,6 +211,8 @@ export default function StaffDashboardLayout() {
   return (
     <div className="dashboard-layout premium-layout staff-dashboard-layout">
       <SmartSidebar
+        shell="dark"
+        subtitle="Staff Portal"
         sections={staffNavSections.map((section) => ({
           title: section.label,
           items: (section.sub || []).map((sub) => ({

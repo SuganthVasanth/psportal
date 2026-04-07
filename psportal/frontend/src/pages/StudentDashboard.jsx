@@ -1,330 +1,452 @@
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+    Star,
+    TrendingUp,
+    Check,
+    X,
+    Settings,
+    LineChart,
+    Calendar,
+    Trophy,
+} from "lucide-react";
+import "./StudentDashboard.css";
 import StudentLayout from "../components/StudentLayout";
 import AttendanceDetails from "../components/AttendanceDetails";
-import axios from "axios";
-import "./StudentDashboard.css";
+import RewardPointsPanel from "../components/RewardPointsPanel";
 
-const API_BASE = "http://localhost:5000";
+const API_BASE = (
+    import.meta.env.VITE_API_BASE ||
+    import.meta.env.VITE_API_URL ||
+    "http://localhost:5000"
+).replace(/\/$/, "");
 
-export default function StudentDashboard() {
-    const [dashboardData, setDashboardData] = useState(null);
-    const [attendance, setAttendance] = useState(null);
-    const [practiceDashboard, setPracticeDashboard] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState("");
-    const [showAttendanceView, setShowAttendanceView] = useState(false);
+function categoryPillClass(cat) {
+    const c = (cat || "").toLowerCase();
+    if (c.includes("assessment")) return "sd-pill sd-pill-blue";
+    if (c.includes("ssg")) return "sd-pill sd-pill-amber";
+    if (c.includes("daily")) return "sd-pill sd-pill-slate";
+    return "sd-pill sd-pill-slate";
+}
+
+function skillLevelToPercent(level) {
+    const n = Number(level);
+    if (!Number.isFinite(n) || n <= 0) return 35;
+    return Math.min(98, Math.round(20 + n * 8));
+}
+
+function AttendanceRing({ percentage, size = 76 }) {
+    const pct = Math.min(100, Math.max(0, Number(percentage) || 0));
+    const stroke = 6;
+    const r = (size - stroke) / 2;
+    const c = size / 2;
+    const circumference = 2 * Math.PI * r;
+    const dash = (pct / 100) * circumference;
+    return (
+        <svg
+            width={size}
+            height={size}
+            className="sd-attendance-ring"
+            aria-hidden
+        >
+            <circle
+                cx={c}
+                cy={c}
+                r={r}
+                fill="none"
+                stroke="#e2e8f0"
+                strokeWidth={stroke}
+            />
+            <circle
+                cx={c}
+                cy={c}
+                r={r}
+                fill="none"
+                stroke="#1e40af"
+                strokeWidth={stroke}
+                strokeLinecap="round"
+                strokeDasharray={`${dash} ${circumference}`}
+                transform={`rotate(-90 ${c} ${c})`}
+            />
+            <text
+                x={c}
+                y={c + 5}
+                textAnchor="middle"
+                className="sd-attendance-ring-text"
+            >
+                {Math.round(pct)}%
+            </text>
+        </svg>
+    );
+}
+
+const StudentDashboard = () => {
     const navigate = useNavigate();
+    const [dashboardData, setDashboardData] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    const [attendance, setAttendance] = useState(null);
+    /** 'activity' | 'attendance' | 'reward' */
+    const [activeView, setActiveView] = useState("activity");
+
+    const registerNo = localStorage.getItem("register_no");
 
     useEffect(() => {
-        const registerNo = (localStorage.getItem("register_no") || "").trim() || "7376231CS323";
-        const fetchDashboardData = async () => {
+        const fetchDashboard = async () => {
+            if (!registerNo) {
+                setError("Not logged in");
+                setLoading(false);
+                return;
+            }
             try {
-                const res = await axios.get(`${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
-                setDashboardData(res.data);
-            } catch (err) {
-                console.error("Error fetching dashboard data:", err);
-                setError("Failed to load dashboard data.");
+                const token = localStorage.getItem("token");
+                const res = await fetch(
+                    `${API_BASE}/api/dashboard/student?register_no=${encodeURIComponent(
+                        registerNo
+                    )}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (!res.ok) throw new Error("Failed to load dashboard");
+                const data = await res.json();
+                setDashboardData(data);
+            } catch (e) {
+                setError(e.message || "Failed to load dashboard");
             } finally {
                 setLoading(false);
             }
         };
+        fetchDashboard();
+    }, [registerNo]);
+
+    useEffect(() => {
         const fetchAttendance = async () => {
+            if (!registerNo) return;
             try {
-                const res = await axios.get(`${API_BASE}/api/attendance?register_no=${encodeURIComponent(registerNo)}`);
-                setAttendance(res.data);
-            } catch (_) {
-                setAttendance({ percentage: 0, presentDays: 0, absentDays: 0, records: [] });
+                const token = localStorage.getItem("token");
+                const res = await fetch(
+                    `${API_BASE}/api/attendance?register_no=${encodeURIComponent(
+                        registerNo
+                    )}`,
+                    { headers: { Authorization: `Bearer ${token}` } }
+                );
+                if (res.ok) {
+                    const data = await res.json();
+                    setAttendance(data);
+                }
+            } catch {
+                /* optional */
             }
         };
-        const fetchPracticeDashboard = () => {
-            fetch(`${API_BASE}/api/practice/dashboard?register_no=${encodeURIComponent(registerNo)}`)
-                .then((r) => r.json())
-                .then(setPracticeDashboard)
-                .catch(() => setPracticeDashboard(null));
-        };
-        fetchDashboardData();
         fetchAttendance();
-        fetchPracticeDashboard();
-    }, []);
+    }, [registerNo]);
+
+    const profile = dashboardData?.profile;
+    const points = dashboardData?.points;
+    const skills = dashboardData?.skills;
+    const rewardPoints = dashboardData?.rewardPoints || {};
+
+    const firstName = useMemo(() => {
+        const n = profile?.name || "Student";
+        return n.trim().split(/\s+/)[0] || "Student";
+    }, [profile?.name]);
+
+    const displayId = profile?.register_no || registerNo || "—";
+    const totalPoints = points?.total ?? 0;
+    const recentRows = points?.recentTransactions || [];
+    const skillTags = skills?.tags || [];
+
+    const attPct = attendance?.percentage ?? 0;
+    const presentDays = attendance?.presentDays ?? 0;
+    const absentDays = attendance?.absentDays ?? 0;
+
+    const balanceReward = rewardPoints.balance ?? 0;
 
     if (loading) {
         return (
             <StudentLayout>
-                <div className="dashboard-container-inner" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 360 }}>
-                    <h2>Loading Dashboard...</h2>
+                <div className="student-dashboard-v2 sd-loading">
+                    <div className="sd-spinner" />
+                    <p>Loading your dashboard…</p>
                 </div>
             </StudentLayout>
         );
     }
 
-    if (error) {
+    if (error || !dashboardData) {
         return (
             <StudentLayout>
-                <div className="dashboard-container-inner" style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 360 }}>
-                    <h2 style={{ color: 'red' }}>{error}</h2>
+                <div className="student-dashboard-v2 sd-error">
+                    <p>{error || "Unable to load dashboard."}</p>
                 </div>
             </StudentLayout>
         );
     }
-
-    const { profile, points, skills } = dashboardData;
 
     return (
         <StudentLayout>
-            <div className="dashboard-container-inner">
-                    {/* <div className="welcome-banner">
-                        <div>
-                            <div className="welcome-banner-text">
-                                Welcome back, <span className="highlight">{profile.name}</span>! Ready to code?
-                            </div>
-                            <div className="welcome-banner-sub">
-                                Keep your streak alive by solving today&apos;s challenge.
-                            </div>
-                        </div>
-                        <img
-                            src="/assets/dashboard-rocket.svg"
-                            alt=""
-                            className="welcome-banner-illustration"
-                        />
-                    </div> */}
+            <div className="student-dashboard-v2">
+                <header className="sd-header">
+                    <div>
+                        <h1 className="sd-welcome">Welcome back, {firstName}</h1>
+                        <p className="sd-sub">
+                            Here’s a snapshot of your progress and activity.
+                        </p>
+                    </div>
+                    <div className="sd-status-pill" role="status">
+                        <span className="sd-status-dot" />
+                        System Status: Optimal
+                    </div>
+                </header>
 
-                    {/* {practiceDashboard && (
-                        <div className="dashboard-grid" style={{ marginBottom: 24 }}>
-                            <div className="left-column">
-                                <div className="dashboard-card practice-card">
-                                    <h3 className="card-title">Daily Coding Challenge</h3>
-                                    <p className="card-subtitle">Topic and points from MongoDB.</p>
-                                    {practiceDashboard.dailyTask && practiceDashboard.dailyTask.title ? (
-                                        <>
-                                            <h4 style={{ marginTop: 8 }}>{practiceDashboard.dailyTask.title}</h4>
-                                            <p className="card-subtitle">Topic: {practiceDashboard.dailyTask.topic || "—"} · Points: {practiceDashboard.dailyTask.points}</p>
-                                            <button type="button" className="sa-btn sa-btn-primary" style={{ marginTop: 12 }} onClick={() => navigate(`/practice/problem/${encodeURIComponent(practiceDashboard.dailyTask.problemId)}`)}>
-                                                Start Coding
-                                            </button>
-                                        </>
-                                    ) : (
-                                        <p className="sa-muted">No daily challenge for today.</p>
-                                    )}
-                                </div>
-                                <div className="dashboard-card practice-card" style={{ marginTop: 16 }}>
-                                    <h3 className="card-title">Streak</h3>
-                                    <p className="card-subtitle">Your coding streak.</p>
-                                    <div style={{ fontSize: 28, fontWeight: 700, color: "#8b5cf6" }}>{practiceDashboard.streak?.currentStreak ?? 0} days</div>
-                                </div>
-                            </div>
-                            <div className="right-column">
-                                <div className="dashboard-card practice-card">
-                                    <h3 className="card-title">Recent Activity</h3>
-                                    <p className="card-subtitle">Latest submissions from MongoDB.</p>
-                                    {practiceDashboard.recentActivity?.length ? (
-                                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                                            {practiceDashboard.recentActivity.slice(0, 5).map((a) => (
-                                                <li key={a.id} style={{ padding: "6px 0", borderBottom: "1px solid #eee" }}>Problem {a.problemId} – {a.result}</li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="sa-muted">No recent activity.</p>
-                                    )}
-                                </div>
-                                <div className="dashboard-card practice-card" style={{ marginTop: 16 }}>
-                                    <h3 className="card-title">Recommended for you</h3>
-                                    <p className="card-subtitle">Problems from MongoDB.</p>
-                                    {practiceDashboard.recommended?.length ? (
-                                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                                            {practiceDashboard.recommended.slice(0, 3).map((p) => (
-                                                <li key={p.problemId} style={{ padding: "6px 0" }}>
-                                                    <button type="button" className="sa-btn sa-btn-sm" onClick={() => navigate(`/practice/problem/${encodeURIComponent(p.problemId)}`)}>{p.title}</button>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="sa-muted">No recommendations yet.</p>
-                                    )}
-                                </div>
-                                <div className="dashboard-card practice-card" style={{ marginTop: 16 }}>
-                                    <h3 className="card-title">Achievements</h3>
-                                    <p className="card-subtitle">Unlock by solving and streaking.</p>
-                                    {practiceDashboard.achievements?.length ? (
-                                        <ul style={{ listStyle: "none", padding: 0, margin: 0 }}>
-                                            {practiceDashboard.achievements.map((a) => (
-                                                <li key={a.id} style={{ padding: "6px 0" }}>{a.unlocked ? "✓" : "○"} {a.name}</li>
-                                            ))}
-                                        </ul>
-                                    ) : (
-                                        <p className="sa-muted">No achievements yet.</p>
-                                    )}
-                                </div>
+                <div className="sd-top-grid sd-top-grid--metrics">
+                    <button
+                        type="button"
+                        className={`sd-metric-card sd-metric-card--activity ${
+                            activeView === "activity" ? "sd-metric-card--active" : ""
+                        }`}
+                        onClick={() => setActiveView("activity")}
+                    >
+                        <div className="sd-metric-card-top">
+                            <span className="sd-kicker">Activity points</span>
+                            <div className="sd-icon-circle" aria-hidden>
+                                <LineChart size={18} strokeWidth={2} />
                             </div>
                         </div>
-                    )} */}
+                        <div className="sd-metric-value">{totalPoints}</div>
+                        <p className="sd-metric-label">Total points earned</p>
+                        <div className="sd-metric-accent sd-metric-accent--navy" />
+                    </button>
 
-                    <div className="dashboard-grid">
-
-                        {/* --- LEFT COLUMN --- */}
-                        <div className="left-column">
-
-                            {/* Points Wallets - always visible */}
-                            <div className="dashboard-card pt-wallets-card">
-                                <div className="card-header-flex">
-                                    <div>
-                                        <h3 className="card-title">Points Wallets</h3>
-                                        <p className="card-subtitle">Choose a mode to see category points, leaderboard and quest logs.</p>
-                                    </div>
-                                </div>
-                                <div className="points-wallets-grid">
-                                    <button
-                                        type="button"
-                                        className={`points-wallet-box points-wallet-box-btn ${!showAttendanceView ? "points-wallet-box-active" : ""}`}
-                                        onClick={() => setShowAttendanceView(false)}
-                                    >
-                                        <div className="status-badge">{!showAttendanceView ? "Active" : "View"}</div>
-                                        <div className="mode-label">MODE</div>
-                                        <h3>Activity Points</h3>
-                                        <div className="points-label">Points</div>
-                                        <div className="points-value">{points.total}</div>
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className={`points-wallet-box points-wallet-box-btn points-wallet-box-attendance ${showAttendanceView ? "points-wallet-box-active" : ""}`}
-                                        onClick={() => setShowAttendanceView(true)}
-                                    >
-                                        <div className="status-badge">{showAttendanceView ? "Active" : "View"}</div>
-                                        <div className="mode-label">MODE</div>
-                                        <h3>Attendance</h3>
-                                        <div className="points-label">Attendance %</div>
-                                        <div className="points-value">{attendance ? attendance.percentage : "—"}</div>
-                                    </button>
-                                </div>
+                    <button
+                        type="button"
+                        className={`sd-metric-card sd-metric-card--attendance ${
+                            activeView === "attendance"
+                                ? "sd-metric-card--active sd-metric-card--active-att"
+                                : ""
+                        }`}
+                        onClick={() => setActiveView("attendance")}
+                    >
+                        <div className="sd-metric-card-top">
+                            <span className="sd-kicker">Attendance</span>
+                            <div className="sd-icon-circle sd-icon-circle--green" aria-hidden>
+                                <Calendar size={18} strokeWidth={2} />
                             </div>
+                        </div>
+                        <div className="sd-metric-value-row">
+                            <span className="sd-metric-value">{Math.round(attPct)}%</span>
+                            <AttendanceRing percentage={attPct} size={64} />
+                        </div>
+                        <p className="sd-metric-label">
+                            {presentDays} present / {absentDays} absent
+                        </p>
+                    </button>
 
-                            {/* Below wallets: either Points Breakdown + Activity Points, or Attendance details */}
-                            {showAttendanceView ? (
-                                <AttendanceDetails attendance={attendance} />
-                            ) : (
-                                <>
-                            {/* Points Breakdown */}
-                            <div className="dashboard-card">
-                                <h3 className="card-title">Points Breakdown</h3>
-                                <p className="card-subtitle">Your points organized by source and category.</p>
+                    <button
+                        type="button"
+                        className={`sd-metric-card sd-metric-card--reward ${
+                            activeView === "reward"
+                                ? "sd-metric-card--active sd-metric-card--active-reward"
+                                : ""
+                        }`}
+                        onClick={() => setActiveView("reward")}
+                    >
+                        {activeView === "reward" && (
+                            <span className="sd-reward-dot" aria-hidden />
+                        )}
+                        <div className="sd-metric-card-top">
+                            <span className="sd-kicker">Reward points</span>
+                            <div className="sd-icon-circle sd-icon-circle--amber" aria-hidden>
+                                <Trophy size={18} strokeWidth={2} />
+                            </div>
+                        </div>
+                        <div className="sd-metric-value">{balanceReward}</div>
+                        <p className="sd-metric-label">Balance points</p>
+                    </button>
 
-                                <table className="breakdown-table">
+                    <div className="sd-card sd-card-navy sd-profile-navy">
+                        <div className="sd-profile-navy-top">
+                            <img
+                                src={
+                                    profile?.avatarUrl ||
+                                    "https://ui-avatars.com/api/?name=" +
+                                        encodeURIComponent(
+                                            profile?.name || "Student"
+                                        ) +
+                                        "&background=1e3a8a&color=fff&size=128"
+                                }
+                                alt=""
+                                className="sd-profile-avatar"
+                            />
+                            <div className="sd-profile-text">
+                                <h3 className="sd-profile-name">
+                                    {profile?.name || "Student"}
+                                </h3>
+                                <p className="sd-profile-id">ID: {displayId}</p>
+                            </div>
+                        </div>
+                        <div className="sd-profile-divider" />
+                        <div className="sd-profile-meta">
+                            <div>
+                                <span className="sd-meta-label">Major</span>
+                                <p className="sd-meta-value">
+                                    {profile?.department || "—"}
+                                </p>
+                            </div>
+                            <div>
+                                <span className="sd-meta-label">Academic year</span>
+                                <p className="sd-meta-value">
+                                    {profile?.year || "—"}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {activeView === "activity" && (
+                    <div className="sd-bottom-grid">
+                        <div className="sd-card sd-card-white sd-points-card">
+                            <div className="sd-points-head">
+                                <h2 className="sd-section-title">Points breakdown</h2>
+                                <button
+                                    type="button"
+                                    className="sd-link"
+                                    onClick={() => navigate("/daily-tasks")}
+                                >
+                                    View Full Report
+                                </button>
+                            </div>
+                            <div className="sd-table-wrap">
+                                <table className="sd-table">
                                     <thead>
                                         <tr>
-                                            <th>SOURCE / CATEGORY</th>
-                                            <th className="text-right">POINTS EARNED</th>
-                                            <th className="text-right">ELIGIBLE BONUS</th>
+                                            <th>Activity name</th>
+                                            <th>Category</th>
+                                            <th>Date</th>
+                                            <th className="sd-th-right">Points</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        {points.breakdown.map((item, idx) => (
-                                            <React.Fragment key={idx}>
-                                                <tr className="category-row">
-                                                    <td>{item.category}</td>
-                                                    <td className="text-right text-blue">{item.pointsEarned.toFixed(2)}</td>
-                                                    <td className="text-right text-orange">{item.eligibleBonus.toFixed(2)}</td>
+                                        {recentRows.length === 0 ? (
+                                            <tr>
+                                                <td
+                                                    colSpan={4}
+                                                    className="sd-table-empty"
+                                                >
+                                                    No recent point transactions yet.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            recentRows.map((row, i) => (
+                                                <tr key={i}>
+                                                    <td className="sd-td-title">
+                                                        {row.title || "—"}
+                                                    </td>
+                                                    <td>
+                                                        <span
+                                                            className={categoryPillClass(
+                                                                row.category
+                                                            )}
+                                                        >
+                                                            {row.category || "—"}
+                                                        </span>
+                                                    </td>
+                                                    <td className="sd-td-muted">
+                                                        {row.date || "—"}
+                                                    </td>
+                                                    <td className="sd-td-points">
+                                                        +
+                                                        {row.points != null
+                                                            ? row.points
+                                                            : "0"}
+                                                    </td>
                                                 </tr>
-                                                {item.transactions.map((tx, txIdx) => (
-                                                    <tr className="sub-row" key={txIdx}>
-                                                        <td className="source">{tx.source}</td>
-                                                        <td className="text-right text-gray">{tx.points > 0 ? tx.points.toFixed(2) : tx.points}</td>
-                                                        <td className="text-right text-gray">{tx.bonus}</td>
-                                                    </tr>
-                                                ))}
-                                            </React.Fragment>
-                                        ))}
+                                            ))
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
+                        </div>
 
-                            {/* Activity Points List */}
-                            <div className="dashboard-card">
-                                <h3 className="card-title">Activity Points</h3>
-                                <p className="card-subtitle">Recent points transactions.</p>
-
-                                <div className="activity-list">
-                                    {points.recentTransactions.map((tx, idx) => (
-                                        <div className="activity-item" key={idx}>
-                                            <div className="activity-icon">⚡</div>
-                                            <div className="activity-details">
-                                                <h4 className="activity-title">
-                                                    {tx.title}
-                                                    <span className={`tag ${tx.category === 'SSG' ? 'tag-pink' : 'tag-purple'}`}>{tx.category}</span>
-                                                    <span className="tag tag-green">{tx.status}</span>
-                                                </h4>
-                                                <p className="activity-meta">
-                                                    {new Date(tx.date).toLocaleDateString()} • {new Date(tx.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className="sd-card sd-card-white sd-skills-card">
+                            <div className="sd-skills-head">
+                                <Settings
+                                    size={18}
+                                    className="sd-skills-gear"
+                                    strokeWidth={2}
+                                />
+                                <h2 className="sd-section-title">Skill Loadout</h2>
+                            </div>
+                            <div className="sd-skills-list">
+                                {skillTags.length === 0 ? (
+                                    <p className="sd-skills-empty">
+                                        Skill tags will appear here as you progress.
+                                    </p>
+                                ) : (
+                                    skillTags.map((tag, i) => {
+                                        const pct = skillLevelToPercent(tag.level);
+                                        return (
+                                            <div
+                                                className="sd-skill-row"
+                                                key={`${tag.name}-${i}`}
+                                            >
+                                                <div className="sd-skill-row-top">
+                                                    <span className="sd-skill-name">
+                                                        {tag.name}
+                                                    </span>
+                                                    <span className="sd-skill-pct">
+                                                        {pct}%
+                                                    </span>
+                                                </div>
+                                                <div
+                                                    className="sd-skill-bar"
+                                                    role="progressbar"
+                                                    aria-valuenow={pct}
+                                                    aria-valuemin={0}
+                                                    aria-valuemax={100}
+                                                >
+                                                    <div
+                                                        className="sd-skill-bar-fill"
+                                                        style={{ width: `${pct}%` }}
+                                                    />
+                                                </div>
+                                                <p className="sd-skill-sub">
+                                                    Level {tag.level ?? "—"}
                                                 </p>
                                             </div>
-                                            <div className="activity-points">
-                                                +{tx.points}
-                                                <span>Point</span>
-                                            </div>
-                                        </div>
-                                    ))}
-
-                                    {points.recentTransactions.length === 0 && (
-                                        <p style={{ color: '#a0aec0', fontSize: '13px' }}>No recent transactions found.</p>
-                                    )}
-                                </div>
+                                        );
+                                    })
+                                )}
                             </div>
-
-                                </>
-                            )}
-
+                            <button
+                                type="button"
+                                className="sd-btn-ghost"
+                                onClick={() => navigate("/my-courses")}
+                            >
+                                Endorse skills
+                            </button>
                         </div>
-
-                        {/* --- RIGHT COLUMN --- */}
-                        <div className="right-column">
-
-                            {/* Profile Details Card */}
-                            <div className="profile-card">
-                                <div className="profile-card-header"></div>
-                                <div className="profile-card-body">
-                                    <img
-                                        src={profile.avatarUrl}
-                                        alt="Avatar"
-                                        className="profile-card-avatar"
-                                    />
-                                    <h2 className="profile-card-name">{profile.name}</h2>
-                                    <p className="profile-card-dept">{profile.department}</p>
-                                </div>
-                            </div>
-
-                            {/* Skills Loadout */}
-                            <div className="dashboard-card">
-                                <h3 className="card-title">Skill Loadout</h3>
-                                <div className="skill-tags">
-                                    {skills.tags.map((skill, idx) => (
-                                        <div className="skill-tag" key={idx}>
-                                            {skill.name} <span className="skill-level">{skill.level}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Personalized Skills Progress */}
-                            <div className="dashboard-card">
-                                <h3 className="card-title">Personalized Skill's Progress</h3>
-
-                                <div className="progress-container">
-                                    <div className="progress-block">
-                                        <div className="progress-number">{skills.progress.cleared}</div>
-                                        <div className="progress-label">Cleared</div>
-                                    </div>
-                                    <div className="progress-block">
-                                        <div className="progress-number">{skills.progress.ongoing}</div>
-                                        <div className="progress-label">Ongoing</div>
-                                    </div>
-                                </div>
-
-                                <button className="action-button">Explore Courses</button>
-                            </div>
-
-                        </div>
-
                     </div>
-                </div>
+                )}
+
+                {activeView === "attendance" && (
+                    <div className="sd-panel-flow">
+                        <div className="sd-card sd-card-white sd-attendance-wrap">
+                            <AttendanceDetails attendance={attendance} />
+                        </div>
+                    </div>
+                )}
+
+                {activeView === "reward" && (
+                    <div className="sd-panel-flow">
+                        <RewardPointsPanel
+                            profile={profile}
+                            rewardPoints={rewardPoints}
+                        />
+                    </div>
+                )}
+            </div>
         </StudentLayout>
     );
-}
+};
+
+export default StudentDashboard;

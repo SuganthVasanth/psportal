@@ -146,7 +146,7 @@ const ROLE_TAG_PALETTE = [
   { backgroundColor: "#dbeafe", color: "#1d4ed8" },
   { backgroundColor: "#ccfbf1", color: "#0f766e" },
   { backgroundColor: "#fef9c3", color: "#a16207" },
-  { backgroundColor: "#f3e8ff", color: "#7c3aed" },
+  { backgroundColor: "#dbeafe", color: "#1e40af" },
   { backgroundColor: "#fed7aa", color: "#ea580c" },
   { backgroundColor: "#e0e7ff", color: "#4338ca" },
   { backgroundColor: "#d1fae5", color: "#059669" },
@@ -418,7 +418,7 @@ export default function SuperAdminDashboard() {
     const counts = coursesList.length ? [320, 280, 150].slice(0, labels.length) : [320, 280, 150];
     return {
       labels,
-      datasets: [{ label: "Applications", data: counts, backgroundColor: ["#8b5cf6", "#06b6d4", "#10b981"] }],
+      datasets: [{ label: "Applications", data: counts, backgroundColor: ["#2563eb", "#06b6d4", "#10b981"] }],
     };
   }, [coursesList]);
   const statsSlotChart = useMemo(() => {
@@ -426,7 +426,7 @@ export default function SuperAdminDashboard() {
     const bookings = slotsList.length ? [450, 320, 280].slice(0, labels.length) : [450, 320, 280];
     return {
       labels,
-      datasets: [{ label: "Bookings", data: bookings, backgroundColor: ["#8b5cf6", "#06b6d4", "#10b981"] }],
+      datasets: [{ label: "Bookings", data: bookings, backgroundColor: ["#2563eb", "#06b6d4", "#10b981"] }],
     };
   }, [slotsList]);
   const statsWeeklyChart = useMemo(() => ({

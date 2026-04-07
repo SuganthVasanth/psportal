@@ -4,13 +4,18 @@ import { Plus, Trash2 } from "lucide-react";
 const cardClass = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
 const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm";
 
+function normalizeAnswers(arr) {
+  if (!Array.isArray(arr) || arr.length === 0) return [""];
+  return arr.map((a) => (a == null ? "" : String(a)));
+}
+
 export default function FillBlank({ config = {}, value = {}, onChange }) {
-  const [question, setQuestion] = useState(value.question ?? "");
-  const [answers, setAnswers] = useState(value.answers || [""]);
+  const [question, setQuestion] = useState(value?.question == null ? "" : String(value.question));
+  const [answers, setAnswers] = useState(normalizeAnswers(value?.answers));
 
   useEffect(() => {
-    setQuestion(value.question ?? "");
-    setAnswers(value.answers || [""]);
+    setQuestion(value?.question == null ? "" : String(value.question));
+    setAnswers(normalizeAnswers(value?.answers));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(value || {})]);
 
@@ -49,7 +54,7 @@ export default function FillBlank({ config = {}, value = {}, onChange }) {
                 type="text"
                 className={inputClass}
                 placeholder="Accepted answer"
-                value={a}
+                value={a ?? ""}
                 onChange={(e) => updateAnswer(idx, e.target.value)}
               />
               <button type="button" onClick={() => removeAnswer(idx)} disabled={answers.length <= 1} className="shrink-0 rounded-lg p-2 text-gray-500 hover:text-red-600 disabled:opacity-40">
@@ -60,7 +65,7 @@ export default function FillBlank({ config = {}, value = {}, onChange }) {
           <button
             type="button"
             onClick={addAnswer}
-            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 py-2 text-sm font-medium text-gray-600 hover:border-[#6366f1] hover:bg-[#e0e7ff]/30"
+            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 py-2 text-sm font-medium text-gray-600 hover:border-[#2563eb] hover:bg-[#dbeafe]/40"
           >
             <Plus size={16} /> Add answer
           </button>

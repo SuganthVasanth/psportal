@@ -20,7 +20,7 @@ export default function CodeReviewDashboard() {
             </div>
             <button
               type="button"
-              className="mt-2 px-5 py-2 bg-[#6366f1] text-white text-sm font-semibold rounded-xl hover:bg-[#4f46e5] transition-colors"
+              className="mt-2 px-5 py-2 bg-[#2563eb] text-white text-sm font-semibold rounded-xl hover:bg-[#1d4ed8] transition-colors"
             >
               Refresh
             </button>

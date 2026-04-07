@@ -2,7 +2,7 @@ import React, { useMemo } from "react";
 import {
   LayoutDashboard,
   SquareLibrary,
-  Youtube,
+  GraduationCap,
   Layers,
   CodeXml,
   ClipboardCheck,
@@ -31,7 +31,7 @@ export default function StudentSidebar({ collapsed = false, onToggle, surface })
         title: "LEARN",
         items: [
           { name: "Courses Available", path: "/courses-available", icon: SquareLibrary },
-          { name: "My Courses", path: "/my-courses", icon: Youtube },
+          { name: "My Courses", path: "/my-courses", icon: GraduationCap },
           { name: "Web Practice", path: "/web-practice", icon: Globe },
           { name: "Codeforces Practice", path: "/practice/codeforces", icon: FileCode },
         ],

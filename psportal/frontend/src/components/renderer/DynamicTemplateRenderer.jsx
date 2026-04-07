@@ -124,14 +124,14 @@ export default function DynamicTemplateRenderer({
           };
           return (
             <div key={item.id} style={commonStyle}>
-              <MCQ config={config} value={val} onChange={(v) => updateField(item.id, v)} />
+              <MCQ config={config} value={val ?? {}} onChange={(v) => updateField(item.id, v)} />
             </div>
           );
         }
         if (type === "checkbox_options") {
           const n = props.numberOfOptions ?? 4;
           const opts = Array.from({ length: n }, (_, i) => val?.options?.[i] ?? `Option ${i + 1}`);
-          const checked = val?.value ?? [];
+          const checked = Array.isArray(val?.value) ? val.value : [];
           return (
             <div key={item.id} className={cardClass} style={commonStyle}>
               {props.label && (

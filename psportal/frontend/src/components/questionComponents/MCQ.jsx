@@ -22,7 +22,7 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
     text: (Array.isArray(optionLabels) && optionLabels[i]) || `Option ${i + 1}`,
     correct: i === 0,
   }));
-  const [optionList, setOptionList] = useState(value.options || defaultOptions);
+  const [optionList, setOptionList] = useState(value?.options || defaultOptions);
 
   useEffect(() => {
     const labels = Array.isArray(optionLabels) ? optionLabels : [];
@@ -40,7 +40,7 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
   const syncValue = (next) => {
     if (isDisabled && !isStudent) return; // Don't allow changes if readOnly and not student answering
     setOptionList(next);
-    onChange?.({ ...value, options: next });
+    onChange?.({ ...(value || {}), options: next });
   };
 
   const addOption = () => syncValue([...optionList, { text: `Option ${optionList.length + 1}`, correct: false }]);
@@ -51,7 +51,11 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
     if (next.length && !next.some((o) => o.correct)) next[0].correct = true;
     syncValue(next);
   };
-  const setCorrect = (idx) => syncValue(optionList.map((o, i) => ({ ...o, correct: i === idx })));
+  const setCorrect = (idx) => {
+    const isAlreadyCorrect = optionList[idx]?.correct === true;
+    const next = optionList.map((o, i) => ({ ...o, correct: isAlreadyCorrect ? false : i === idx }));
+    syncValue(next);
+  };
   const updateText = (idx, text) => syncValue(optionList.map((o, i) => (i === idx ? { ...o, text } : o)));
 
   return (
@@ -90,7 +94,7 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
                     }
                   : {
                       backgroundColor: isCorrect ? "#e0e7ff" : pastel,
-                      borderColor: isCorrect ? "#8b5cf6" : "rgba(226, 232, 240, 0.9)",
+                      borderColor: isCorrect ? "#2563eb" : "rgba(226, 232, 240, 0.9)",
                     }
               }
             >
@@ -119,7 +123,7 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
                   type="text"
                   className={`${inputClass} flex-1`}
                   placeholder={`Option ${idx + 1} text`}
-                  value={opt.text}
+                  value={opt.text ?? ""}
                   onChange={(e) => updateText(idx, e.target.value)}
                   onClick={(e) => e.stopPropagation()}
                 />
@@ -144,7 +148,7 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
           <button
             type="button"
             onClick={addOption}
-            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#c7d2fe] bg-[#f4f7fe] py-3 text-sm font-medium text-[#6366f1] hover:border-[#8b5cf6] hover:bg-[#e0e7ff]/50 transition-colors"
+            className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfdbfe] bg-[#eff6ff] py-3 text-sm font-medium text-[#2563eb] hover:border-[#2563eb] hover:bg-[#dbeafe]/50 transition-colors"
           >
             <Plus size={18} />
             Add option

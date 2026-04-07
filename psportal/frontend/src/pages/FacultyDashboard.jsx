@@ -649,11 +649,11 @@ export default function FacultyDashboard({ data, has, authHeaders }) {
                       gap: 6,
                       padding: "8px 16px",
                       borderRadius: 8,
-                      border: "1px solid #6366f1",
+                      border: "1px solid #2563eb",
                       background: "#f5f3ff",
                       cursor: "pointer",
                       fontWeight: 600,
-                      color: "#6366f1",
+                      color: "#2563eb",
                     }}
                   >
                     <FileSpreadsheet size={18} /> Upload Questions (Excel)

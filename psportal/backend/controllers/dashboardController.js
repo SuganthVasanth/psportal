@@ -11,16 +11,226 @@ const Leave = require("../models/Leave");
 const LeaveWorkflow = require("../models/LeaveWorkflow");
 const FacultyCourseAssignment = require("../models/FacultyCourseAssignment");
 
+/** Map a transaction category string to a fixed reward breakdown bucket */
+function rewardBucketKey(activityCategory) {
+    const c = (activityCategory || "").toLowerCase().trim();
+    if (!c) return "UNMAPPED";
+    if (/penalt/i.test(c)) return "PENALTIES";
+    if (/student initiatives/i.test(c)) return "STUDENT INITIATIVES";
+    if (/external/i.test(c)) return "EXTERNAL EVENTS";
+    if (/technical events/i.test(c)) return "TECHNICAL EVENTS";
+    if (/technical society/i.test(c)) return "TECHNICAL SOCIETY ACTIVITIES";
+    if (/special lab/i.test(c)) return "SPECIAL LAB INITIATIVES";
+    if (/extra[- ]curricular/i.test(c)) return "EXTRA-CURRICULAR ACTIVITIES";
+    if (/\bp skill\b|pskill/i.test(c)) return "P SKILL";
+    if (/\btac\b/i.test(c) || c === "tac") return "TAC";
+    if (/interview/i.test(c)) return "INTERVIEW";
+    if (/assignment/i.test(c)) return "ASSIGNMENTS";
+    if (/skill/i.test(c) || /personalized skills/i.test(c)) return "SKILLS";
+    return "UNMAPPED";
+}
+
+function academicYearEvenLabel() {
+    const y = new Date().getFullYear();
+    const m = new Date().getMonth();
+    const start = m >= 5 ? y : y - 1;
+    return `${start}-${start + 1} EVEN`;
+}
+
+/**
+ * Build reward-points view for student dashboard (matches UI breakdown structure).
+ */
+function buildRewardPointsView(student, allTransactions, mentorUser) {
+    const cumulative = Number(student.total_reward_points) || 0;
+    const redeemed = Number(student.redeemed_reward_points) || 0;
+    const balance = Math.max(0, cumulative - redeemed);
+    const carryover = Number(student.reward_carryover) || 0;
+    const ip1 = Number(student.ip1_reward) || 0;
+    const ip2 = Number(student.ip2_reward) || 0;
+    const year = student.year || "—";
+    const yearAverageReward =
+        Number(process.env.REWARD_YEAR_III_AVERAGE) > 0
+            ? Number(process.env.REWARD_YEAR_III_AVERAGE)
+            : 790;
+    const pointsNeededToAverage = Math.max(0, Math.round((yearAverageReward - balance) * 100) / 100);
+
+    const mentorName =
+        mentorUser && mentorUser.name
+            ? mentorUser.name
+            : student.mentor_name || "—";
+
+    const buckets = {};
+    allTransactions.forEach((tx) => {
+        let key = rewardBucketKey(tx.activity_category);
+        if (key === "UNMAPPED") key = "EXTRA-CURRICULAR ACTIVITIES";
+        if (!buckets[key]) buckets[key] = { points: 0, count: 0 };
+        buckets[key].points += Number(tx.points_earned) || 0;
+        buckets[key].count += 1;
+    });
+
+    const bucketPoints = (label) => (buckets[label] ? buckets[label].points : 0);
+    const bucketCount = (label) => (buckets[label] ? buckets[label].count : 0);
+
+    const semesterCategoryKeys = [
+        "TECHNICAL EVENTS",
+        "SKILLS",
+        "ASSIGNMENTS",
+        "INTERVIEW",
+        "TECHNICAL SOCIETY ACTIVITIES",
+        "P SKILL",
+        "TAC",
+        "SPECIAL LAB INITIATIVES",
+        "EXTRA-CURRICULAR ACTIVITIES",
+        "STUDENT INITIATIVES",
+        "EXTERNAL EVENTS",
+    ];
+    let semesterSum = 0;
+    semesterCategoryKeys.forEach((k) => {
+        semesterSum += bucketPoints(k);
+    });
+
+    const penaltiesPts = bucketPoints("PENALTIES");
+    const totalSemesterLabel = `TOTAL (${academicYearEvenLabel()})`;
+
+    const detailedActivities = allTransactions
+        .filter((tx) => /student initiatives/i.test(tx.activity_category || ""))
+        .map((tx) => ({
+            title: tx.activity_title || "—",
+            points: Number(tx.points_earned) || 0,
+        }))
+        .slice(0, 50);
+
+    let activitiesTotal = detailedActivities.reduce((s, x) => s + x.points, 0);
+    if (activitiesTotal === 0 && semesterSum > 0) activitiesTotal = semesterSum;
+
+    const breakdownRows = [
+        {
+            key: "initial",
+            category: "INITIAL POINTS / CARRY-OVER",
+            countDisplay: "—",
+            points: carryover,
+            style: "default",
+        },
+        ...[
+            "TECHNICAL EVENTS",
+            "SKILLS",
+            "ASSIGNMENTS",
+            "INTERVIEW",
+            "TECHNICAL SOCIETY ACTIVITIES",
+            "P SKILL",
+            "TAC",
+            "SPECIAL LAB INITIATIVES",
+            "EXTRA-CURRICULAR ACTIVITIES",
+            "STUDENT INITIATIVES",
+            "EXTERNAL EVENTS",
+        ].map((label) => ({
+            key: label.toLowerCase().replace(/\s+/g, "_"),
+            category: label,
+            count: bucketCount(label),
+            countDisplay: String(bucketCount(label)),
+            points: bucketPoints(label),
+            style: "default",
+        })),
+        {
+            key: "total_semester",
+            category: totalSemesterLabel,
+            countDisplay: String(
+                semesterCategoryKeys.reduce((n, k) => n + bucketCount(k), 0)
+            ),
+            points: semesterSum,
+            style: "total",
+        },
+        {
+            key: "penalties",
+            category: "PENALTIES",
+            countDisplay: String(bucketCount("PENALTIES")),
+            points: penaltiesPts,
+            style: "penalty",
+        },
+        {
+            key: "cumulative",
+            category: "CUMULATIVE POINTS",
+            countDisplay: "—",
+            points: cumulative,
+            style: "cumulative",
+        },
+        {
+            key: "ip1",
+            category: "INNOVATIVE PRACTICE - 1 (IP-1)",
+            countDisplay: "—",
+            points: ip1,
+            style: "default",
+        },
+        {
+            key: "ip2",
+            category: "INNOVATIVE PRACTICE - 2 (IP-2)",
+            countDisplay: "—",
+            points: ip2,
+            style: "default",
+        },
+        {
+            key: "redeemed_row",
+            category: "REDEEMED POINTS",
+            countDisplay: "—",
+            points: redeemed,
+            style: "default",
+        },
+        {
+            key: "balance_row",
+            category: "BALANCE POINTS",
+            countDisplay: "—",
+            points: balance,
+            style: "balance",
+        },
+        {
+            key: "carry_forward",
+            category: "CARRY FORWARD TO NEXT SEMESTER",
+            countDisplay: "—",
+            points: balance,
+            style: "default",
+        },
+    ];
+
+    return {
+        cumulative,
+        redeemed,
+        balance,
+        carryover,
+        year,
+        yearAverageReward,
+        pointsNeededToAverage,
+        mentorName,
+        semesterLabel: academicYearEvenLabel(),
+        detailedActivities,
+        activitiesTotal,
+        breakdownRows,
+        lastUpdated: student.updatedAt || new Date(),
+    };
+}
+
 exports.getStudentDashboardData = async (req, res) => {
     try {
         // For testing without auth middleware, we'll accept a register_no or just return the first student
         const register_no = req.query.register_no || "7376231CS323";
 
         // Find student
-        const student = await Student.findOne({ register_no }).populate("user_id");
+        const student = await Student.findOne({ register_no })
+            .populate("user_id")
+            .populate("mentor_id");
 
         if (!student) {
-            // Return mock data so the dashboard still loads (e.g. before running dashboard seed)
+            const mockStudent = {
+                total_reward_points: 0,
+                redeemed_reward_points: 0,
+                reward_carryover: 0,
+                ip1_reward: 0,
+                ip2_reward: 0,
+                year: "III",
+                updatedAt: new Date(),
+                register_no,
+                name: "Student",
+                department: "Computer Science and Engineering",
+            };
             const mockPayload = {
                 profile: {
                     name: "Student",
@@ -36,7 +246,8 @@ exports.getStudentDashboardData = async (req, res) => {
                 skills: {
                     tags: [],
                     progress: { cleared: 0, ongoing: 0 }
-                }
+                },
+                rewardPoints: buildRewardPointsView(mockStudent, [], null),
             };
             return res.status(200).json(mockPayload);
         }
@@ -119,13 +330,20 @@ exports.getStudentDashboardData = async (req, res) => {
         const dynamicClearedSkills = allTransactions.filter(tx => tx.activity_category.startsWith("Personalized Skills")).length;
         const dynamicOngoingSkills = 6; // Mock buffer for visually appealing UI layout
 
+        const mentorUser = student.mentor_id && typeof student.mentor_id === "object"
+            ? student.mentor_id
+            : null;
+
+        const rewardPoints = buildRewardPointsView(student, allTransactions, mentorUser);
+
         // Payload Assembly
         const payload = {
             profile: {
                 name: student.name,
                 register_no: student.register_no,
                 avatarUrl: student.profile_pic || "https://ps.bitsathy.ac.in/static/media/user.00c2fd4353b2650fbdaa.png",
-                department: student.department
+                department: student.department,
+                year: student.year,
             },
             points: {
                 total: student.activity_points,
@@ -144,7 +362,8 @@ exports.getStudentDashboardData = async (req, res) => {
                     cleared: dynamicClearedSkills,
                     ongoing: dynamicOngoingSkills
                 }
-            }
+            },
+            rewardPoints,
         };
 
         res.json(payload);

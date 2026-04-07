@@ -762,9 +762,17 @@ exports.getSlotReport = async (req, res) => {
     });
     const activeRegNos = Array.from(unifiedRegs.keys());
     const allowedCourseIds = (slot.allowed_courses || []).map(ac => (ac.course_id?._id || ac.course_id));
-    const bookingIds = Array.from(unifiedRegs.values()).filter(r => r.source === 'course_booking').map(r => r.id);
-    const attempts = await StudentExamAttempt.find({ 
-      $or: [{ booking_id: { $in: bookingIds } }, { course_id: { $in: allowedCourseIds }, register_no: { $in: activeRegNos } }]
+    const bookingIds = Array.from(unifiedRegs.values())
+      .filter((r) => r.source === "booking")
+      .map((r) => r.id);
+    const attempts = await StudentExamAttempt.find({
+      $or: [
+        { booking_id: { $in: bookingIds } },
+        {
+          course_id: { $in: allowedCourseIds.map((id) => (id && id.toString ? id.toString() : String(id))) },
+          register_no: { $in: activeRegNos },
+        },
+      ],
     }).lean();
     const allRegNos = Array.from(new Set([...activeRegNos, ...attempts.map(a => a.register_no)]));
     const studentsList = await Student.find({ register_no: { $in: allRegNos } }).lean();
@@ -801,11 +809,19 @@ exports.getSlotReport = async (req, res) => {
 
         if (!existing || (!existing.content && content)) {
           const qValue = q.value || {};
-          const mcqKey = Object.keys(qValue).find(k => k.toLowerCase().includes('mcq') || k.toLowerCase().includes('multiple_choice') || k.toLowerCase().includes('options'));
+          
+          // 1. MCQ Detection
+          const mcqKey = Object.keys(qValue).find(k => 
+            k.toLowerCase().includes('mcq') || 
+            k.toLowerCase().includes('multiple_choice') || 
+            k.toLowerCase().includes('options') ||
+            k.toLowerCase().includes('choice')
+          );
           const mcqData = mcqKey ? qValue[mcqKey] : null;
           
           let options = [];
           let correctIdx = -1;
+          let correctAnswer = null;
           
           if (mcqData && Array.isArray(mcqData.options)) {
             options = mcqData.options.map(o => (typeof o === 'object' ? (o.text || o.label || o.value) : o));
@@ -815,15 +831,52 @@ exports.getSlotReport = async (req, res) => {
             options = qValue.options.map(o => (typeof o === 'object' ? (o.text || o.label || o.value) : o));
             correctIdx = qValue.options.findIndex(o => o.correct === true);
           }
+          else if (mcqData && Array.isArray(mcqData)) {
+             // Case where the key itself points to the options array
+             options = mcqData.map(o => (typeof o === 'object' ? (o.text || o.label || o.value) : o));
+             correctIdx = mcqData.findIndex(o => o.correct === true);
+          }
+
+          // 2. Short Answer / Fill Blank Detection
+          if (qValue.correctAnswer) {
+            correctAnswer = qValue.correctAnswer;
+          } else if (qValue.answer && typeof qValue.answer === 'string') {
+            correctAnswer = qValue.answer;
+          }
+
+          // 3. Match Following Detection
+          let pairs = null;
+          if (qValue.pairs && Array.isArray(qValue.pairs)) {
+            pairs = qValue.pairs;
+          }
           
-          questionMetadataMap.set(key, { template_name: q.template_id?.name, layout: q.template_id?.layout, title, content, options, correctIdx, mcqKey });
+          questionMetadataMap.set(key, { 
+            template_name: q.template_id?.name, 
+            layout: q.template_id?.layout, 
+            title, 
+            content, 
+            options, 
+            correctIdx, 
+            mcqKey,
+            correctAnswer,
+            pairs
+          });
         }
       });
     });
 
-    const reportData = Array.from(unifiedRegs.values()).map(reg => {
-      const student = studentsList.find(s => s.register_no === reg.registerNo) || {};
-      const attempt = attempts.find(a => (a.booking_id && a.booking_id === reg.id) || (!a.booking_id && a.register_no === reg.registerNo));
+    const resolveAttemptForReg = (reg) => {
+      return attempts.find((a) => {
+        if (a.booking_id && String(a.booking_id) === String(reg.id)) return true;
+        if (reg.source === "attempt_only" && a._id && String(a._id) === String(reg.id)) return true;
+        if (!a.booking_id && a.register_no === reg.registerNo) return true;
+        return false;
+      });
+    };
+
+    const reportData = Array.from(unifiedRegs.values()).map((reg) => {
+      const student = studentsList.find((s) => s.register_no === reg.registerNo) || {};
+      const attempt = resolveAttemptForReg(reg);
       let enrichedAnswers = [];
       if (attempt && Array.isArray(attempt.questions)) {
         enrichedAnswers = attempt.questions.map(q => {
@@ -838,32 +891,41 @@ exports.getSlotReport = async (req, res) => {
             layout: bankMeta.layout,
             options: bankMeta.options,
             correctIdx: bankMeta.correctIdx,
-            mcqKey: bankMeta.mcqKey
+            mcqKey: bankMeta.mcqKey,
+            correctAnswer: bankMeta.correctAnswer,
+            pairs: bankMeta.pairs
           };
         });
       }
-      let attemptPassed = attempt ? (attempt.isPassed || (attempt.score != null && attempt.score >= 50)) : false;
+      const submissionFinalized = !!(attempt && attempt.submitted_at);
+      let attemptPassed = false;
+      if (submissionFinalized) {
+        attemptPassed = !!(attempt.isPassed || (attempt.score != null && attempt.score >= 50));
+      }
       return {
         registrationId: reg.id,
         studentId: student._id || "N/A",
         name: student.name || reg.name || "Unknown",
         registerNo: reg.registerNo,
-        status: (reg.processed || (attempt && attempt.submitted_at)) ? 'attended' : 'registered', 
-        isAttempted: !!(attempt && attempt.submitted_at),
+        status:
+          reg.processed || (attempt && attempt.submitted_at) ? "attended" : "registered",
+        isAttempted: submissionFinalized,
+        submissionFinalized,
+        hasLiveAttempt: !!attempt,
         hasAssignedQuestions: !!attempt,
         score: attempt ? attempt.score : 0,
         tabSwitches: attempt ? attempt.tab_switches : 0,
         isPassed: attemptPassed,
         submittedAt: attempt ? attempt.submitted_at : null,
-        answers: enrichedAnswers
+        answers: enrichedAnswers,
       };
     });
 
     const summary = {
       totalBooked: reportData.length,
-      attended: reportData.filter(r => r.status === 'attended' || r.isAttempted).length,
-      passed: reportData.filter(r => r.isPassed).length,
-      failed: reportData.filter(r => r.isAttempted && !r.isPassed).length,
+      attended: reportData.filter((r) => r.status === "attended").length,
+      passed: reportData.filter((r) => r.submissionFinalized && r.isPassed).length,
+      failed: reportData.filter((r) => r.submissionFinalized && !r.isPassed).length,
       capacity: slot.capacity,
       venueName: slot.venue_id?.name || "N/A",
       timeLabel: slot.time_slot_id ? `${slot.time_slot_id.startTime} – ${slot.time_slot_id.endTime}` : "N/A",

@@ -3,13 +3,18 @@ import React, { useEffect, useState } from "react";
 const cardClass = "rounded-xl border border-gray-200 bg-white p-4 shadow-sm";
 const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm";
 
+function strOrEmpty(v) {
+  if (v == null) return "";
+  return typeof v === "string" ? v : String(v);
+}
+
 export default function TrueFalse({ config = {}, value = {}, onChange }) {
-  const [question, setQuestion] = useState(value.question ?? "");
-  const [answer, setAnswer] = useState(value.answer ?? null);
+  const [question, setQuestion] = useState(strOrEmpty(value?.question));
+  const [answer, setAnswer] = useState(value?.answer ?? null);
 
   useEffect(() => {
-    setQuestion(value.question ?? "");
-    setAnswer(value.answer ?? null);
+    setQuestion(strOrEmpty(value?.question));
+    setAnswer(value?.answer ?? null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [JSON.stringify(value || {})]);
 

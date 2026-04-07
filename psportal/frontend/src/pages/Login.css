@@ -21,7 +21,7 @@
   margin: 0;
   font-size: 22px;
   font-weight: 600;
-  color: #111827;
+  color: #001b3d;
 }
 
 .welcome-text {
@@ -53,7 +53,7 @@
   font-size: clamp(1.5rem, 2.6vw, 2rem);
   line-height: 1.2;
   font-weight: 600;
-  color: #1e293b;
+  color: #001b3d;
 }
 
 .login-visual-overlay p {

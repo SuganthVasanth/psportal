@@ -97,7 +97,7 @@ export default function DailyTasks() {
                 type="checkbox"
                 checked={showAll}
                 onChange={(e) => setShowAll(e.target.checked)}
-                className="w-4 h-4 rounded accent-[#6366f1]"
+                className="w-4 h-4 rounded accent-[#2563eb]"
               />
               Show all tasks
             </label>
@@ -120,7 +120,7 @@ export default function DailyTasks() {
 
           <div className="bg-white rounded-2xl border border-[rgba(0,0,0,0.07)] shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-[rgba(0,0,0,0.05)] flex items-center gap-3">
-              <div className="w-9 h-9 rounded-xl bg-[rgba(99,102,241,0.1)] flex items-center justify-center text-[#6366f1]">
+              <div className="w-9 h-9 rounded-xl bg-[rgba(37,99,235,0.1)] flex items-center justify-center text-[#2563eb]">
                 <ClipboardList size={18} />
               </div>
               <div>
@@ -140,7 +140,7 @@ export default function DailyTasks() {
 
             {!loading && !error && sortedTasks.length === 0 && (
               <div className="py-16 flex flex-col items-center gap-3 text-center px-8">
-                <div className="w-14 h-14 rounded-2xl bg-[rgba(99,102,241,0.08)] flex items-center justify-center text-2xl">
+                <div className="w-14 h-14 rounded-2xl bg-[rgba(37,99,235,0.08)] flex items-center justify-center text-2xl">
                   📋
                 </div>
                 <div className="text-[15px] font-semibold text-[#374151]">No tasks for today</div>
@@ -150,7 +150,7 @@ export default function DailyTasks() {
                 <button
                   type="button"
                   onClick={() => navigate("/courses-available")}
-                  className="mt-2 px-5 py-2 bg-[#6366f1] text-white text-sm font-semibold rounded-xl hover:bg-[#4f46e5] transition-colors"
+                  className="mt-2 px-5 py-2 bg-[#2563eb] text-white text-sm font-semibold rounded-xl hover:bg-[#1d4ed8] transition-colors"
                 >
                   Browse Courses
                 </button>
@@ -167,7 +167,7 @@ export default function DailyTasks() {
                         className={`text-[11px] font-semibold px-2.5 py-1 rounded-full ${
                           task.isRegistered
                             ? "bg-[rgba(16,185,129,0.12)] text-[#10b981]"
-                            : "bg-[rgba(99,102,241,0.1)] text-[#6366f1]"
+                            : "bg-[rgba(37,99,235,0.1)] text-[#2563eb]"
                         }`}
                       >
                         {task.isRegistered ? "Enrolled" : "Today"}
@@ -188,14 +188,14 @@ export default function DailyTasks() {
                         type="button"
                         onClick={() => enrollTask(task)}
                         disabled={task.isRegistered || workingTaskId === task.id || !registerNo}
-                        className="px-4 py-2 rounded-xl text-sm font-semibold bg-[rgba(99,102,241,0.1)] text-[#6366f1] border border-[rgba(99,102,241,0.25)] disabled:opacity-60"
+                        className="px-4 py-2 rounded-xl text-sm font-semibold bg-[rgba(37,99,235,0.1)] text-[#2563eb] border border-[rgba(37,99,235,0.25)] disabled:opacity-60"
                       >
                         {task.isRegistered ? "Enrolled" : workingTaskId === task.id ? "Enrolling..." : "Enroll"}
                       </button>
                       <button
                         type="button"
                         onClick={() => openClassroom(task)}
-                        className="px-4 py-2 bg-[#6366f1] hover:bg-[#4f46e5] text-white text-sm font-semibold rounded-xl transition-colors inline-flex items-center gap-1.5"
+                        className="px-4 py-2 bg-[#2563eb] hover:bg-[#1d4ed8] text-white text-sm font-semibold rounded-xl transition-colors inline-flex items-center gap-1.5"
                       >
                         Open Classroom
                         <ExternalLink size={14} />

@@ -87,7 +87,7 @@ export default function Coding({ config = {}, value = {}, onChange }) {
                   className={inputClass}
                   rows={2}
                   placeholder="Sample input"
-                  value={s.input}
+                  value={s.input ?? ""}
                   onChange={(e) => updateSample(idx, "input", e.target.value)}
                 />
               </div>
@@ -97,7 +97,7 @@ export default function Coding({ config = {}, value = {}, onChange }) {
                   className={inputClass}
                   rows={2}
                   placeholder="Sample output"
-                  value={s.output}
+                  value={s.output ?? ""}
                   onChange={(e) => updateSample(idx, "output", e.target.value)}
                 />
               </div>
@@ -115,7 +115,7 @@ export default function Coding({ config = {}, value = {}, onChange }) {
         <button
           type="button"
           onClick={addSample}
-          className="mt-1 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#6366f1] hover:bg-[#e0e7ff]/30"
+          className="mt-1 inline-flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:border-[#2563eb] hover:bg-[#dbeafe]/40"
         >
           <Plus size={14} />
           Add sample
@@ -136,7 +136,7 @@ export default function Coding({ config = {}, value = {}, onChange }) {
                   className={inputClass}
                   rows={2}
                   placeholder="Test case input"
-                  value={tc.input}
+                  value={tc.input ?? ""}
                   onChange={(e) => updateCase(idx, "input", e.target.value)}
                 />
               </div>
@@ -146,7 +146,7 @@ export default function Coding({ config = {}, value = {}, onChange }) {
                   className={inputClass}
                   rows={2}
                   placeholder="Expected output"
-                  value={tc.expectedOutput}
+                  value={tc.expectedOutput ?? ""}
                   onChange={(e) => updateCase(idx, "expectedOutput", e.target.value)}
                 />
               </div>
@@ -164,7 +164,7 @@ export default function Coding({ config = {}, value = {}, onChange }) {
             type="button"
             onClick={addCase}
             disabled={!canAddCase}
-            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white py-2 text-sm font-medium text-gray-600 hover:border-[#6366f1] hover:bg-[#e0e7ff]/30 disabled:opacity-50"
+            className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white py-2 text-sm font-medium text-gray-600 hover:border-[#2563eb] hover:bg-[#dbeafe]/40 disabled:opacity-50"
           >
             <Plus size={16} />
             {canAddCase ? "Add test case" : `Max ${maxCases} test cases`}

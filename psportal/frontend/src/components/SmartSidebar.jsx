@@ -1,17 +1,17 @@
-import React, { createElement, isValidElement, useEffect, useMemo, useRef, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import React, { createElement, isValidElement } from "react";
+import { NavLink } from "react-router-dom";
+import { GraduationCap, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
 import "./StudentSidebar.css";
 
 function labelOf(item) {
   return item.label || item.name || "Untitled";
 }
 
-function renderIcon(icon) {
+function renderIcon(icon, opts = {}) {
+  const { size = 18, className = "" } = opts;
   if (isValidElement(icon)) return icon;
   if (!icon) return null;
-  // Supports function components and forwardRef component objects (e.g. lucide-react icons).
-  return createElement(icon, { size: 18 });
+  return createElement(icon, { size, className });
 }
 
 export default function SmartSidebar({
@@ -22,57 +22,19 @@ export default function SmartSidebar({
   profileRole = "User",
   onLogout,
   brand = "PCDP Portal",
-  logoUrl = "https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png",
-  /** "dark" = default staff/student nav; "soft" = light indigo gradient (e.g. assessment booking) */
+  subtitle = "Skills Platform",
+  logoUrl,
+  /** Unused for styling; prefer `shell`. */
   surface = "dark",
+  /**
+   * "light" = white rail + solid black active pills (student / reference UI).
+   * "dark"  = navy gradient rail (admin / staff).
+   */
+  shell,
 }) {
-  const isSoft = surface === "soft";
-  const location = useLocation();
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [indicatorTop, setIndicatorTop] = useState(0);
-  const itemRefs = useRef([]);
-  const navScrollRef = useRef(null);
-
-  const flatItems = useMemo(() => sections.flatMap((section) => section.items || []), [sections]);
-
-  useEffect(() => {
-    const idx = flatItems.findIndex(
-      (item) =>
-        location.pathname === item.path ||
-        location.pathname.startsWith(`${item.path}/`) ||
-        (item.path !== "/" && location.pathname.startsWith(item.path))
-    );
-    if (idx >= 0) setActiveIndex(idx);
-  }, [location.pathname, flatItems]);
-
-  useEffect(() => {
-    if (activeIndex >= flatItems.length) {
-      setActiveIndex(flatItems.length > 0 ? flatItems.length - 1 : 0);
-    }
-  }, [activeIndex, flatItems.length]);
-
-  const syncIndicatorToActiveItem = () => {
-    const el = itemRefs.current[activeIndex];
-    if (el instanceof HTMLElement) {
-      setIndicatorTop(el.offsetTop);
-    }
-  };
-
-  useEffect(() => {
-    syncIndicatorToActiveItem();
-  }, [activeIndex, collapsed, sections, location.pathname]);
-
-  useEffect(() => {
-    const onResize = () => syncIndicatorToActiveItem();
-    const onScroll = () => syncIndicatorToActiveItem();
-    const nav = navScrollRef.current;
-    window.addEventListener("resize", onResize);
-    nav?.addEventListener("scroll", onScroll);
-    return () => {
-      window.removeEventListener("resize", onResize);
-      nav?.removeEventListener("scroll", onScroll);
-    };
-  }, [activeIndex, collapsed, sections]);
+  void surface;
+  const resolvedShell = shell ?? "light";
+  const isDarkShell = resolvedShell === "dark";
 
   const initials = String(profileName)
     .split(" ")
@@ -82,44 +44,70 @@ export default function SmartSidebar({
     .slice(0, 2)
     .toUpperCase();
 
+  const itemRowClass = ({ isActive }) =>
+    [
+      "flex items-center gap-3 w-full rounded-2xl px-3 py-2.5 min-h-[48px] transition-all duration-200",
+      isActive
+        ? "text-white font-semibold bg-black shadow-[0_6px_20px_rgba(0,0,0,0.22)]"
+        : isDarkShell
+          ? "text-white/60 font-medium hover:bg-white/[0.08] hover:text-white/90"
+          : "text-[#64748b] font-medium hover:bg-slate-50 hover:text-slate-800",
+    ].join(" ");
+
+  const collapsedItemRowClass = ({ isActive }) =>
+    [
+      "flex items-center justify-center w-full rounded-2xl p-2.5 min-h-[44px] transition-all duration-200",
+      isActive
+        ? "text-white bg-black shadow-[0_6px_20px_rgba(0,0,0,0.22)]"
+        : isDarkShell
+          ? "text-white/60 hover:bg-white/[0.08]"
+          : "text-[#64748b] hover:bg-slate-50",
+    ].join(" ");
+
+  const iconClass = (isActive) =>
+    isActive ? "text-white" : isDarkShell ? "text-white/55" : "text-[#64748b]";
+
   return (
     <aside
-      className={`flex flex-col h-screen rounded-r-2xl overflow-hidden relative ${
-        collapsed ? (isSoft ? "w-[72px]" : "w-20") : isSoft ? "w-[220px]" : "w-[260px]"
-      } ${isSoft ? "shadow-[4px_0_24px_rgba(67,56,202,0.08)] border-r border-indigo-100/90" : "shadow-[4px_0_32px_rgba(30,39,97,0.18)]"}`}
-      style={{
-        background: isSoft
-          ? "linear-gradient(165deg, #f0f4ff 0%, #e8eeff 42%, #e0e7ff 100%)"
-          : "linear-gradient(160deg, #2d3a8c 0%, #1e2761 60%, #16204f 100%)",
-      }}
+      className={`smart-sidebar-shell flex flex-col h-screen overflow-hidden relative ${
+        isDarkShell
+          ? `shadow-[4px_0_32px_rgba(0,27,61,0.22)] border-r border-white/[0.12] bg-gradient-to-br from-[#1a3352] via-[#0f2744] to-[#001b3d]`
+          : "border-r border-[#e2e8f0] bg-white shadow-[2px_0_12px_rgba(15,23,42,0.04)]"
+      } ${collapsed ? "w-[72px]" : "w-[268px]"}`}
     >
-      {isSoft ? (
-        <>
-          <div className="absolute w-44 h-44 -top-16 -right-12 rounded-full bg-indigo-400/[0.09] pointer-events-none" />
-          <div className="absolute w-28 h-28 bottom-24 -left-8 rounded-full bg-sky-400/[0.08] pointer-events-none" />
-        </>
-      ) : (
+      {isDarkShell && (
         <>
           <div className="absolute w-40 h-40 -top-10 -right-10 rounded-full bg-white/[0.04] pointer-events-none" />
-          <div className="absolute w-24 h-24 bottom-16 -left-8 rounded-full bg-white/[0.04] pointer-events-none" />
+          <div className="absolute w-24 h-24 bottom-24 -left-8 rounded-full bg-white/[0.04] pointer-events-none" />
         </>
       )}
 
-      <div className={`flex-shrink-0 flex items-center gap-2.5 relative z-10 ${isSoft ? "px-4 py-5" : "px-6 py-7"}`}>
-        <img src={logoUrl} alt="Logo" className={`object-contain ${isSoft ? "w-7 h-7" : "w-8 h-8"}`} />
+      <div className={`flex-shrink-0 flex items-center gap-3 relative z-10 ${collapsed ? "px-3 py-5 justify-center" : "px-5 py-6"}`}>
+        {logoUrl ? (
+          <img src={logoUrl} alt="" className="w-10 h-10 rounded-xl object-contain" />
+        ) : (
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#001b3d] flex items-center justify-center shadow-md shrink-0">
+            <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} aria-hidden />
+          </div>
+        )}
         {!collapsed && (
-          <span
-            className={`text-xl font-bold tracking-[-0.3px] ${isSoft ? "text-slate-800" : "text-white"}`}
-          >
-            {brand}
-          </span>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span
+              className={`text-[17px] font-bold tracking-tight leading-tight ${isDarkShell ? "text-white" : "text-[#0f172a]"}`}
+            >
+              {brand}
+            </span>
+            <span className={`text-xs font-medium mt-0.5 ${isDarkShell ? "text-white/50" : "text-slate-400"}`}>
+              {subtitle}
+            </span>
+          </div>
         )}
         <button
           type="button"
           className={
-            isSoft
-              ? "ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[10px] bg-white/70 text-slate-600 shadow-sm border border-indigo-100/80 hover:bg-white transition-colors duration-200"
-              : "ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[10px] bg-white/15 text-white hover:bg-white/25 transition-colors duration-200"
+            isDarkShell
+              ? `inline-flex items-center justify-center w-8 h-8 rounded-[10px] text-white bg-white/15 border border-white/10 hover:bg-white/25 transition-colors duration-200 ${collapsed ? "absolute top-4 right-2" : "shrink-0 ml-auto"}`
+              : `inline-flex items-center justify-center w-8 h-8 rounded-[10px] text-slate-500 bg-slate-50 border border-slate-200/90 hover:bg-slate-100 transition-colors duration-200 ${collapsed ? "absolute top-4 right-2" : "shrink-0 ml-auto"}`
           }
           onClick={onToggle}
           aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -128,153 +116,102 @@ export default function SmartSidebar({
         </button>
       </div>
 
-      <div ref={navScrollRef} className="flex-1 overflow-y-auto px-3 relative z-10" style={{ scrollbarWidth: "none" }}>
-        <div
-          className={`absolute left-2 right-2 rounded-xl pointer-events-none z-0 ${
-            isSoft ? "ring-1 ring-indigo-100/80" : ""
-          }`}
-          style={{
-            height: "52px",
-            top: indicatorTop,
-            background: isSoft ? "rgba(255,255,255,0.85)" : "rgba(255,255,255,0.13)",
-            backdropFilter: isSoft ? "blur(8px)" : "blur(4px)",
-            boxShadow: isSoft
-              ? "0 4px 14px rgba(67, 56, 202, 0.10)"
-              : "0 2px 16px rgba(0,0,0,0.10)",
-            transition: "top 0.32s cubic-bezier(0.4, 0, 0.2, 1)",
-          }}
-        />
-        <div>
-              {(() => {
-                let globalIndex = 0;
-                return sections.map((section, groupIdx) => {
-                  return (
-                    <div key={section.title || section.label || section.id}>
-                      {!collapsed && (
-                        <p
-                          className={`text-[10px] font-bold tracking-[0.12em] uppercase px-3.5 pt-2.5 pb-1 ${
-                            groupIdx === 0 ? "mt-0" : "mt-2"
-                          } ${isSoft ? "text-slate-400" : "text-white/40"}`}
-                        >
-                          {section.title || section.label || "SECTION"}
-                        </p>
+      <div
+        className="flex-1 overflow-y-auto px-3 pb-2 relative z-10 smart-sidebar-nav"
+        style={{ scrollbarWidth: "thin" }}
+      >
+        {sections.map((section, groupIdx) => (
+          <div key={section.title || section.label || section.id}>
+            {!collapsed && (
+              <p
+                className={`text-[10px] font-bold tracking-[0.14em] uppercase px-3.5 ${
+                  isDarkShell ? "text-white/40" : "text-slate-400"
+                } ${groupIdx === 0 ? "pt-1 pb-2" : "pt-5 pb-2"}`}
+              >
+                {section.title || section.label || "SECTION"}
+              </p>
+            )}
+            <div className="flex flex-col gap-1">
+              {(section.items || []).map((item) => {
+                const Icon = item.icon;
+                const name = labelOf(item);
+                return (
+                  <div key={item.id || name} className="flex items-center px-1.5">
+                    <NavLink to={item.path} className={collapsed ? collapsedItemRowClass : itemRowClass} end={Boolean(item.end)}>
+                      {({ isActive }) => (
+                        <>
+                          <span className="flex items-center justify-center w-8 h-8 shrink-0 [&_svg]:shrink-0">
+                            {renderIcon(Icon, { className: iconClass(isActive) })}
+                          </span>
+                          {!collapsed && (
+                            <>
+                              <span className="flex-1 text-[13px] truncate">{name}</span>
+                              {/* {isActive && (
+                                <Star
+                                  className="w-3.5 h-3.5 text-amber-300 fill-amber-300 flex-shrink-0 drop-shadow-sm"
+                                  aria-hidden
+                                />
+                              )} */}
+                            </>
+                          )}
+                        </>
                       )}
-                      <div>
-                        {(section.items || []).map((item, idx) => {
-                          const index = globalIndex++;
-                          const Icon = item.icon;
-                          const name = labelOf(item);
-                          return (
-                            <div
-                              key={item.id || name}
-                              ref={(el) => {
-                                itemRefs.current[index] = el;
-                              }}
-                              onClick={() => setActiveIndex(index)}
-                              className="flex items-center gap-2 px-2.5 cursor-pointer select-none relative z-10"
-                              style={{ height: "52px" }}
-                            >
-                              <NavLink
-                                to={item.path}
-                                className={({ isActive }) =>
-                                  isSoft
-                                    ? `flex items-center gap-3 w-full rounded-xl pl-2.5 pr-2 py-1.5 transition-all duration-200 ${
-                                        isActive
-                                          ? "bg-white/95 text-indigo-900 font-semibold shadow-sm ring-1 ring-indigo-100/90 border-l-[3px] border-indigo-600"
-                                          : "text-slate-600 font-medium border-l-[3px] border-transparent hover:bg-white/55"
-                                      }`
-                                    : `flex items-center gap-3 w-full ${
-                                        isActive ? "text-white font-semibold" : "text-white/50 font-normal"
-                                      }`
-                                }
-                                end={Boolean(item.end)}
-                              >
-                                {({ isActive }) => (
-                                  <>
-                                    <span
-                                      className={`flex items-center justify-center w-8 h-8 rounded-[10px] transition-colors duration-200 ${
-                                        isSoft
-                                          ? isActive
-                                            ? "bg-indigo-100 text-indigo-700"
-                                            : "text-slate-500 bg-white/45"
-                                          : isActive
-                                            ? "bg-white/20"
-                                            : ""
-                                      }`}
-                                    >
-                                      {renderIcon(Icon)}
-                                    </span>
-                                    {!collapsed && (
-                                      <span
-                                        className={`flex-1 text-[13px] truncate transition-colors duration-200 ${
-                                          isSoft
-                                            ? isActive
-                                              ? "text-indigo-950 font-semibold"
-                                              : "text-slate-600 font-medium"
-                                            : isActive
-                                              ? "text-white font-semibold"
-                                              : "text-white/50 font-normal"
-                                        }`}
-                                      >
-                                        {name}
-                                      </span>
-                                    )}
-                                    {isActive && !collapsed && !isSoft && (
-                                      <span
-                                        className="w-1.5 h-1.5 rounded-full bg-blue-300 flex-shrink-0"
-                                        style={{ boxShadow: "0 0 6px rgba(147,197,253,0.8)" }}
-                                      />
-                                    )}
-                                  </>
-                                )}
-                              </NavLink>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      {groupIdx < sections.length - 1 && (
-                        <div className={`h-px mx-3.5 my-1 ${isSoft ? "bg-indigo-200/50" : "bg-white/[0.07]"}`} />
-                      )}
-                    </div>
-                  );
-                });
-              })()}
-        </div>
+                    </NavLink>
+                  </div>
+                );
+              })}
+            </div>
+            {groupIdx < sections.length - 1 && !collapsed && (
+              <div className={`h-px mx-3.5 my-3 ${isDarkShell ? "bg-white/[0.08]" : "bg-slate-100"}`} />
+            )}
+          </div>
+        ))}
       </div>
 
       <div
-        className={`flex-shrink-0 px-3 pb-5 pt-2 relative z-10 border-t ${
-          isSoft ? "border-indigo-200/60 bg-white/20" : "border-white/[0.08]"
+        className={`flex-shrink-0 px-3 pb-5 pt-3 relative z-10 border-t ${
+          isDarkShell ? "border-white/[0.1] bg-transparent" : "border-slate-100 bg-white"
         }`}
       >
-        <div className="flex items-center gap-3 px-2" style={{ height: "52px" }}>
+        <div className="flex items-center gap-3 px-2 py-1" style={{ minHeight: "48px" }}>
           <div
-            className={`flex items-center justify-center w-8 h-8 rounded-[10px] text-xs font-bold ${
-              isSoft ? "bg-indigo-600 text-white shadow-sm" : "bg-white/20 text-white"
+            className={`flex items-center justify-center w-9 h-9 rounded-xl text-xs font-bold shadow-sm shrink-0 ${
+              isDarkShell ? "bg-white/20 text-white" : "bg-gradient-to-br from-[#2563eb] to-[#1e40af] text-white"
             }`}
           >
             {initials || "U"}
           </div>
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className={`text-sm font-semibold leading-tight truncate ${isSoft ? "text-slate-800" : "text-white"}`}>
+              <span
+                className={`text-sm font-semibold leading-tight truncate ${isDarkShell ? "text-white" : "text-slate-800"}`}
+              >
                 {profileName}
               </span>
-              <span className={`text-[11px] ${isSoft ? "text-slate-500" : "text-white/70"}`}>{profileRole}</span>
+              <span className={`text-[11px] ${isDarkShell ? "text-white/65" : "text-slate-500"}`}>{profileRole}</span>
             </div>
           )}
         </div>
 
         <div
           onClick={onLogout}
-          className={`flex items-center gap-3 px-2 cursor-pointer select-none transition-colors duration-200 rounded-xl mx-1 ${
-            isSoft
-              ? "text-slate-500 hover:text-indigo-700 hover:bg-white/60"
-              : "text-white/45 hover:text-white/70"
-          }`}
-          style={{ height: "48px" }}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              onLogout?.();
+            }
+          }}
+          className={
+            isDarkShell
+              ? "flex items-center gap-3 px-2 py-2.5 mt-1 cursor-pointer select-none transition-colors duration-200 rounded-full mx-0.5 text-white/50 hover:text-white/85 hover:bg-white/[0.08]"
+              : "flex items-center gap-3 px-2 py-2.5 mt-1 cursor-pointer select-none transition-colors duration-200 rounded-full mx-0.5 text-slate-500 hover:text-slate-800 hover:bg-slate-50"
+          }
         >
-          <span className={`flex items-center justify-center w-8 h-8 rounded-[10px] ${isSoft ? "text-slate-500" : ""}`}>
+          <span
+            className={`flex items-center justify-center w-8 h-8 rounded-xl ${isDarkShell ? "text-white/55" : "text-slate-500"}`}
+          >
             <LogOut size={18} />
           </span>
           {!collapsed && <span className="text-sm font-medium">Log Out</span>}

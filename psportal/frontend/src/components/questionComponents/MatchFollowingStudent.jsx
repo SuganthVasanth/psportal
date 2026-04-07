@@ -230,8 +230,8 @@ export default function MatchFollowingStudent({ config = {}, value = {}, onChang
               <rect x={0} y={0} width={Math.max(1, areaSize.width)} height={Math.max(1, areaSize.height)} />
             </clipPath>
             <linearGradient id="mfs-v2-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
-              <stop offset="0%" stopColor="#6366f1" />
-              <stop offset="100%" stopColor="#8b5cf6" />
+              <stop offset="0%" stopColor="#2563eb" />
+              <stop offset="100%" stopColor="#1e40af" />
             </linearGradient>
           </defs>
           <g clipPath="url(#mfs-v2-clip)">

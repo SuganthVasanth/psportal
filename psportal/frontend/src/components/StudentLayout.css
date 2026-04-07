@@ -1,5 +1,5 @@
 :root {
-  --layout-bg: #f8fafc;
+  --layout-bg: var(--ps-bg, #f8fafc);
   --navbar-h: 72px;
   --sidebar-w: 256px;
   --sidebar-w-collapsed: 80px;
@@ -121,7 +121,7 @@
 .avatar-minimal-premium {
   width: 36px;
   height: 36px;
-  background: #3b82f6;
+  background: var(--ps-blue, #2563eb);
   color: #ffffff;
   border-radius: 50%;
   display: flex;
@@ -194,8 +194,8 @@
 }
 
 .layout-booking .search-bar-premium:focus-within {
-  border-color: #a5b4fc;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+  border-color: rgba(37, 99, 235, 0.45);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.18);
 }
 
 .layout-booking .search-bar-premium input::placeholder {
@@ -207,8 +207,8 @@
 }
 
 .layout-booking .nav-btn-premium:hover {
-  background: #eef2ff;
-  color: #4338ca;
+  background: rgba(37, 99, 235, 0.08);
+  color: var(--ps-blue-dark, #1e40af);
 }
 
 .abk-top-avatar {
@@ -217,7 +217,7 @@
   border-radius: 50%;
   object-fit: cover;
   border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(67, 56, 202, 0.12);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
 }
 
 .layout-booking .content-area-premium {

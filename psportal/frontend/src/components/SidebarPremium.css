@@ -2,12 +2,12 @@
 :root {
   --sidebar-w-premium: 256px;
   --sidebar-w-collapsed: 80px;
-  --sidebar-accent: #6366f1;
-  --sidebar-text-active: #1e293b;
+  --sidebar-accent: var(--ps-blue, #2563eb);
+  --sidebar-text-active: var(--ps-text, #0f172a);
   --sidebar-text-muted: rgba(255, 255, 255, 0.7);
   --sidebar-pill: #ffffff;
-  --sidebar-border: #e5e7eb;
-  --layout-bg: #f8fafc;
+  --sidebar-border: var(--ps-border, #e2e8f0);
+  --layout-bg: var(--ps-bg, #f8fafc);
   --navbar-h: 72px;
 }
 

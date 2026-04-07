@@ -7,7 +7,7 @@ const API_BASE = import.meta.env.VITE_API_BASE?.replace(/\/$/, "") || "http://lo
 
 const inputClass =
   "w-full px-4 py-3 rounded-lg border border-gray-300 bg-white " +
-  "focus:ring-2 focus:ring-black focus:border-black outline-none transition " +
+  "focus:ring-2 focus:ring-[#2563eb] focus:border-[#2563eb] outline-none transition " +
   "disabled:opacity-60";
 
 function storeAuthAndRedirect(data) {
@@ -124,8 +124,8 @@ export default function LoginPage() {
               type="submit"
               className="
                 w-full py-3 rounded-lg mt-6
-                bg-black text-white font-medium
-                hover:bg-gray-900 transition
+                bg-[#001b3d] text-white font-medium
+                hover:bg-[#002952] transition
                 disabled:opacity-60 disabled:cursor-not-allowed
               "
               disabled={loading}
@@ -154,7 +154,7 @@ export default function LoginPage() {
           className="
             relative w-full md:w-1/2 shrink-0 flex flex-col items-center justify-center
             p-12 min-h-[280px] md:min-h-0 overflow-hidden
-            bg-gradient-to-br from-[#F1F5F9] to-[#E2E8F0]
+            bg-gradient-to-br from-[#f8fafc] via-[#f1f5f9] to-[#e2e8f0]
           "
         >
           <div className="relative z-10 login-visual-overlay w-full text-center mb-10">

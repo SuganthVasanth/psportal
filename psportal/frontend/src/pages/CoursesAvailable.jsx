@@ -61,18 +61,18 @@ export default function CoursesAvailable() {
 
   const CourseCard = ({ course }) => {
     const colorMap = {
-      Advanced: { bg: "rgba(99,102,241,0.1)", color: "#6366f1", emoji: "🚀" },
+      Advanced: { bg: "rgba(37,99,235,0.1)", color: "#2563eb", emoji: "🚀" },
       Mechanical: { bg: "rgba(245,158,11,0.1)", color: "#f59e0b", emoji: "⚙️" },
       "Analog Electronics": { bg: "rgba(16,185,129,0.1)", color: "#10b981", emoji: "⚡" },
-      Electronics: { bg: "rgba(99,102,241,0.1)", color: "#6366f1", emoji: "🔌" },
+      Electronics: { bg: "rgba(37,99,235,0.1)", color: "#2563eb", emoji: "🔌" },
       AE: { bg: "rgba(236,72,153,0.1)", color: "#ec4899", emoji: "📡" },
       Aptitude: { bg: "rgba(245,158,11,0.1)", color: "#f59e0b", emoji: "🧠" },
-      default: { bg: "rgba(99,102,241,0.08)", color: "#6366f1", emoji: "📘" },
+      default: { bg: "rgba(37,99,235,0.08)", color: "#2563eb", emoji: "📘" },
     };
     const style = colorMap[course.name] || colorMap.default;
 
     return (
-      <div className="group bg-white rounded-2xl border border-[#f1f1f5] overflow-hidden hover:border-[#6366f1]/20 hover:shadow-[0_20px_50px_-20px_rgba(99,102,241,0.15)] transition-all duration-300 flex flex-col h-full">
+      <div className="group bg-white rounded-2xl border border-[#f1f1f5] overflow-hidden hover:border-[#2563eb]/20 hover:shadow-[0_20px_50px_-20px_rgba(37,99,235,0.15)] transition-all duration-300 flex flex-col h-full">
         <div className="h-[120px] flex items-center justify-center relative overflow-hidden">
           {/* Soft background glow */}
           <div 
@@ -109,7 +109,7 @@ export default function CoursesAvailable() {
 
         <div className="p-5 flex flex-col flex-1 gap-4">
           <div className="flex flex-col gap-1">
-            <h3 className="text-base font-semibold text-[#1a1a2e] leading-tight group-hover:text-[#6366f1] transition-colors">
+            <h3 className="text-base font-semibold text-[#1a1a2e] leading-tight group-hover:text-[#2563eb] transition-colors">
               {course.name}
             </h3>
             <div className="flex items-center gap-2 mt-1">
@@ -122,7 +122,7 @@ export default function CoursesAvailable() {
 
           <button
             type="button"
-            className="w-full mt-auto py-2.5 bg-[#6366f1]/5 hover:bg-[#6366f1] text-[#6366f1] hover:text-white text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-[#6366f1]/10 hover:border-[#6366f1] shadow-sm hover:shadow-md"
+            className="w-full mt-auto py-2.5 bg-[#2563eb]/5 hover:bg-[#2563eb] text-[#2563eb] hover:text-white text-sm font-semibold rounded-xl transition-all duration-200 flex items-center justify-center gap-2 border border-[#2563eb]/10 hover:border-[#2563eb] shadow-sm hover:shadow-md"
             onClick={() => navigate(`/course/${course.id}`)}
           >
             {enrolledIds.has(course.id) ? "Continue Learning" : "View Curriculum"}
@@ -151,7 +151,7 @@ export default function CoursesAvailable() {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9ca3af]" size={16} />
               <input
                 placeholder="Search courses, skills, or levels..."
-                className="w-full h-11 pl-11 pr-4 bg-white border border-[#f1f1f5] rounded-2xl text-sm text-[#374151] placeholder:text-[#9ca3af] outline-none focus:ring-4 focus:ring-[#6366f1]/5 focus:border-[#6366f1]/30 transition-all shadow-sm"
+                className="w-full h-11 pl-11 pr-4 bg-white border border-[#f1f1f5] rounded-2xl text-sm text-[#374151] placeholder:text-[#9ca3af] outline-none focus:ring-4 focus:ring-[#2563eb]/5 focus:border-[#2563eb]/30 transition-all shadow-sm"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
@@ -161,8 +161,8 @@ export default function CoursesAvailable() {
                 key={f}
                 className={`px-5 py-2 rounded-2xl text-sm font-semibold transition-all duration-200 shadow-sm ${
                   activeFilter === f
-                    ? "bg-[#6366f1] text-white shadow-[#6366f1]/20 shadow-lg"
-                    : "bg-white border border-[#f1f1f5] text-[#6b7280] hover:border-[#6366f1]/20 hover:text-[#6366f1] hover:shadow-md"
+                    ? "bg-[#2563eb] text-white shadow-[#2563eb]/20 shadow-lg"
+                    : "bg-white border border-[#f1f1f5] text-[#6b7280] hover:border-[#2563eb]/20 hover:text-[#2563eb] hover:shadow-md"
                 }`}
                 onClick={() => setActiveFilter(f)}
               >

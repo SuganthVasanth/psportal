@@ -95,7 +95,7 @@
 
 .web-practice-level-btn.active {
   border-color: #1d4ed8;
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   color: #fff;
 }
 
@@ -160,7 +160,7 @@
   padding: 8px 12px;
   font-weight: 700;
   color: #fff;
-  background: linear-gradient(135deg, #2563eb 0%, #4f46e5 100%);
+  background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
   cursor: pointer;
 }
 

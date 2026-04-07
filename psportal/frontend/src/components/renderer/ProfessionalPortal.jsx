@@ -403,23 +403,6 @@ export default function ProfessionalPortal({
                 </div>
 
                 <div className="flex flex-col gap-6 pt-10 mt-10 border-t border-slate-100">
-                    <div className="flex items-center gap-4">
-                        {isModernMCQ && !isProgramming && (
-                            <>
-                                {!submittedQuestions.has(currentQ.questionNumber) ? (
-                                    <button onClick={handleMCQSubmit} disabled={selectedOptionIdx === null} className="px-10 py-4 bg-slate-600 hover:bg-slate-700 text-white rounded-2xl font-black text-[13px] uppercase tracking-widest transition-all disabled:opacity-50 disabled:grayscale shadow-xl shadow-slate-200 active:scale-95">Submit</button>
-                                ) : (
-                                    <>
-                                        <button onClick={handleMCQReset} className="px-10 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-2xl font-black text-[13px] uppercase tracking-widest transition-all active:scale-95">Reset Answer</button>
-                                        <div className="px-6 py-4 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center gap-3 border border-emerald-100 font-black text-sm shadow-sm">
-                                            <CheckCircle size={20} /> ANSWER SUBMITTED
-                                        </div>
-                                    </>
-                                )}
-                            </>
-                        )}
-                    </div>
-
                     <div className="flex items-center justify-between pt-10 border-t border-slate-50 mt-4">
                         <button disabled={currentIdx === 0} onClick={() => { setCurrentIdx(prev => prev - 1); setTestResults(null); }} className="px-12 py-4 rounded-2xl text-slate-400 font-black text-sm uppercase tracking-widest bg-transparent hover:bg-slate-50 transition-all disabled:opacity-0 active:scale-95">Previous</button>
                         <button onClick={currentIdx === questions.length - 1 ? onSubmitAttempt : () => { setCurrentIdx(prev => prev + 1); setTestResults(null); }} className={`px-14 py-4 rounded-2xl text-white font-black text-sm uppercase tracking-widest shadow-2xl active:scale-95 transition-all ${currentIdx === questions.length - 1 ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-200' : 'bg-slate-900 hover:bg-black shadow-slate-300'}`}>{currentIdx === questions.length - 1 ? 'Finish Attempt' : 'Next'}</button>

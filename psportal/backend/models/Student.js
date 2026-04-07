@@ -16,6 +16,10 @@ const studentSchema = new mongoose.Schema({
     bus_id: { type: mongoose.Schema.Types.ObjectId, ref: "Bus" },
     total_reward_points: { type: Number, default: 0 },
     redeemed_reward_points: { type: Number, default: 0 },
+    /** Carry-over shown in reward points breakdown (INITIAL POINTS row) */
+    reward_carryover: { type: Number, default: 0 },
+    ip1_reward: { type: Number, default: 0 },
+    ip2_reward: { type: Number, default: 0 },
     year: { type: String, default: "III" }
 }, {
     timestamps: true

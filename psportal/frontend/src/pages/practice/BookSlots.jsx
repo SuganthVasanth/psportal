@@ -238,8 +238,8 @@ export default function BookSlots() {
                     </span>
                   </div>
 
-                  <h2 className="abk-card__title">{course.title || "Course"}</h2>
-                  <p className="abk-card__category">{course.levelName || "Assessment"}</p>
+                  <h2 className="abk-card__title">{course.levelName || "Course"}</h2>
+                  <p className="abk-card__category">{course.title || "Assessment"}</p>
                   <p className="abk-card__meta">
                     {openCount > 0 ? `${openCount} open slot${openCount === 1 ? "" : "s"}` : "Open slots will appear when available"}
                   </p>

@@ -7,7 +7,7 @@ const inputClass = "w-full rounded-lg border border-gray-200 bg-white px-3 py-2 
 export default function MatchFollowing({ config = {}, value = {}, onChange }) {
   const { label = "Matching pairs", pairs: numPairs = 4 } = config;
   const [pairList, setPairList] = useState(
-    value.pairs || Array.from({ length: Math.max(1, numPairs) }, (_, i) => ({ left: `Item ${i + 1}`, right: `Match ${i + 1}` }))
+    value?.pairs || Array.from({ length: Math.max(1, numPairs) }, (_, i) => ({ left: `Item ${i + 1}`, right: `Match ${i + 1}` }))
   );
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export default function MatchFollowing({ config = {}, value = {}, onChange }) {
 
   const syncValue = (next) => {
     setPairList(next);
-    onChange?.({ ...value, pairs: next });
+    onChange?.({ ...(value || {}), pairs: next });
   };
 
   const addPair = () => syncValue([...pairList, { left: "", right: "" }]);
@@ -37,7 +37,7 @@ export default function MatchFollowing({ config = {}, value = {}, onChange }) {
               type="text"
               className={inputClass}
               placeholder="Left item"
-              value={p.left}
+              value={p.left ?? ""}
               onChange={(e) => updatePair(idx, "left", e.target.value)}
             />
             <div className="flex items-center gap-1">
@@ -45,7 +45,7 @@ export default function MatchFollowing({ config = {}, value = {}, onChange }) {
                 type="text"
                 className={inputClass}
                 placeholder="Right item"
-                value={p.right}
+                value={p.right ?? ""}
                 onChange={(e) => updatePair(idx, "right", e.target.value)}
               />
               <button
@@ -62,7 +62,7 @@ export default function MatchFollowing({ config = {}, value = {}, onChange }) {
         <button
           type="button"
           onClick={addPair}
-          className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white py-2 text-sm font-medium text-gray-600 hover:border-[#6366f1] hover:bg-[#e0e7ff]/30"
+          className="flex items-center justify-center gap-2 rounded-xl border border-dashed border-gray-300 bg-white py-2 text-sm font-medium text-gray-600 hover:border-[#2563eb] hover:bg-[#dbeafe]/40"
         >
           <Plus size={16} />
           Add pair

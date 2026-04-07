@@ -65,19 +65,19 @@
 }
 
 .mfs__dot:hover:not(.mfs__dot--disabled) {
-  border-color: #6366f1;
+  border-color: #2563eb;
   background: #eef2ff;
 }
 
 .mfs__dot--selected {
-  background: #6366f1;
-  border-color: #6366f1;
+  background: #2563eb;
+  border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
 }
 
 .mfs__dot--connected {
   background: #818cf8;
-  border-color: #6366f1;
+  border-color: #2563eb;
 }
 
 .mfs__dot--disabled {
@@ -166,7 +166,7 @@
 }
 .mfs-v2__btn:hover { background: var(--pastel-surface-soft); transform: scale(1.02); }
 .mfs-v2__btn--reset { color: var(--pastel-text-muted); }
-.mfs-v2__btn--shuffle { color: var(--pastel-primary, #a78bfa); }
+.mfs-v2__btn--shuffle { color: var(--pastel-primary, #2563eb); }
 .mfs-v2__btn--shuffle:hover { background: var(--pastel-primary-soft); box-shadow: 0 0 0 1px var(--pastel-primary-soft); }
 
 /* Connection area: two pastel column cards */
@@ -243,7 +243,7 @@
   transform: scale(1.02);
 }
 .mfs-v2__pill--connected {
-  border-color: var(--pastel-nav-active, #8b5cf6);
+  border-color: var(--pastel-nav-active, #2563eb);
   background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
   box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2), 0 4px 14px rgba(139, 92, 246, 0.15);
 }

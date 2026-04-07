@@ -88,7 +88,7 @@ export default function DynamicQuestionRenderer({ layout = [], value = {}, onCha
         if (comp === "optionList") {
           return (
             <div key={idx} style={commonStyle}>
-              <MCQ config={item} value={val} onChange={(v) => updateField(idx, v)} />
+              <MCQ config={item} value={val ?? {}} onChange={(v) => updateField(idx, v)} />
             </div>
           );
         }
@@ -145,7 +145,7 @@ export default function DynamicQuestionRenderer({ layout = [], value = {}, onCha
                     <input
                       type="text"
                       className={inputClass}
-                      value={typeof o === "string" ? o : o?.text}
+                      value={(typeof o === "string" ? o : o?.text) ?? ""}
                       onChange={(e) => {
                         const next = [...opts];
                         next[i] = e.target.value;
@@ -161,7 +161,7 @@ export default function DynamicQuestionRenderer({ layout = [], value = {}, onCha
         }
         if (comp === "checkboxGroup") {
           const opts = Array.from({ length: item.options || 4 }, (_, i) => val?.options?.[i] ?? `Option ${i + 1}`);
-          const checked = val?.value ?? [];
+          const checked = Array.isArray(val?.value) ? val.value : [];
           return (
             <div key={idx} className={cardClass} style={commonStyle}>
               {item.label && <span className="mb-2 block text-sm font-medium text-gray-700">{item.label}</span>}

@@ -187,7 +187,7 @@ const ROLE_TAG_STYLES = {
   student: { backgroundColor: "#e0f2fe", color: "#0369a1" },
   mentor: { backgroundColor: "#d1fae5", color: "#047857" },
   warden: { backgroundColor: "#fef3c7", color: "#b45309" },
-  "hostel manager": { backgroundColor: "#e0e7ff", color: "#3730a3" },
+  "hostel manager": { backgroundColor: "#dbeafe", color: "#1e3a8a" },
   security: { backgroundColor: "#fee2e2", color: "#b91c1c" },
   admin: { backgroundColor: "#cffafe", color: "#0e7490" },
   super_admin: { backgroundColor: "#e2e8f0", color: "#334155" },
@@ -200,9 +200,9 @@ const ROLE_TAG_PALETTE = [
   { backgroundColor: "#dbeafe", color: "#1d4ed8" },
   { backgroundColor: "#ccfbf1", color: "#0f766e" },
   { backgroundColor: "#fef9c3", color: "#a16207" },
-  { backgroundColor: "#f3e8ff", color: "#7c3aed" },
+  { backgroundColor: "#dbeafe", color: "#1e40af" },
   { backgroundColor: "#fed7aa", color: "#ea580c" },
-  { backgroundColor: "#e0e7ff", color: "#4338ca" },
+  { backgroundColor: "#dbeafe", color: "#1e40af" },
   { backgroundColor: "#d1fae5", color: "#059669" },
   { backgroundColor: "#fecdd3", color: "#be123c" },
   { backgroundColor: "#e0f2fe", color: "#0284c7" },
@@ -859,7 +859,7 @@ export default function AdminDashboard() {
     const counts = coursesList.length ? [320, 280, 150].slice(0, labels.length) : [320, 280, 150];
     return {
       labels,
-      datasets: [{ label: "Applications", data: counts, backgroundColor: ["#8b5cf6", "#06b6d4", "#10b981"] }],
+      datasets: [{ label: "Applications", data: counts, backgroundColor: ["#2563eb", "#06b6d4", "#10b981"] }],
     };
   }, [coursesList]);
   const statsSlotChart = useMemo(() => {
@@ -867,7 +867,7 @@ export default function AdminDashboard() {
     const bookings = slotsList.length ? [450, 320, 280].slice(0, labels.length) : [450, 320, 280];
     return {
       labels,
-      datasets: [{ label: "Bookings", data: bookings, backgroundColor: ["#8b5cf6", "#06b6d4", "#10b981"] }],
+      datasets: [{ label: "Bookings", data: bookings, backgroundColor: ["#2563eb", "#06b6d4", "#10b981"] }],
     };
   }, [slotsList]);
   const statsWeeklyChart = useMemo(() => ({
@@ -894,6 +894,8 @@ export default function AdminDashboard() {
   return (
     <div className="dashboard-layout premium-layout admin-dashboard-layout">
       <SmartSidebar
+        shell="dark"
+        subtitle="Admin Console"
         sections={NAV.map((section) => ({
           title: section.label,
           items: section.sub.map((sub) => {
@@ -3843,20 +3845,29 @@ function SlotReportView({ slotId, onBack }) {
   const [selectedStudent, setSelectedStudent] = useState(null);
 
   useEffect(() => {
-    const fetchReport = async () => {
-      setLoading(true);
+    let cancelled = false;
+    const fetchReport = async (opts = { silent: false }) => {
+      if (!opts.silent) setLoading(true);
       try {
         const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${slotId}/report`);
         const json = await res.json();
         if (!res.ok) throw new Error(json.message || "Failed to fetch report");
-        setData(json);
+        if (!cancelled) {
+          setData(json);
+          setError(null);
+        }
       } catch (err) {
-        setError(err.message);
+        if (!cancelled && !opts.silent) setError(err.message);
       } finally {
-        setLoading(false);
+        if (!cancelled && !opts.silent) setLoading(false);
       }
     };
-    fetchReport();
+    fetchReport({ silent: false });
+    const poll = setInterval(() => fetchReport({ silent: true }), 12000);
+    return () => {
+      cancelled = true;
+      clearInterval(poll);
+    };
   }, [slotId]);
 
   if (loading) return (
@@ -3978,15 +3989,17 @@ function SlotReportView({ slotId, onBack }) {
                   </td>
                   <td>
                     <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                      s.isAttempted 
-                        ? "bg-indigo-50 text-indigo-600 border-indigo-100" 
-                        : "bg-slate-50 text-slate-400 border-slate-100"
+                      s.submissionFinalized
+                        ? "bg-indigo-50 text-indigo-600 border-indigo-100"
+                        : s.hasLiveAttempt
+                          ? "bg-amber-50 text-amber-700 border-amber-100"
+                          : "bg-slate-50 text-slate-400 border-slate-100"
                     }`}>
-                      {s.isAttempted ? "Attempted" : "Absent"}
+                      {s.submissionFinalized ? "Submitted" : s.hasLiveAttempt ? "In progress" : "Absent"}
                     </span>
                   </td>
                   <td>
-                    {s.isAttempted ? (
+                    {s.submissionFinalized || s.hasLiveAttempt ? (
                       <div className="flex items-center gap-2">
                         <span className={`text-[13px] font-black ${s.tabSwitches > 5 ? "text-rose-600" : s.tabSwitches > 0 ? "text-amber-600" : "text-emerald-600"}`}>
                           {s.tabSwitches || 0} switches
@@ -4001,12 +4014,12 @@ function SlotReportView({ slotId, onBack }) {
                   </td>
                   <td>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '18px', fontWeight: "900", color: s.isAttempted ? "#1e293b" : "#cbd5e1" }}>{s.isAttempted ? s.score : "—"}</span>
-                      {s.isAttempted && <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>PTS</span>}
+                      <span style={{ fontSize: '18px', fontWeight: "900", color: s.hasLiveAttempt ? "#1e293b" : "#cbd5e1" }}>{s.hasLiveAttempt ? s.score : "—"}</span>
+                      {s.hasLiveAttempt && <span style={{ fontSize: '11px', color: '#94a3b8', fontWeight: '600' }}>PTS</span>}
                     </div>
                   </td>
                   <td>
-                    {s.isAttempted ? (
+                    {s.submissionFinalized ? (
                       s.isPassed ? (
                         <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '6px 12px', backgroundColor: '#ecfdf5', color: '#059669', borderRadius: '10px', fontSize: '12px', fontWeight: '800' }}>
                           <UserCheck size={14} /> <span>PASSED</span>
@@ -4017,13 +4030,13 @@ function SlotReportView({ slotId, onBack }) {
                         </div>
                       )
                     ) : (
-                      <span style={{ color: "#cbd5e1", fontWeight: '700' }}>—</span>
+                      <span style={{ color: "#94a3b8", fontWeight: '700' }}>—</span>
                     )}
                   </td>
                   <td style={{ textAlign: 'right', paddingRight: '24px' }}>
                     <button 
                       className="group inline-flex items-center gap-2 px-4 py-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl transition-all border border-indigo-100 font-bold text-xs"
-                      disabled={!s.isAttempted}
+                      disabled={!s.hasLiveAttempt || !(s.answers && s.answers.length)}
                       onClick={() => {
                         setSelectedAnswers(s.answers || []);
                         setSelectedStudent(s);
@@ -4108,36 +4121,103 @@ function ReviewAnswersModal({ student, answers, onClose }) {
 
     const findMCQSelection = (obj, targetKey) => {
       if (!obj || typeof obj !== 'object') return null;
-      // 1. Direct match with mcqKey from Question Bank
-      if (targetKey && obj[targetKey]) return obj[targetKey];
-      
-      // 2. Search for any key that contains 'mcq' or 'multiple_choice' or matches targetKey suffix
+
+      // Helper: given a block that may be a string, {text,...}, or {options:[...]} wrapper,
+      // drill down to the actual selected option object or string.
+      const resolveSelectedOption = (block) => {
+        if (!block) return null;
+        // It's a plain string — the direct selected text
+        if (typeof block === 'string') return block;
+        // It's {text, correct, ...} — an option object
+        if (block.text !== undefined || block.value !== undefined) return block;
+        // It's {options: [{text, correct}, ...]} — a full MCQ value block
+        if (Array.isArray(block.options)) {
+          const selected = block.options.find(o => o && o.correct === true);
+          return selected || null;
+        }
+        return null;
+      };
+
+      // 1. Direct match with the mcqKey from the Question Bank metadata
+      if (targetKey && obj[targetKey] !== undefined) {
+        const resolved = resolveSelectedOption(obj[targetKey]);
+        if (resolved) return resolved;
+      }
+
+      // 2. Search for any key containing 'mcq' or 'multiple_choice'
       for (const k in obj) {
-        if (k.toLowerCase().includes('mcq') || k.toLowerCase().includes('multiple_choice') || (targetKey && k.includes(targetKey))) {
-          if (obj[k]) return obj[k];
+        if (
+          k.toLowerCase().includes('mcq') ||
+          k.toLowerCase().includes('multiple_choice') ||
+          (targetKey && k.includes(targetKey))
+        ) {
+          const resolved = resolveSelectedOption(obj[k]);
+          if (resolved) return resolved;
         }
       }
-      
-      // 3. Fallback: Search for component IDs
+
+      // 3. Fallback: top-level 'options' array (legacy submissions)
+      if (obj.options && Array.isArray(obj.options)) {
+        const selected = obj.options.find(o => o && o.correct === true);
+        if (selected) return selected;
+      }
+
+      // 4. Fallback: any component-id key
       for (const k in obj) {
         if (k.startsWith('component-') && obj[k]) {
-          // If the value is one of the options (we'll check this later, but for now return it)
-          const potential = obj[k];
-          if (typeof potential === 'string' || (typeof potential === 'object' && potential.text)) return potential;
+          const resolved = resolveSelectedOption(obj[k]);
+          if (resolved) return resolved;
         }
       }
+
       return null;
     };
 
-    // MCQ Detection logic
+    // Question Type Detection logic
     const options = currentAnswer.options || [];
     const correctIdx = currentAnswer.correctIdx ?? -1;
     const mcqKey = currentAnswer.mcqKey;
     const studentSelection = findMCQSelection(val, mcqKey);
     const isMcq = options.length > 0;
+    
+    // Non-MCQ answers (from enhanced backend)
+    const correctAnswerVal = currentAnswer.correctAnswer;
+    const correctPairs = currentAnswer.pairs;
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+        
+        {/* SUMMARY VERDICT SECTION */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '24px', backgroundColor: '#fcfdfe', borderRadius: '24px', border: '1px solid #e2e8f0' }}>
+          <div style={{ fontSize: '10px', fontWeight: '900', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px' }}>
+            Submission Comparison
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ padding: '16px', borderRadius: '16px', backgroundColor: '#eff6ff', border: '1px solid #bfdbfe' }}>
+              <div style={{ fontSize: '11px', color: '#2563eb', fontWeight: '900', marginBottom: '8px', textTransform: 'uppercase' }}>Student Answer</div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>
+                {isMcq ? (
+                  studentSelection ? (typeof studentSelection === 'object' ? studentSelection.text : studentSelection) : "No selection"
+                ) : (
+                  studentResponse || (typeof val === 'string' ? val : (val.value || "No response"))
+                )}
+              </div>
+            </div>
+            
+            <div style={{ padding: '16px', borderRadius: '16px', backgroundColor: '#f0fdf4', border: '1px solid #d1fae5' }}>
+              <div style={{ fontSize: '11px', color: '#059669', fontWeight: '900', marginBottom: '8px', textTransform: 'uppercase' }}>Actual Answer</div>
+              <div style={{ fontSize: '15px', fontWeight: '800', color: '#1e293b' }}>
+                {isMcq ? (
+                  correctIdx >= 0 && options[correctIdx] ? (typeof options[correctIdx] === 'object' ? options[correctIdx].text : options[correctIdx]) : "Not specified"
+                ) : (
+                  correctAnswerVal || "Not specified"
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* 1. MCQ RENDERING */}
         {isMcq && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
@@ -4148,8 +4228,8 @@ function ReviewAnswersModal({ student, answers, onClose }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {options.map((opt, idx) => {
                 const optText = (typeof opt === 'object' ? opt.text : opt)?.toString().trim();
-                const studentText = (typeof studentSelection === 'object' ? studentSelection.text : studentSelection)?.toString().trim();
-                const isSelected = studentText && optText && (studentText === optText);
+                const studentText = (typeof studentSelection === 'object' ? (studentSelection.text || studentSelection.value) : studentSelection)?.toString().trim();
+                const isSelected = !!(studentText && optText && (studentText === optText));
                 const isCorrect = (idx === correctIdx);
                 
                 return (
@@ -4159,32 +4239,38 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                       padding: '16px 20px',
                       borderRadius: '16px',
                       border: isSelected 
-                        ? '2px solid #4f46e5' 
+                        ? '2px solid #2563eb' 
                         : (isCorrect ? '2px solid #10b981' : '1px solid #e2e8f0'),
                       backgroundColor: isSelected 
-                        ? '#eef2ff' 
+                        ? '#eff6ff' 
                         : (isCorrect ? '#f0fdf4' : '#fff'),
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
                       transition: 'all 0.2s ease',
-                      boxShadow: isSelected ? '0 4px 6px -1px rgba(79, 70, 229, 0.1)' : 'none'
+                      boxShadow: isSelected ? '0 4px 12px rgba(79, 70, 229, 0.15)' : 'none',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                   >
+                    {isSelected && <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#2563eb' }}></div>}
+                    {isCorrect && !isSelected && <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#10b981' }}></div>}
+                    
                     <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
                       <div style={{ 
-                        width: '24px', height: '24px', borderRadius: '50%', border: '2px solid',
-                        borderColor: isSelected ? '#4f46e5' : (isCorrect ? '#10b981' : '#cbd5e1'),
+                        width: '28px', height: '28px', borderRadius: '50%', border: '2px solid',
+                        borderColor: isSelected ? '#2563eb' : (isCorrect ? '#10b981' : '#cbd5e1'),
                         display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        backgroundColor: isSelected ? '#4f46e5' : 'transparent',
-                        color: '#fff', fontSize: '10px', fontWeight: '900'
+                        backgroundColor: isSelected ? '#2563eb' : (isCorrect ? '#f0fdf4' : 'transparent'),
+                        color: isSelected ? '#fff' : (isCorrect ? '#059669' : '#94a3b8'), 
+                        fontSize: '11px', fontWeight: '900'
                       }}>
                         {String.fromCharCode(65 + idx)}
                       </div>
                       <span style={{ 
-                        fontSize: '14px', 
-                        fontWeight: (isSelected || isCorrect) ? '750' : '500',
-                        color: isSelected ? '#1e293b' : (isCorrect ? '#065f46' : '#475569')
+                        fontSize: '14.5px', 
+                        fontWeight: (isSelected || isCorrect) ? '800' : '500',
+                        color: isSelected ? '#1e293b' : (isCorrect ? '#064e3b' : '#64748b')
                       }}>
                         {optText}
                       </span>
@@ -4194,17 +4280,21 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                       {isSelected && (
                         <div style={{ 
                           fontSize: '9px', fontWeight: '900', letterSpacing: '0.05em', 
-                          padding: '4px 8px', borderRadius: '6px', 
-                          backgroundColor: '#4f46e5', color: '#fff' 
+                          padding: '5px 10px', borderRadius: '8px', 
+                          backgroundColor: isCorrect ? '#ecfdf5' : '#2563eb', 
+                          color: isCorrect ? '#059669' : '#fff',
+                          border: isCorrect ? '1px solid #10b981' : 'none',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                         }}>
-                          STUDENT'S SELECTION
+                          {isCorrect ? "STUDENT CORRECTLY SELECTED" : "STUDENT'S SELECTION"}
                         </div>
                       )}
-                      {isCorrect && (
+                      {isCorrect && !isSelected && (
                         <div style={{ 
                           fontSize: '9px', fontWeight: '900', letterSpacing: '0.05em', 
-                          padding: '4px 8px', borderRadius: '6px', 
-                          backgroundColor: '#10b981', color: '#fff' 
+                          padding: '5px 10px', borderRadius: '8px', 
+                          backgroundColor: '#10b981', color: '#fff',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
                         }}>
                           CORRECT ANSWER
                         </div>
@@ -4217,7 +4307,24 @@ function ReviewAnswersModal({ student, answers, onClose }) {
           </div>
         )}
 
-        {/* 2. STUDENT ANSWER (CODE) */}
+        {/* 2. MATCH THE FOLLOWING RENDERING */}
+        {correctPairs && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
+              <GitBranch size={14} className="text-amber-500" />
+              Pairing Verification
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+               {/* This would need more detailed mapping if pairs are complex, but for now show raw if not handled */}
+               <div style={{ backgroundColor: '#fffbeb', padding: '16px', borderRadius: '16px', border: '1px solid #fef3c7' }}>
+                 <div style={{ fontSize: '10px', color: '#b45309', fontWeight: '900', marginBottom: '8px' }}>Correct Pairs</div>
+                 <pre style={{ margin: 0, fontSize: '12px', color: '#92400e', fontWeight: '600' }}>{JSON.stringify(correctPairs, null, 2)}</pre>
+               </div>
+            </div>
+          </div>
+        )}
+
+        {/* 3. STUDENT ANSWER (CODE) */}
         {studentResponse && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -4245,7 +4352,7 @@ function ReviewAnswersModal({ student, answers, onClose }) {
           </div>
         )}
 
-        {/* 2. AUTOMATED TEST RESULTS */}
+        {/* 4. AUTOMATED TEST RESULTS */}
         {testCases && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
@@ -4303,8 +4410,8 @@ function ReviewAnswersModal({ student, answers, onClose }) {
           </div>
         )}
 
-        {/* FALLBACK FOR NON-PROGRAMMING CONTENT (If not MCQ) */}
-        {!studentResponse && !testCases && !isMcq && (
+        {/* 5. FALLBACK FOR OTHER CONTENT (If not MCQ/Code) */}
+        {!studentResponse && !testCases && !isMcq && !correctAnswerVal && (
           <div style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "20px", border: "1px solid #e2e8f0" }}>
              <div style={{ fontSize: "9px", color: "#94a3b8", fontWeight: "900", textTransform: "uppercase", letterSpacing: "0.15em", marginBottom: '12px' }}>Response Data</div>
              <pre style={{ margin: 0, fontSize: "12px", color: "#475569", overflow: "auto", fontWeight: '600', whiteSpace: 'pre-wrap' }}>
@@ -4321,7 +4428,7 @@ function ReviewAnswersModal({ student, answers, onClose }) {
       <div style={{ width: "100%", maxWidth: "1000px", height: "85vh", backgroundColor: "#fff", borderRadius: "32px", display: "flex", flexDirection: "column", overflow: "hidden", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)" }}>
         <div style={{ padding: "24px 32px", borderBottom: "1px solid #f1f5f9", display: "flex", alignItems: "center", justifyContent: "space-between", backgroundColor: "#f8fafc" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-            <div style={{ width: "48px", height: "48px", borderRadius: "16px", backgroundColor: "#eef2ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#4f46e5" }}>
+            <div style={{ width: "48px", height: "48px", borderRadius: "16px", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", color: "#2563eb" }}>
               <UserCheck size={24} />
             </div>
             <div>
@@ -4349,7 +4456,7 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                 onClick={() => setActiveIdx(i)}
                 style={{ 
                   width: "100%", textAlign: "left", padding: "14px 16px", borderRadius: "14px", fontSize: "13px", fontWeight: "800", transition: "all 0.2s",
-                  backgroundColor: activeIdx === i ? "#4f46e5" : "transparent",
+                  backgroundColor: activeIdx === i ? "#2563eb" : "transparent",
                   color: activeIdx === i ? "#fff" : "#475569",
                   border: "none", cursor: "pointer",
                   boxShadow: activeIdx === i ? "0 10px 15px -3px rgba(79, 70, 229, 0.2)" : "none"
@@ -4364,7 +4471,7 @@ function ReviewAnswersModal({ student, answers, onClose }) {
             {currentAnswer ? (
               <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
-                  <div style={{ padding: '8px', backgroundColor: '#f5f3ff', borderRadius: '8px', color: '#7c3aed' }}>
+                  <div style={{ padding: '8px', backgroundColor: '#eff6ff', borderRadius: '8px', color: '#1e40af' }}>
                     <Terminal size={20} />
                   </div>
                   <h4 style={{ fontSize: "18px", fontWeight: "900", color: "#1e293b", margin: 0 }}>Submission Detail</h4>
@@ -4372,8 +4479,8 @@ function ReviewAnswersModal({ student, answers, onClose }) {
                 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                    <div style={{ padding: '24px', backgroundColor: '#f8fafc', borderRadius: '24px', border: '1px solid #e2e8f0', position: 'relative', overflow: 'hidden' }}>
-                    <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#4f46e5' }}></div>
-                    <div style={{ fontSize: '10px', fontWeight: '900', color: '#6366f1', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
+                    <div style={{ position: 'absolute', top: 0, left: 0, width: '4px', height: '100%', backgroundColor: '#2563eb' }}></div>
+                    <div style={{ fontSize: '10px', fontWeight: '900', color: '#2563eb', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '8px' }}>
                       Problem Statement
                     </div>
                     <h5 style={{ fontSize: '18px', fontWeight: '900', color: '#1e293b', marginBottom: '12px', lineHeight: '1.4' }}>
