@@ -1,9 +1,28 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, User, Fingerprint, Play, ArrowLeft } from "lucide-react";
+import {
+    Loader2,
+    ArrowLeft,
+    ArrowRight,
+    Check,
+    GraduationCap,
+    BarChart3,
+    ShieldCheck,
+    History,
+} from "lucide-react";
 import StudentLayout from "../../components/StudentLayout";
 import API from "../../services/api";
 import "./PreTestPortal.css";
+
+function difficultyLabel(levelIndex, levelName) {
+    const n = (levelName || "").toLowerCase();
+    if (/advanced|expert|hard/.test(n)) return "ADVANCED";
+    if (/beginner|foundation|basic/.test(n)) return "BEGINNER";
+    if (/intermediate|1-a|1-b|level\s*[12]/.test(n)) return "INTERMEDIATE";
+    if (levelIndex <= 0) return "BEGINNER";
+    if (levelIndex === 1) return "INTERMEDIATE";
+    return "ADVANCED";
+}
 
 export default function PreTestPortal() {
     const { courseId } = useParams();
@@ -24,15 +43,17 @@ export default function PreTestPortal() {
 
         const fetchData = async () => {
             try {
-                // Fetch student profile
-                const studentRes = await API.get(`/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`);
+                const studentRes = await API.get(
+                    `/api/dashboard/student?register_no=${encodeURIComponent(registerNo)}`
+                );
                 setStudentData(studentRes.data.profile);
 
-                const coursesRes = await API.get(`/api/dashboard/my-courses?register_no=${encodeURIComponent(registerNo)}`);
+                const coursesRes = await API.get(
+                    `/api/dashboard/my-courses?register_no=${encodeURIComponent(registerNo)}`
+                );
                 const myCourses = Array.isArray(coursesRes.data) ? coursesRes.data : [];
-                const currentCourse = myCourses.find(c => String(c.id) === String(courseId));
+                const currentCourse = myCourses.find((c) => String(c.id) === String(courseId));
                 setCourseData(currentCourse);
-
             } catch (err) {
                 console.error("Error fetching pre-test data:", err);
                 setError("Failed to load portal information.");
@@ -44,12 +65,28 @@ export default function PreTestPortal() {
         fetchData();
     }, [registerNo, courseId]);
 
+    const durationMin = courseData?.durationMinutes ?? 60;
+    const questionCount = courseData?.questionsPerAssessment ?? 5;
+    const levelName = courseData?.levelName || "—";
+    const courseTitle = courseData?.title || "—";
+    const levelIdx = courseData?.levelIndex ?? 0;
+    const tier = useMemo(
+        () => difficultyLabel(levelIdx, levelName),
+        [levelIdx, levelName]
+    );
+
+    const avatarSrc = useMemo(() => {
+        if (studentData?.avatarUrl) return studentData.avatarUrl;
+        const name = encodeURIComponent(studentData?.name || "Student");
+        return `https://ui-avatars.com/api/?name=${name}&background=2563eb&color=fff&size=128`;
+    }, [studentData?.avatarUrl, studentData?.name]);
+
     if (loading) {
         return (
             <StudentLayout>
-                <div className="pre-test-loading">
-                    <Loader2 className="animate-spin" size={48} />
-                    <p>Preparing your test portal...</p>
+                <div className="apt-loading">
+                    <Loader2 className="apt-loading-icon" size={40} strokeWidth={2} />
+                    <p>Preparing your assessment preview…</p>
                 </div>
             </StudentLayout>
         );
@@ -58,11 +95,12 @@ export default function PreTestPortal() {
     if (error) {
         return (
             <StudentLayout>
-                <div className="pre-test-error">
-                    <h2>Error</h2>
+                <div className="apt-error">
+                    <h2>Something went wrong</h2>
                     <p>{error}</p>
-                    <button onClick={() => navigate(-1)} className="back-btn">
-                        <ArrowLeft size={16} /> Go Back
+                    <button type="button" onClick={() => navigate(-1)} className="apt-error-back">
+                        <ArrowLeft size={18} strokeWidth={2.2} />
+                        Go back
                     </button>
                 </div>
             </StudentLayout>
@@ -70,58 +108,95 @@ export default function PreTestPortal() {
     }
 
     return (
-        <StudentLayout hideNav={true}>
-            <div className="pre-test-portal-wrapper">
-                <div className="pre-test-card-premium">
-                    <div className="pre-test-header-accent"></div>
+        <StudentLayout hideNav>
+            <div className="apt-shell">
+                <header className="apt-topbar">
+                    <button
+                        type="button"
+                        className="apt-back"
+                        onClick={() => navigate(-1)}
+                        aria-label="Go back"
+                    >
+                        <ArrowLeft size={20} strokeWidth={2.2} />
+                    </button>
+                    <h1 className="apt-topbar-title">Assessment Preview</h1>
+                    <span className="apt-topbar-spacer" aria-hidden />
+                </header>
 
-                    <div className="pre-test-content-centered">
-                        <div className="student-profile-section-premium">
-                            <div className="profile-photo-container-premium">
-                                {studentData?.avatarUrl ? (
-                                    <img src={studentData.avatarUrl} alt="Student Profile" className="profile-photo-premium" />
-                                ) : (
-                                    <div className="profile-photo-placeholder-premium">
-                                        <User size={64} />
+                <main className="apt-main">
+                    <section className="apt-hero-card">
+                        <div className="apt-hero-accent" aria-hidden />
+                        <div className="apt-hero-inner">
+                            <div className="apt-profile-block">
+                                <div className="apt-avatar-wrap">
+                                    <img src={avatarSrc} alt="" className="apt-avatar" />
+                                    <span className="apt-verified" title="Verified" aria-hidden>
+                                        <Check size={12} strokeWidth={3} />
+                                    </span>
+                                </div>
+                                <h2 className="apt-student-name">
+                                    {(studentData?.name || "Student").toUpperCase()}
+                                </h2>
+                                <p className="apt-student-id">ID: {registerNo}</p>
+                            </div>
+
+                            <div className="apt-detail-stack">
+                                <div className="apt-detail-row">
+                                    <div className="apt-detail-icon apt-detail-icon--blue">
+                                        <GraduationCap size={20} strokeWidth={2} />
                                     </div>
-                                )}
-                            </div>
-                            <h1 className="student-name-premium">{studentData?.name || "Student"}</h1>
-                            <div className="student-meta-badge-premium">
-                                <Fingerprint size={14} />
-                                <span>{registerNo}</span>
-                            </div>
-                        </div>
-
-                        <div className="test-info-section-premium">
-                            <div className="test-info-row-premium">
-                                <div className="test-info-text-premium">
-                                    <span className="test-info-label-premium">Assessment Level</span>
-                                    <h2 className="test-info-value-premium">{courseData?.levelName || "Not Found"}</h2>
+                                    <div className="apt-detail-text">
+                                        <span className="apt-detail-label">Course name</span>
+                                        <span className="apt-detail-value">{courseTitle}</span>
+                                    </div>
+                                </div>
+                                <div className="apt-detail-row">
+                                    <div className="apt-detail-icon apt-detail-icon--teal">
+                                        <BarChart3 size={20} strokeWidth={2} />
+                                    </div>
+                                    <div className="apt-detail-text apt-detail-text--level">
+                                        <span className="apt-detail-label">Assessment level</span>
+                                        <div className="apt-level-line">
+                                            <span className="apt-detail-value">{levelName}</span>
+                                            
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <div className="test-info-row-premium">
-                                <div className="test-info-text-premium">
-                                    <span className="test-info-label-premium">Course Name</span>
-                                    <h2 className="test-info-value-premium">{courseData?.title || "Not Found"}</h2>
+
+                            <div className="apt-stats-footer">
+                                <div className="apt-stat">
+                                    <span className="apt-stat-label">Duration</span>
+                                    <span className="apt-stat-value">
+                                        {durationMin}{" "}
+                                        {durationMin === 1 ? "Minute" : "Minutes"}
+                                    </span>
+                                </div>
+                                <div className="apt-stat-divider" aria-hidden />
+                                <div className="apt-stat">
+                                    <span className="apt-stat-label">Questions</span>
+                                    <span className="apt-stat-value">
+                                        {questionCount} {questionCount === 1 ? "Item" : "Items"}
+                                    </span>
                                 </div>
                             </div>
                         </div>
+                    </section>
 
-                        <div className="pre-test-actions-premium">
-                            <button
-                                className="start-test-btn-premium"
-                                onClick={() => navigate(`/course/${courseId}?launch=true`)}
-                            >
-                                <Play size={20} />
-                                Proceed to Assessment
-                            </button>
-                            <p className="pre-test-disclaimer-premium">
-                                By proceeding, you agree to follow the assessment rules and guidelines.
-                            </p>
-                        </div>
-                    </div>
-                </div>
+                    
+
+                    <button
+                        type="button"
+                        className="apt-cta"
+                        onClick={() => navigate(`/course/${courseId}?launch=true`)}
+                    >
+                        <span>Proceed to Assessment</span>
+                        <ArrowRight size={20} strokeWidth={2.25} aria-hidden />
+                    </button>
+                    <p className="apt-disclaimer">
+                        By proceeding, you agree to follow the assessment rules and guidelines.
+                    </p>
+                </main>
             </div>
         </StudentLayout>
     );

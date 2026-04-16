@@ -43,6 +43,8 @@ import "./SuperAdminDashboard.css";
 import "../components/SidebarPremium.css";
 import { ChevronRight, Search, Bell } from "lucide-react";
 import ChatModal from "../components/ChatModal";
+import SmartSidebar from "../components/SmartSidebar";
+import ProfileDetailsModal from "../components/ProfileDetailsModal";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -103,6 +105,7 @@ const NAV = [
     label: "Reports",
     icon: BarChart3,
     sub: [
+      { id: "reports-center", label: "Admin Reports Center", icon: BarChart3 },
       { id: "stats-course", label: "Students applied per course (year, dept)", icon: TrendingUp },
       { id: "stats-slot", label: "Slot used most often", icon: PieChart },
       { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2 },
@@ -213,6 +216,17 @@ export default function SuperAdminDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
+  const [reportsFilters, setReportsFilters] = useState({
+    from: "",
+    to: "",
+    course_id: "",
+    department: "",
+    year: "",
+  });
+  const [reportsData, setReportsData] = useState(null);
+  const [reportsLoading, setReportsLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
@@ -264,6 +278,30 @@ export default function SuperAdminDashboard() {
       }
     };
     fetchAll();
+  }, []);
+
+  const fetchReports = async (overrideFilters) => {
+    const nextFilters = overrideFilters || reportsFilters;
+    const params = new URLSearchParams();
+    Object.entries(nextFilters).forEach(([k, v]) => {
+      if (v) params.set(k, v);
+    });
+    setReportsLoading(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/superadmin/reports?${params.toString()}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Failed to load reports");
+      setReportsData(data);
+    } catch (e) {
+      alert(e.message || "Failed to load reports");
+    } finally {
+      setReportsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchReports();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const userRole = localStorage.getItem("role") || "super_admin";
@@ -453,69 +491,26 @@ export default function SuperAdminDashboard() {
 
   return (
     <div className="dashboard-layout premium-layout sa-dashboard-layout">
-      <aside className="student-sidebar-premium">
-        <div className="sidebar-header-premium">
-          <img
-            src="https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png"
-            alt="Logo"
-            className="sidebar-logo-premium"
-          />
-          <span className="sidebar-brand-premium">PCDP Portal</span>
-        </div>
+      <SmartSidebar
+        subtitle="Skills Platform"
+        sections={NAV.map((section) => ({
+          title: section.label,
+          items: (section.sub || []).map((sub) => ({
+            id: sub.id,
+            label: sub.label,
+            icon: sub.icon || section.icon,
+            active: activeSub === sub.id,
+            onClick: () => setActiveSub(sub.id),
+          })),
+        }))}
+        profileName={userName}
+        profileRole="Super Admin"
+        onLogout={handleLogout}
+        collapsed={sidebarCollapsed}
+        onToggle={() => setSidebarCollapsed((v) => !v)}
+      />
 
-        <nav className="sidebar-nav-premium">
-          {NAV.map((section) => {
-            return (
-              <div key={section.id} className="nav-section-premium">
-                <h3 className="section-title-premium">{section.label}</h3>
-                <ul>
-                  {section.sub.map((sub) => {
-                    const SubIcon = sub.icon;
-                    const isActive = activeSub === sub.id;
-                    return (
-                      <li key={sub.id}>
-                        <a
-                          href="#"
-                          className={`nav-item-premium ${isActive ? "active" : ""}`}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            setActiveSub(sub.id);
-                          }}
-                        >
-                          <span className="icon-wrapper-premium">
-                            {SubIcon ? <SubIcon size={20} /> : <section.icon size={20} />}
-                          </span>
-                          <span className="item-name-premium">{sub.label}</span>
-                          {isActive && <ChevronRight size={14} className="active-indicator-premium" />}
-                        </a>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            );
-          })}
-        </nav>
-
-        <div className="sidebar-footer-premium">
-          <div className="user-profile-summary-premium">
-            <div className="user-avatar-premium">
-              {userInitials}
-            </div>
-            <div className="user-info-premium">
-              <span className="user-name-premium">{userName}</span>
-              <span className="user-role-premium">Super Admin</span>
-            </div>
-          </div>
-
-          <button onClick={handleLogout} className="logout-btn-premium">
-            <LogOut size={18} />
-            <span>Logout</span>
-          </button>
-        </div>
-      </aside>
-
-      <div className="main-container-premium">
+      <div className={`main-container-premium ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}>
         <header className="top-navbar-premium">
           <div className="search-bar-premium">
             <Search size={18} className="search-icon" />
@@ -527,7 +522,7 @@ export default function SuperAdminDashboard() {
               <Bell size={20} />
               <span className="badge-premium"></span>
             </button>
-            <div className="header-profile-premium">
+            <div className="header-profile-premium" onClick={() => setProfileModalOpen(true)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setProfileModalOpen(true)}>
               <div className="avatar-minimal-premium">
                 {userInitials}
               </div>
@@ -1103,6 +1098,181 @@ export default function SuperAdminDashboard() {
           )}
 
           {/* Nav 6: Statistics - Chart.js graphs */}
+          {activeSub === "reports-center" && (
+            <>
+              <div className="dashboard-card">
+                <h3 className="card-title">Admin Reports Center</h3>
+                <p className="card-subtitle">Unified operational and academic reporting for assessment, leaves, coding, rewards, compliance, and reliability.</p>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: 12 }}>
+                  <div className="sa-form-group">
+                    <label>From</label>
+                    <input type="date" value={reportsFilters.from} onChange={(e) => setReportsFilters((p) => ({ ...p, from: e.target.value }))} />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>To</label>
+                    <input type="date" value={reportsFilters.to} onChange={(e) => setReportsFilters((p) => ({ ...p, to: e.target.value }))} />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Course</label>
+                    <select value={reportsFilters.course_id} onChange={(e) => setReportsFilters((p) => ({ ...p, course_id: e.target.value }))}>
+                      <option value="">All courses</option>
+                      {coursesList.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Department</label>
+                    <input type="text" value={reportsFilters.department} placeholder="e.g. CSE" onChange={(e) => setReportsFilters((p) => ({ ...p, department: e.target.value }))} />
+                  </div>
+                  <div className="sa-form-group">
+                    <label>Year</label>
+                    <input type="text" value={reportsFilters.year} placeholder="e.g. III" onChange={(e) => setReportsFilters((p) => ({ ...p, year: e.target.value }))} />
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, display: "flex", gap: 8 }}>
+                  <button type="button" className="sa-btn sa-btn-primary" onClick={() => fetchReports()}>Apply filters</button>
+                  <button
+                    type="button"
+                    className="sa-btn"
+                    onClick={() => {
+                      const cleared = { from: "", to: "", course_id: "", department: "", year: "" };
+                      setReportsFilters(cleared);
+                      fetchReports(cleared);
+                    }}
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              {reportsLoading && <div className="dashboard-card"><p>Loading reports…</p></div>}
+
+              {!reportsLoading && reportsData && (
+                <>
+                  <div className="sa-stats-row">
+                    <div className="sa-stat-card"><h4>Bookings</h4><div className="value">{reportsData.assessmentSlotPerformance?.totalBookings ?? 0}</div></div>
+                    <div className="sa-stat-card"><h4>Attempts</h4><div className="value">{reportsData.assessmentSlotPerformance?.totalAttempts ?? 0}</div></div>
+                    <div className="sa-stat-card"><h4>Pass</h4><div className="value">{reportsData.assessmentSlotPerformance?.passCount ?? 0}</div></div>
+                    <div className="sa-stat-card"><h4>Avg Score</h4><div className="value">{reportsData.assessmentSlotPerformance?.averageScore ?? 0}</div></div>
+                  </div>
+
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Course-Level Funnel</h3>
+                    <table className="sa-table">
+                      <thead><tr><th>Total</th><th>Enrolled</th><th>Completed</th><th>Failed</th><th>Cooldown Active</th></tr></thead>
+                      <tbody>
+                        <tr>
+                          <td>{reportsData.courseLevelFunnel?.totalProgressRecords ?? 0}</td>
+                          <td>{reportsData.courseLevelFunnel?.enrolled ?? 0}</td>
+                          <td>{reportsData.courseLevelFunnel?.completed ?? 0}</td>
+                          <td>{reportsData.courseLevelFunnel?.failed ?? 0}</td>
+                          <td>{reportsData.cooldownImpact?.cooldownActiveStudents ?? 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Leave Workflow SLA</h3>
+                    <table className="sa-table">
+                      <thead><tr><th>Total</th><th>Pending</th><th>Approved</th><th>Rejected</th></tr></thead>
+                      <tbody>
+                        <tr>
+                          <td>{reportsData.leaveWorkflowSla?.totalLeaves ?? 0}</td>
+                          <td>{reportsData.leaveWorkflowSla?.pending ?? 0}</td>
+                          <td>{reportsData.leaveWorkflowSla?.approved ?? 0}</td>
+                          <td>{reportsData.leaveWorkflowSla?.rejected ?? 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Question Bank Throughput</h3>
+                    <table className="sa-table">
+                      <thead><tr><th>Total</th><th>Draft</th><th>Submitted</th><th>Approved</th><th>Rejected</th></tr></thead>
+                      <tbody>
+                        <tr>
+                          <td>{reportsData.questionBankThroughput?.totalSubmissions ?? 0}</td>
+                          <td>{reportsData.questionBankThroughput?.byStatus?.draft ?? 0}</td>
+                          <td>{reportsData.questionBankThroughput?.byStatus?.submitted ?? 0}</td>
+                          <td>{reportsData.questionBankThroughput?.byStatus?.approved ?? 0}</td>
+                          <td>{reportsData.questionBankThroughput?.byStatus?.rejected ?? 0}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Rewards, Coding, Movement and Bus Reliability</h3>
+                    <table className="sa-table">
+                      <thead>
+                        <tr>
+                          <th>Points Txns</th><th>Total Points</th><th>Coding Submissions</th><th>Accepted (Coding/Web)</th><th>Movement Passes</th><th>Buses Live/Stale/Offline</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr>
+                          <td>{reportsData.rewardsPointsLedger?.totalTransactions ?? 0}</td>
+                          <td>{reportsData.rewardsPointsLedger?.totalPoints ?? 0}</td>
+                          <td>{reportsData.codingPracticeEffectiveness?.totalCodingSubmissions ?? 0}</td>
+                          <td>
+                            {(reportsData.codingPracticeEffectiveness?.acceptedCodingSubmissions ?? 0)}/
+                            {(reportsData.codingPracticeEffectiveness?.acceptedWebProblems ?? 0)}
+                          </td>
+                          <td>{reportsData.movementPassCompliance?.totalPasses ?? 0}</td>
+                          <td>
+                            {(reportsData.busReliability?.live ?? 0)}/
+                            {(reportsData.busReliability?.stale ?? 0)}/
+                            {(reportsData.busReliability?.offline ?? 0)}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Malpractice Watchlist (Top Risk)</h3>
+                    <table className="sa-table">
+                      <thead><tr><th>Register No</th><th>Name</th><th>Course</th><th>Score</th><th>Tab Switches</th><th>Submitted At</th></tr></thead>
+                      <tbody>
+                        {(reportsData.malpracticeWatchlist || []).slice(0, 10).map((r) => (
+                          <tr key={`${r.register_no}-${r.submitted_at || "na"}`}>
+                            <td>{r.register_no}</td>
+                            <td>{r.student_name}</td>
+                            <td>{r.course_id}</td>
+                            <td>{r.score}</td>
+                            <td>{r.tab_switches}</td>
+                            <td>{r.submitted_at ? new Date(r.submitted_at).toLocaleString() : "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  <div className="dashboard-card">
+                    <h3 className="card-title">Faculty Productivity</h3>
+                    <table className="sa-table">
+                      <thead><tr><th>Faculty</th><th>Course</th><th>Level</th><th>Target</th><th>Submitted</th><th>Approved</th><th>Rejected</th></tr></thead>
+                      <tbody>
+                        {(reportsData.facultyProductivity || []).map((f) => (
+                          <tr key={f.assignmentId}>
+                            <td>{f.facultyName}</td>
+                            <td>{coursesList.find((c) => c.id === f.courseId)?.name || f.courseId}</td>
+                            <td>{f.level_index}</td>
+                            <td>{f.targetCount}</td>
+                            <td>{f.submitted}</td>
+                            <td>{f.approved}</td>
+                            <td>{f.rejected}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           {activeSub === "stats-course" && (
             <>
               <div className="sa-stats-row">
@@ -1202,6 +1372,18 @@ export default function SuperAdminDashboard() {
       </div>
 
       {/* Edit / Add modal */}
+      <ProfileDetailsModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        profile={{
+          id: localStorage.getItem("register_no") || localStorage.getItem("userId") || "N/A",
+          userId: localStorage.getItem("userId") || "N/A",
+          registerNo: localStorage.getItem("register_no") || "N/A",
+          name: userName || "Super Admin",
+          avatarUrl: "",
+        }}
+      />
+
       {editModal.open && (
         <div className="sa-modal-overlay" onClick={closeEdit}>
           <div className="sa-modal" onClick={(e) => e.stopPropagation()}>

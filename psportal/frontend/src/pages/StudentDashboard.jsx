@@ -188,14 +188,12 @@ const StudentDashboard = () => {
                 <header className="sd-header">
                     <div>
                         <h1 className="sd-welcome">Welcome back, {firstName}</h1>
-                        <p className="sd-sub">
-                            Here’s a snapshot of your progress and activity.
-                        </p>
+                        
                     </div>
-                    <div className="sd-status-pill" role="status">
+                    {/* <div className="sd-status-pill" role="status">
                         <span className="sd-status-dot" />
                         System Status: Optimal
-                    </div>
+                    </div> */}
                 </header>
 
                 <div className="sd-top-grid sd-top-grid--metrics">
@@ -239,6 +237,7 @@ const StudentDashboard = () => {
                         <p className="sd-metric-label">
                             {presentDays} present / {absentDays} absent
                         </p>
+                        <div className="sd-metric-accent sd-metric-accent--navy" />
                     </button>
 
                     <button
@@ -250,9 +249,6 @@ const StudentDashboard = () => {
                         }`}
                         onClick={() => setActiveView("reward")}
                     >
-                        {activeView === "reward" && (
-                            <span className="sd-reward-dot" aria-hidden />
-                        )}
                         <div className="sd-metric-card-top">
                             <span className="sd-kicker">Reward points</span>
                             <div className="sd-icon-circle sd-icon-circle--amber" aria-hidden>
@@ -261,6 +257,7 @@ const StudentDashboard = () => {
                         </div>
                         <div className="sd-metric-value">{balanceReward}</div>
                         <p className="sd-metric-label">Balance points</p>
+                        <div className="sd-metric-accent sd-metric-accent--navy" />
                     </button>
 
                     <div className="sd-card sd-card-navy sd-profile-navy">

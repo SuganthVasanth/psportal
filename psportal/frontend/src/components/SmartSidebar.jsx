@@ -1,6 +1,9 @@
 import React, { createElement, isValidElement } from "react";
 import { NavLink } from "react-router-dom";
-import { GraduationCap, LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+import { LogOut, PanelLeftClose, PanelLeftOpen } from "lucide-react";
+
+const DEFAULT_SIDEBAR_LOGO =
+  "https://ps.bitsathy.ac.in/static/media/logo.e99a8edb9e376c3ed2e5.png";
 import "./StudentSidebar.css";
 
 function labelOf(item) {
@@ -23,7 +26,7 @@ export default function SmartSidebar({
   onLogout,
   brand = "PCDP Portal",
   subtitle = "Skills Platform",
-  logoUrl,
+  logoUrl = DEFAULT_SIDEBAR_LOGO,
   /** Unused for styling; prefer `shell`. */
   surface = "dark",
   /**
@@ -51,7 +54,7 @@ export default function SmartSidebar({
         ? "text-white font-semibold bg-black shadow-[0_6px_20px_rgba(0,0,0,0.22)]"
         : isDarkShell
           ? "text-white/60 font-medium hover:bg-white/[0.08] hover:text-white/90"
-          : "text-[#64748b] font-medium hover:bg-slate-50 hover:text-slate-800",
+          : "text-[#64748b] font-medium hover:bg-black hover:text-white",
     ].join(" ");
 
   const collapsedItemRowClass = ({ isActive }) =>
@@ -61,7 +64,7 @@ export default function SmartSidebar({
         ? "text-white bg-black shadow-[0_6px_20px_rgba(0,0,0,0.22)]"
         : isDarkShell
           ? "text-white/60 hover:bg-white/[0.08]"
-          : "text-[#64748b] hover:bg-slate-50",
+          : "text-[#64748b] hover:bg-black hover:text-white",
     ].join(" ");
 
   const iconClass = (isActive) =>
@@ -72,7 +75,7 @@ export default function SmartSidebar({
       className={`smart-sidebar-shell flex flex-col h-screen overflow-hidden relative ${
         isDarkShell
           ? `shadow-[4px_0_32px_rgba(0,27,61,0.22)] border-r border-white/[0.12] bg-gradient-to-br from-[#1a3352] via-[#0f2744] to-[#001b3d]`
-          : "border-r border-[#e2e8f0] bg-white shadow-[2px_0_12px_rgba(15,23,42,0.04)]"
+          : "border-r border-[#e5e7eb] bg-[#f8fafc] shadow-[2px_0_12px_rgba(15,23,42,0.04)]"
       } ${collapsed ? "w-[72px]" : "w-[268px]"}`}
     >
       {isDarkShell && (
@@ -83,13 +86,12 @@ export default function SmartSidebar({
       )}
 
       <div className={`flex-shrink-0 flex items-center gap-3 relative z-10 ${collapsed ? "px-3 py-5 justify-center" : "px-5 py-6"}`}>
-        {logoUrl ? (
-          <img src={logoUrl} alt="" className="w-10 h-10 rounded-xl object-contain" />
-        ) : (
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#2563eb] to-[#001b3d] flex items-center justify-center shadow-md shrink-0">
-            <GraduationCap className="w-5 h-5 text-white" strokeWidth={2.2} aria-hidden />
-          </div>
-        )}
+        <img
+          src={logoUrl}
+          alt=""
+          className="w-10 h-10 rounded-xl object-contain shrink-0"
+          decoding="async"
+        />
         {!collapsed && (
           <div className="flex flex-col min-w-0 flex-1">
             <span
@@ -135,28 +137,32 @@ export default function SmartSidebar({
               {(section.items || []).map((item) => {
                 const Icon = item.icon;
                 const name = labelOf(item);
+                const hasPath = typeof item.path === "string" && item.path.length > 0;
                 return (
                   <div key={item.id || name} className="flex items-center px-1.5">
-                    <NavLink to={item.path} className={collapsed ? collapsedItemRowClass : itemRowClass} end={Boolean(item.end)}>
-                      {({ isActive }) => (
-                        <>
-                          <span className="flex items-center justify-center w-8 h-8 shrink-0 [&_svg]:shrink-0">
-                            {renderIcon(Icon, { className: iconClass(isActive) })}
-                          </span>
-                          {!collapsed && (
-                            <>
-                              <span className="flex-1 text-[13px] truncate">{name}</span>
-                              {/* {isActive && (
-                                <Star
-                                  className="w-3.5 h-3.5 text-amber-300 fill-amber-300 flex-shrink-0 drop-shadow-sm"
-                                  aria-hidden
-                                />
-                              )} */}
-                            </>
-                          )}
-                        </>
-                      )}
-                    </NavLink>
+                    {hasPath ? (
+                      <NavLink to={item.path} className={collapsed ? collapsedItemRowClass : itemRowClass} end={Boolean(item.end)}>
+                        {({ isActive }) => (
+                          <>
+                            <span className="flex items-center justify-center w-8 h-8 shrink-0 [&_svg]:shrink-0">
+                              {renderIcon(Icon, { className: iconClass(isActive) })}
+                            </span>
+                            {!collapsed && <span className="flex-1 text-[13px] truncate">{name}</span>}
+                          </>
+                        )}
+                      </NavLink>
+                    ) : (
+                      <button
+                        type="button"
+                        className={`${collapsed ? collapsedItemRowClass({ isActive: !!item.active }) : itemRowClass({ isActive: !!item.active })} text-left`}
+                        onClick={item.onClick}
+                      >
+                        <span className="flex items-center justify-center w-8 h-8 shrink-0 [&_svg]:shrink-0">
+                          {renderIcon(Icon, { className: iconClass(!!item.active) })}
+                        </span>
+                        {!collapsed && <span className="flex-1 text-[13px] truncate">{name}</span>}
+                      </button>
+                    )}
                   </div>
                 );
               })}
@@ -173,7 +179,7 @@ export default function SmartSidebar({
           isDarkShell ? "border-white/[0.1] bg-transparent" : "border-slate-100 bg-white"
         }`}
       >
-        <div className="flex items-center gap-3 px-2 py-1" style={{ minHeight: "48px" }}>
+        {/* <div className="flex items-center gap-3 px-2 py-1" style={{ minHeight: "48px" }}>
           <div
             className={`flex items-center justify-center w-9 h-9 rounded-xl text-xs font-bold shadow-sm shrink-0 ${
               isDarkShell ? "bg-white/20 text-white" : "bg-gradient-to-br from-[#2563eb] to-[#1e40af] text-white"
@@ -191,7 +197,7 @@ export default function SmartSidebar({
               <span className={`text-[11px] ${isDarkShell ? "text-white/65" : "text-slate-500"}`}>{profileRole}</span>
             </div>
           )}
-        </div>
+        </div> */}
 
         <div
           onClick={onLogout}

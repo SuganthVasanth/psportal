@@ -410,6 +410,8 @@ exports.getMyCourses = async (req, res) => {
                 completed: p.status === "completed",
                 levelName,
                 levelIndex: p.level_index,
+                durationMinutes: lvl.durationMinutes ?? 60,
+                questionsPerAssessment: lvl.questionsPerAssessment ?? 5,
             });
         }
 

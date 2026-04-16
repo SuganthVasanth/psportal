@@ -49,14 +49,17 @@ import {
   LineElement,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import * as XLSX from "xlsx";
 import "./SuperAdminDashboard.css";
 import "../components/SidebarPremium.css";
 import ChatModal from "../components/ChatModal";
 import QuestionTemplateBuilder from "./admin/QuestionTemplateBuilder";
 import QuestionBankSubmissionView from "./admin/QuestionBankSubmissionView";
+import AdminAnalyticsSuite from "../components/admin/AdminAnalyticsSuite";
 import TimePicker12h from "../components/TimePicker12h";
 import { templateApi } from "../services/templateApi";
 import SmartSidebar from "../components/SmartSidebar";
+import ProfileDetailsModal from "../components/ProfileDetailsModal";
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend, ArcElement, PointElement, LineElement);
 
@@ -319,12 +322,46 @@ export default function AdminDashboard() {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatWithUserId, setChatWithUserId] = useState(null);
   const [chatWithUserName, setChatWithUserName] = useState("");
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
   const [openSlotSelectedCourses, setOpenSlotSelectedCourses] = useState({}); // { [id]: [levelIndices] }
   const [openSlotDate, setOpenSlotDate] = useState("");
   const [openSlotVenueId, setOpenSlotVenueId] = useState("");
   const [openSlotStartTime, setOpenSlotStartTime] = useState("");
   const [openSlotCapacity, setOpenSlotCapacity] = useState(30);
   const [isOpeningSlots, setIsOpeningSlots] = useState(false);
+
+  const exportAssessmentSlots = useCallback(() => {
+    const wb = XLSX.utils.book_new();
+    const rows = (assessmentSlots || []).map((row) => {
+      const allowed = (row.allowedCourses || [])
+        .map((ac) => `${ac.courseName} (Levels: ${(ac.levelIndices || []).map((i) => i + 1).join(", ")})`)
+        .join(" | ");
+
+      const start = row.startTime ? formatTime(row.startTime) : "";
+      const end = row.startTime ? calculateSlotEndTime(row.startTime, row.allowedCourses) : "";
+
+      return {
+        id: row.id,
+        date: row.date ? new Date(row.date).toISOString().slice(0, 10) : "",
+        venue: row.venueLabel || "",
+        time: start && end ? `${start} – ${end}` : start || "",
+        capacity: Number(row.capacity || 0),
+        booked: Number(row.bookedCount || 0),
+        allowedCoursesLevels: allowed,
+      };
+    });
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+    XLSX.utils.book_append_sheet(wb, ws, "AssessmentSlots");
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet([{ exportedAt: new Date().toISOString(), count: rows.length }]),
+      "Meta",
+    );
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `assessment-slots-${stamp}.xlsx`);
+  }, [assessmentSlots]);
 
   // Bus management (Admin -> Buses)
   const [busesList, setBusesList] = useState([]);
@@ -894,7 +931,7 @@ export default function AdminDashboard() {
   return (
     <div className="dashboard-layout premium-layout admin-dashboard-layout">
       <SmartSidebar
-        shell="dark"
+        shell="light"
         subtitle="Admin Console"
         sections={NAV.map((section) => ({
           title: section.label,
@@ -929,7 +966,7 @@ export default function AdminDashboard() {
               <Bell size={20} />
               <span className="badge-premium"></span>
             </button>
-            <div className="header-profile-premium">
+            <div className="header-profile-premium" onClick={() => setProfileModalOpen(true)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setProfileModalOpen(true)}>
               <div className="avatar-minimal-premium">
                 {userInitials}
               </div>
@@ -2001,9 +2038,20 @@ export default function AdminDashboard() {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
                 <div>
                   <h3 className="card-title">Assessment Slots</h3>
-                  <p className="card-subtitle">Open specific slots for assessments by linking courses to venues and time slots on a specific date.</p>
+                  
                 </div>
-                <CalendarCheck size={32} style={{ color: "#3b82f6", opacity: 0.8 }} />
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <button
+                    type="button"
+                    className="sa-btn sa-btn-sm sa-btn-ghost"
+                    style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff", color: "#1e293b", fontWeight: 700 }}
+                    onClick={exportAssessmentSlots}
+                    title="Export assessment slots to Excel"
+                  >
+                    Export
+                  </button>
+                  <CalendarCheck size={32} style={{ color: "#3b82f6", opacity: 0.8 }} />
+                </div>
               </div>
               
               <div className="sa-open-slots-form" style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0", marginBottom: "32px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}>
@@ -2661,92 +2709,8 @@ export default function AdminDashboard() {
           )}
 
           {/* Nav 6: Statistics - Chart.js graphs */}
-          {activeSub === "stats-course" && (
-            <>
-              <div className="sa-stats-row">
-                <div className="sa-stat-card"><h4>Total applications</h4><div className="value">1,240</div></div>
-                <div className="sa-stat-card"><h4>By year</h4><div className="value">2025-26</div></div>
-                <div className="sa-stat-card"><h4>By dept</h4><div className="value">8 depts</div></div>
-              </div>
-              <div className="dashboard-card">
-                <h3 className="card-title">Students applied per course (year &amp; dept)</h3>
-                <p className="card-subtitle">Breakdown by year and department.</p>
-                <div className="sa-chart-wrap">
-                  <Bar data={statsCourseChart} options={chartOptions()} />
-                </div>
-                <table className="sa-table" style={{ marginTop: 16 }}>
-                  <thead><tr><th>Course</th><th>Year</th><th>Dept</th><th>Count</th></tr></thead>
-                  <tbody>
-                    {statsCourseChart.labels.slice(0, 3).map((name, i) => (
-                      <tr key={i}><td>{name}</td><td>2025-26</td><td>{["CSE", "ECE", "CSE"][i]}</td><td>{statsCourseChart.datasets[0].data[i]}</td></tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-
-          {activeSub === "stats-slot" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Which slot is used most often</h3>
-              <p className="card-subtitle">Booking distribution by slot.</p>
-              <div className="sa-chart-wrap sa-chart-bar">
-                <Bar data={statsSlotChart} options={chartOptions()} />
-              </div>
-              <div className="sa-chart-wrap sa-chart-doughnut">
-                <Doughnut data={statsSlotChart} options={{ ...chartOptions(), plugins: { ...chartOptions().plugins, legend: { position: "right" } } }} />
-              </div>
-              <table className="sa-table" style={{ marginTop: 16 }}>
-                <thead><tr><th>Slot (Venue, Time)</th><th>Bookings</th><th>%</th></tr></thead>
-                <tbody>
-                  {statsSlotChart.labels.map((label, i) => (
-                    <tr key={i}><td>{label}</td><td>{statsSlotChart.datasets[0].data[i]}</td><td>{Math.round((statsSlotChart.datasets[0].data[i] / statsSlotChart.datasets[0].data.reduce((a, b) => a + b, 0)) * 100)}%</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "stats-weekly" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Weekly clearing analysis</h3>
-              <p className="card-subtitle">Students clearing / not clearing percentage.</p>
-              <div className="sa-chart-wrap">
-                <Line data={statsWeeklyChart} options={chartOptions()} />
-              </div>
-              <table className="sa-table" style={{ marginTop: 16 }}>
-                <thead><tr><th>Week</th><th>Cleared</th><th>Not cleared</th><th>Clear %</th></tr></thead>
-                <tbody>
-                  {statsWeeklyChart.labels.map((week, i) => (
-                    <tr key={i}><td>{week}</td><td>{[85, 92, 78][i]}</td><td>{[15, 8, 22][i]}</td><td>{statsWeeklyChart.datasets[0].data[i]}%</td></tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {activeSub === "stats-registered" && (
-            <div className="dashboard-card">
-              <h3 className="card-title">Course registered and attended</h3>
-              <p className="card-subtitle">Most, least and average.</p>
-              <div className="sa-chart-wrap sa-chart-bar">
-                <Bar data={statsRegisteredChart} options={{ ...chartOptions(), scales: { x: { stacked: true }, y: { stacked: true } } }} />
-              </div>
-              <table className="sa-table" style={{ marginTop: 16 }}>
-                <thead><tr><th>Course</th><th>Registered</th><th>Attended</th><th>Attendance %</th><th>Rank</th></tr></thead>
-                <tbody>
-                  {statsRegisteredChart.labels.map((name, i) => (
-                    <tr key={i}>
-                      <td>{name}</td>
-                      <td>{statsRegisteredChart.datasets[0].data[i]}</td>
-                      <td>{statsRegisteredChart.datasets[1].data[i]}</td>
-                      <td>{((statsRegisteredChart.datasets[1].data[i] / statsRegisteredChart.datasets[0].data[i]) * 100).toFixed(1)}%</td>
-                      <td><span className={`sa-badge ${i === 0 ? "sa-badge-success" : i === 2 ? "sa-badge-warning" : ""}`}>{i === 0 ? "Most" : i === 2 ? "Least" : "Avg"}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {(activeSub === "stats-course" || activeSub === "stats-slot" || activeSub === "stats-weekly" || activeSub === "stats-registered") && (
+            <AdminAnalyticsSuite />
           )}
 
           {/* Nav 7: Bus management */}
@@ -3148,6 +3112,18 @@ export default function AdminDashboard() {
       </div>
 
       {/* Edit / Add modal */}
+      <ProfileDetailsModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        profile={{
+          id: localStorage.getItem("register_no") || localStorage.getItem("userId") || "N/A",
+          userId: localStorage.getItem("userId") || "N/A",
+          registerNo: localStorage.getItem("register_no") || "N/A",
+          name: userName || "Admin",
+          avatarUrl: "",
+        }}
+      />
+
       {editModal.open && (
         <div className="sa-modal-overlay" onClick={closeEdit}>
           <div className={`sa-modal ${editModal.section === "courses" ? "sa-modal-courses" : ""}`} onClick={(e) => e.stopPropagation()}>
@@ -3891,6 +3867,44 @@ function SlotReportView({ slotId, onBack }) {
     s.registerNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const exportSlotReport = () => {
+    const safe = (v) => (v === undefined || v === null ? "" : v);
+    const wb = XLSX.utils.book_new();
+
+    const summaryRow = {
+      slotId: safe(summary.slotId || slotId),
+      date: summary.date ? new Date(summary.date).toISOString().slice(0, 10) : "",
+      venue: safe(summary.venueName),
+      time: safe(summary.timeLabel),
+      capacity: Number(summary.capacity || 0),
+      totalBooked: Number(summary.totalBooked || 0),
+      attended: Number(summary.attended || 0),
+      passed: Number(summary.passed || 0),
+      failed: Number(summary.failed || 0),
+      exportedAt: new Date().toISOString(),
+      searchFilter: safe(searchTerm),
+      exportedStudentsCount: filteredStudents.length,
+    };
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet([summaryRow]), "Summary");
+
+    const studentRows = (filteredStudents || []).map((s) => ({
+      registrationId: safe(s.registrationId),
+      userId: safe(s.userId),
+      name: safe(s.name),
+      registerNo: safe(s.registerNo),
+      submissionFinalized: !!s.submissionFinalized,
+      hasLiveAttempt: !!s.hasLiveAttempt,
+      tabSwitches: Number(s.tabSwitches || 0),
+      score: s.hasLiveAttempt ? Number(s.score || 0) : "",
+      result: s.submissionFinalized ? (s.isPassed ? "PASSED" : "FAILED") : (s.hasLiveAttempt ? "IN_PROGRESS" : "ABSENT"),
+      answersCount: Array.isArray(s.answers) ? s.answers.length : 0,
+    }));
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(studentRows), "Students");
+
+    const stamp = new Date().toISOString().slice(0, 10);
+    XLSX.writeFile(wb, `assessment-slot-report-${safe(summary.date ? new Date(summary.date).toISOString().slice(0, 10) : stamp)}-${String(slotId).slice(0, 6)}.xlsx`);
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       
@@ -3956,15 +3970,25 @@ function SlotReportView({ slotId, onBack }) {
             <h3 style={{ fontSize: '20px', fontWeight: '900', color: '#1e293b', letterSpacing: '-0.02em' }}>Registered Candidates</h3>
             <p style={{ color: '#64748b', fontSize: '13px', fontWeight: '500' }}>Individual performance metrics for current slot session.</p>
           </div>
-          <div style={{ position: "relative", width: '400px' }}>
-            <Search size={18} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
-            <input 
-              type="text" 
-              placeholder="Filter by name or register no..." 
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ width: "100%", padding: "14px 14px 14px 48px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "14px", fontWeight: "600", backgroundColor: "#f8fafc", outline: "none", transition: 'all 0.2s ease' }}
-            />
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <button
+              type="button"
+              onClick={exportSlotReport}
+              className="group flex items-center gap-2 px-4 py-3 bg-white hover:bg-slate-50 rounded-2xl transition-all border border-slate-200 font-black text-[12px] tracking-wide"
+              title="Export this report to Excel"
+            >
+              Export
+            </button>
+            <div style={{ position: "relative", width: '400px' }}>
+              <Search size={18} style={{ position: "absolute", left: "16px", top: "50%", transform: "translateY(-50%)", color: "#94a3b8" }} />
+              <input 
+                type="text" 
+                placeholder="Filter by name or register no..." 
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{ width: "100%", padding: "14px 14px 14px 48px", borderRadius: "16px", border: "1px solid #e2e8f0", fontSize: "14px", fontWeight: "600", backgroundColor: "#f8fafc", outline: "none", transition: 'all 0.2s ease' }}
+              />
+            </div>
           </div>
         </div>
 
@@ -4227,8 +4251,18 @@ function ReviewAnswersModal({ student, answers, onClose }) {
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {options.map((opt, idx) => {
-                const optText = (typeof opt === 'object' ? opt.text : opt)?.toString().trim();
-                const studentText = (typeof studentSelection === 'object' ? (studentSelection.text || studentSelection.value) : studentSelection)?.toString().trim();
+                const optText = (
+                  opt && typeof opt === "object" ? (opt.text ?? opt.value ?? "") : (opt ?? "")
+                )
+                  .toString()
+                  .trim();
+                const studentText = (
+                  studentSelection && typeof studentSelection === "object"
+                    ? (studentSelection.text ?? studentSelection.value ?? "")
+                    : (studentSelection ?? "")
+                )
+                  .toString()
+                  .trim();
                 const isSelected = !!(studentText && optText && (studentText === optText));
                 const isCorrect = (idx === correctIdx);
                 

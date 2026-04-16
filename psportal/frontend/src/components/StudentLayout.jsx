@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Search, Bell } from "lucide-react";
 import StudentSidebar from "./StudentSidebar";
+import ProfileDetailsModal from "./ProfileDetailsModal";
 import "./StudentLayout.css";
 
 const API_BASE = "http://localhost:5000";
@@ -18,6 +19,7 @@ export default function StudentLayout({ children, hideNav = false, theme, search
     // Default collapsed; open only when user clicks ">".
     return saved === "true";
   });
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   useEffect(() => {
     const registerNo = localStorage.getItem("register_no");
@@ -83,7 +85,7 @@ export default function StudentLayout({ children, hideNav = false, theme, search
               <span className="badge-premium" aria-hidden />
             </button>
 
-            <div className="header-profile-premium">
+            <div className="header-profile-premium" onClick={() => setProfileModalOpen(true)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setProfileModalOpen(true)}>
               {isBooking && displayProfile.avatarUrl ? (
                 <img
                   src={displayProfile.avatarUrl}
@@ -107,6 +109,17 @@ export default function StudentLayout({ children, hideNav = false, theme, search
           {children}
         </main>
       </div>
+      <ProfileDetailsModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        profile={{
+          id: displayProfile.register_no || localStorage.getItem("register_no") || "N/A",
+          userId: localStorage.getItem("userId") || displayProfile.register_no || "N/A",
+          registerNo: displayProfile.register_no || "N/A",
+          name: displayProfile.name || "Student",
+          avatarUrl: displayProfile.avatarUrl || "",
+        }}
+      />
     </div>
   );
 }

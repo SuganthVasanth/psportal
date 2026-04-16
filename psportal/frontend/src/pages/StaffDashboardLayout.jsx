@@ -5,6 +5,7 @@ import "./SuperAdminDashboard.css";
 import "./UserDashboard.css";
 import "../components/SidebarPremium.css";
 import SmartSidebar from "../components/SmartSidebar";
+import ProfileDetailsModal from "../components/ProfileDetailsModal";
 import StaffMentorMentees from "./StaffMentorMentees";
 import StaffMentorLeaveApprovals from "./StaffMentorLeaveApprovals";
 import StaffWardenWards from "./StaffWardenWards";
@@ -96,6 +97,7 @@ export default function StaffDashboardLayout() {
   const [error, setError] = useState("");
   const [openNav, setOpenNav] = useState(null);
   const [collapsed, setCollapsed] = useState(false);
+  const [profileModalOpen, setProfileModalOpen] = useState(false);
 
   const rolesFromStorage = (() => {
     try {
@@ -211,7 +213,7 @@ export default function StaffDashboardLayout() {
   return (
     <div className="dashboard-layout premium-layout staff-dashboard-layout">
       <SmartSidebar
-        shell="dark"
+        shell="light"
         subtitle="Staff Portal"
         sections={staffNavSections.map((section) => ({
           title: section.label,
@@ -241,7 +243,7 @@ export default function StaffDashboardLayout() {
               <Bell size={20} />
               <span className="badge-premium"></span>
             </button>
-            <div className="header-profile-premium">
+            <div className="header-profile-premium" onClick={() => setProfileModalOpen(true)} role="button" tabIndex={0} onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setProfileModalOpen(true)}>
               <div className="avatar-minimal-premium">
                 {userAvatar}
               </div>
@@ -273,6 +275,17 @@ export default function StaffDashboardLayout() {
           </div>
         </main>
       </div>
+      <ProfileDetailsModal
+        open={profileModalOpen}
+        onClose={() => setProfileModalOpen(false)}
+        profile={{
+          id: localStorage.getItem("register_no") || localStorage.getItem("userId") || "N/A",
+          userId: localStorage.getItem("userId") || "N/A",
+          registerNo: localStorage.getItem("register_no") || "N/A",
+          name: userName || "Staff",
+          avatarUrl: "",
+        }}
+      />
     </div>
   );
 }

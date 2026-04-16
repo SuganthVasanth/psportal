@@ -1,12 +1,24 @@
 @import "./SidebarPremium.css";
 
+
+.smart-sidebar-nav {
+  scrollbar-width: none;      
+  -ms-overflow-style: none;   
+}
+
 .smart-sidebar-nav::-webkit-scrollbar {
-  width: 6px;
+  width: 0;
+  height: 0;
+  display: none;
 }
 .smart-sidebar-nav::-webkit-scrollbar-thumb {
-  background: #e2e8f0;
-  border-radius: 10px;
+  background: transparent;
 }
 .smart-sidebar-nav::-webkit-scrollbar-track {
   background: transparent;
+}
+
+.smart-sidebar-nav {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }

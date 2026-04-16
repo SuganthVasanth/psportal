@@ -59,8 +59,8 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
   const updateText = (idx, text) => syncValue(optionList.map((o, i) => (i === idx ? { ...o, text } : o)));
 
   return (
-    <div className={`${cardClass} flex flex-col gap-4`}>
-      {label && <span className="text-sm font-medium text-[#1a202c]">{label}</span>}
+    <div className={`${isStudent ? "flex flex-col gap-2.5" : `${cardClass} flex flex-col gap-4`}`}>
+      {!isStudent && label && <span className="text-sm font-medium text-[#1a202c]">{label}</span>}
       <div className="flex flex-col gap-3">
         {optionList.map((opt, idx) => {
           const isCorrect = !!opt.correct;
@@ -83,14 +83,14 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
                   setCorrect(idx);
                 }
               }}
-              className={`flex items-center gap-5 transition-all min-h-[64px] cursor-pointer group ${
-                isStudent ? "rounded-xl border bg-white p-4 hover:border-slate-200 hover:shadow-sm" : "rounded-xl border-2 p-3"
+              className={`flex items-center gap-3 transition-all min-h-[48px] cursor-pointer group ${
+                isStudent ? "rounded-[9px] border bg-white px-3.5 py-2.5" : "rounded-xl border-2 p-3"
               }`}
               style={
                 isStudent
                   ? {
-                      borderColor: isCorrect ? "#e2e8f0" : "#f1f5f9",
-                      background: isCorrect ? "#fff" : "#fff",
+                      borderColor: "#e5e7eb",
+                      background: "#fff",
                     }
                   : {
                       backgroundColor: isCorrect ? "#e0e7ff" : pastel,
@@ -99,23 +99,23 @@ export default function MCQ({ config = {}, value = {}, onChange, readOnly = fals
               }
             >
               <div
-                className={`flex items-center justify-center shrink-0 w-8 h-8 rounded-full border transition-all ${
-                  isCorrect ? "border-slate-900 shadow-sm" : "border-slate-200 bg-white"
+                className={`flex items-center justify-center shrink-0 w-[18px] h-[18px] rounded-full border transition-all ${
+                  isCorrect ? "border-slate-400" : "border-slate-300 bg-white"
                 }`}
               >
-                <div className={`w-3.5 h-3.5 rounded-full transition-all ${isCorrect ? "bg-slate-900 border-[3px] border-white" : "bg-transparent"}`} />
+                <div className={`w-2 h-2 rounded-full transition-all ${isCorrect ? "bg-slate-700" : "bg-transparent"}`} />
               </div>
 
               {isStudent && (
-                 <div className="w-7 h-7 rounded-md bg-slate-100/50 flex items-center justify-center text-[10px] font-black text-slate-400 shrink-0">
+                 <div className="h-5 min-w-5 rounded-sm border border-slate-200 bg-slate-100 px-1.5 flex items-center justify-center text-[10px] font-medium text-slate-500 shrink-0">
                     {["A", "B", "C", "D", "E", "F"][idx] || (idx + 1)}
                  </div>
               )}
               
               {isStudent || readOnly ? (
-                <span className={`flex-1 font-bold leading-relaxed transition-colors ${
+                <span className={`flex-1 leading-relaxed transition-colors ${
                     isCorrect ? "text-slate-900" : "text-slate-800"
-                } ${isStudent ? "text-[15px]" : "text-sm"}`}>
+                } ${isStudent ? "text-[15px] font-medium" : "text-sm font-bold"}`}>
                     {opt.text}
                 </span>
               ) : (

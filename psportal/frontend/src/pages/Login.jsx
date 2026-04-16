@@ -140,7 +140,7 @@ export default function LoginPage() {
               w-full py-3 rounded-lg mt-4
               border border-gray-300 bg-white
               flex items-center justify-center gap-2
-              hover:bg-gray-50 transition
+              hover:bg-gray-50 transition cursor-pointer
               text-gray-800 font-medium text-sm
             "
             onClick={handleGoogleLogin}

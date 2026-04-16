@@ -68,5 +68,7 @@ router.get("/assessment-slots/:id/report", ctrl.getSlotReport);
 
 // Course Lifecycle Canvas
 router.get("/lifecycle-canvas", ctrl.getCourseLifecycleCanvas);
+router.get("/reports", ctrl.getAdminReports);
+router.get("/reports/analytics", ctrl.getAdminAnalytics);
 
 module.exports = router;

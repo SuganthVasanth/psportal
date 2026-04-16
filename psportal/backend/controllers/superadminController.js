@@ -15,6 +15,16 @@ const Student = require("../models/Student");
 const StudentSlotRegistration = require("../models/StudentSlotRegistration");
 const CourseSlotBooking = require("../models/CourseSlotBooking");
 const StudentExamAttempt = require("../models/StudentExamAttempt");
+const StudentLevelProgress = require("../models/StudentLevelProgress");
+const Leave = require("../models/Leave");
+const PointTransaction = require("../models/PointTransaction");
+const CodingSubmission = require("../models/CodingSubmission");
+const WebCodingSubmission = require("../models/WebCodingSubmission");
+const CodingStreak = require("../models/CodingStreak");
+const MovementPass = require("../models/MovementPass");
+const Bus = require("../models/Bus");
+const BusLocation = require("../models/BusLocation");
+const Attendance = require("../models/Attendance");
 const bcrypt = require("bcryptjs");
 
 const DEFAULT_PASSWORD = "Password@123";
@@ -978,5 +988,432 @@ exports.getCourseLifecycleCanvas = async (req, res) => {
     res.json(result);
   } catch (err) {
     res.status(500).json({ message: err.message });
+  }
+};
+
+// ——— Consolidated Admin Reports ———
+exports.getAdminReports = async (req, res) => {
+  try {
+    const { from, to, course_id, department, year } = req.query;
+    const fromDate = from ? new Date(from) : null;
+    const toDate = to ? new Date(to) : null;
+    const dateFilter = {};
+    if (fromDate && !Number.isNaN(fromDate.getTime())) dateFilter.$gte = fromDate;
+    if (toDate && !Number.isNaN(toDate.getTime())) dateFilter.$lte = toDate;
+    const hasDateFilter = Object.keys(dateFilter).length > 0;
+
+    const studentFilter = {};
+    if (department) studentFilter.department = department;
+    if (year) studentFilter.year = year;
+    const students = await Student.find(studentFilter).lean();
+    const studentByRegisterNo = new Map(students.map((s) => [s.register_no, s]));
+    const scopedRegisterNos = new Set(students.map((s) => s.register_no));
+    const scopedStudentIds = new Set(students.map((s) => s._id));
+
+    const bookingFilter = {};
+    if (course_id) bookingFilter.course_id = String(course_id);
+    if (hasDateFilter) bookingFilter.booked_at = dateFilter;
+    const bookings = await CourseSlotBooking.find(bookingFilter).lean();
+    const scopedBookings = bookings.filter((b) => {
+      if (scopedRegisterNos.size === 0 && (department || year)) return false;
+      if (!department && !year) return true;
+      return scopedRegisterNos.has(b.register_no);
+    });
+
+    const attemptFilter = {};
+    if (course_id) attemptFilter.course_id = String(course_id);
+    if (hasDateFilter) attemptFilter.createdAt = dateFilter;
+    const attempts = await StudentExamAttempt.find(attemptFilter).lean();
+    const scopedAttempts = attempts.filter((a) => {
+      if (!department && !year) return true;
+      return scopedRegisterNos.has(a.register_no);
+    });
+
+    const leaveFilter = {};
+    if (hasDateFilter) leaveFilter.createdAt = dateFilter;
+    const leaves = await Leave.find(leaveFilter).lean();
+    const scopedLeaves = leaves.filter((l) => {
+      if (!department && !year) return true;
+      return scopedRegisterNos.has(l.register_no);
+    });
+
+    const progressFilter = {};
+    if (course_id) progressFilter.course_id = String(course_id);
+    if (hasDateFilter) progressFilter.createdAt = dateFilter;
+    const levelProgress = await StudentLevelProgress.find(progressFilter).lean();
+    const scopedProgress = levelProgress.filter((p) => {
+      if (!department && !year) return true;
+      return scopedRegisterNos.has(p.register_no);
+    });
+
+    const qbFilter = {};
+    if (course_id && mongoose.Types.ObjectId.isValid(course_id)) qbFilter.course_id = new mongoose.Types.ObjectId(course_id);
+    if (hasDateFilter) qbFilter.updatedAt = dateFilter;
+    const questionBanks = await QuestionBankSubmission.find(qbFilter).lean();
+    const assignments = await FacultyCourseAssignment.find().populate("user_id", "name email").lean();
+
+    const pointsFilter = {};
+    if (hasDateFilter) pointsFilter.date_earned = dateFilter;
+    const pointTransactions = await PointTransaction.find(pointsFilter).lean();
+    const scopedTransactions = pointTransactions.filter((t) => {
+      if (!department && !year) return true;
+      const st = students.find((s) => s._id === t.student_id || s.register_no === t.student_id);
+      return !!st;
+    });
+
+    const codingFilter = {};
+    if (course_id) codingFilter.courseId = String(course_id);
+    if (hasDateFilter) codingFilter.submittedAt = dateFilter;
+    const codingSubs = await CodingSubmission.find(codingFilter).lean();
+    const scopedCodingSubs = codingSubs.filter((s) => {
+      if (!department && !year) return true;
+      return scopedRegisterNos.has(s.register_no);
+    });
+
+    const webCodingFilter = {};
+    if (hasDateFilter) webCodingFilter.lastSubmittedAt = dateFilter;
+    const webCodingSubs = await WebCodingSubmission.find(webCodingFilter).lean();
+    const scopedWebCodingSubs = webCodingSubs.filter((s) => {
+      if (!department && !year) return true;
+      return scopedRegisterNos.has(s.register_no);
+    });
+    const codingStreaks = await CodingStreak.find().lean();
+
+    const movementPassFilter = {};
+    if (hasDateFilter) movementPassFilter.createdAt = dateFilter;
+    const movementPasses = await MovementPass.find(movementPassFilter).lean();
+    const scopedMovementPasses = movementPasses.filter((p) => {
+      if (!department && !year) return true;
+      return scopedStudentIds.has(p.student_id);
+    });
+
+    const buses = await Bus.find().populate("incharge_id", "name email").lean();
+    const busLocations = await BusLocation.find().lean();
+    const attendanceDocs = await Attendance.find().lean();
+
+    const approvedByCourseLevel = new Map();
+    questionBanks
+      .filter((q) => q.status === "approved")
+      .forEach((q) => {
+        approvedByCourseLevel.set(`${q.course_id}_${q.level_index || 0}`, (approvedByCourseLevel.get(`${q.course_id}_${q.level_index || 0}`) || 0) + 1);
+      });
+
+    const slotUsage = {};
+    scopedBookings.forEach((b) => {
+      const key = `${b.venue_label || "Unknown"} | ${b.time_label || "Unknown"}`;
+      slotUsage[key] = (slotUsage[key] || 0) + 1;
+    });
+
+    const statusCounts = scopedProgress.reduce(
+      (acc, p) => {
+        acc[p.status] = (acc[p.status] || 0) + 1;
+        return acc;
+      },
+      { enrolled: 0, completed: 0, failed: 0 }
+    );
+
+    const leaveStatus = scopedLeaves.reduce(
+      (acc, l) => {
+        const k = (l.status || "Pending").toLowerCase();
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
+
+    const qbStatus = questionBanks.reduce(
+      (acc, q) => {
+        acc[q.status] = (acc[q.status] || 0) + 1;
+        return acc;
+      },
+      {}
+    );
+
+    const pointsByCategory = scopedTransactions.reduce((acc, t) => {
+      const k = t.activity_category || "Other";
+      acc[k] = (acc[k] || 0) + (Number(t.points_earned) || 0);
+      return acc;
+    }, {});
+
+    const codingAccepted = scopedCodingSubs.filter((s) => s.result === "accepted").length;
+    const webAccepted = scopedWebCodingSubs.filter((s) => s.isAccepted).length;
+
+    const busReliability = buses.map((bus) => {
+      const loc = busLocations.find((l) => String(l.bus_id) === String(bus._id));
+      const staleMinutes = loc?.lastUpdated ? Math.floor((Date.now() - new Date(loc.lastUpdated).getTime()) / 60000) : null;
+      return {
+        busId: bus._id.toString(),
+        busNumber: bus.busNumber,
+        route: bus.route,
+        incharge: bus.incharge_id?.name || bus.incharge_id?.email || "N/A",
+        lastUpdated: loc?.lastUpdated || null,
+        staleMinutes,
+        status: staleMinutes == null ? "offline" : staleMinutes > 20 ? "stale" : "live",
+      };
+    });
+
+    const attendanceSummary = attendanceDocs.reduce(
+      (acc, doc) => {
+        acc.count += 1;
+        acc.totalPercentage += Number(doc.percentage) || 0;
+        return acc;
+      },
+      { count: 0, totalPercentage: 0 }
+    );
+
+    const highRiskAttempts = scopedAttempts
+      .filter((a) => Number(a.tab_switches || 0) >= 3)
+      .sort((a, b) => Number(b.tab_switches || 0) - Number(a.tab_switches || 0))
+      .slice(0, 20)
+      .map((a) => ({
+        register_no: a.register_no,
+        student_name: studentByRegisterNo.get(a.register_no)?.name || "Unknown",
+        course_id: a.course_id,
+        score: a.score || 0,
+        tab_switches: a.tab_switches || 0,
+        submitted_at: a.submitted_at || null,
+      }));
+
+    const cooldownActive = scopedProgress.filter((p) => {
+      if (!p.last_failed_at) return false;
+      const diff = Date.now() - new Date(p.last_failed_at).getTime();
+      return diff < 48 * 60 * 60 * 1000;
+    }).length;
+
+    const facultyProductivity = assignments.map((a) => {
+      const matched = questionBanks.filter(
+        (q) =>
+          String(q.user_id) === String(a.user_id?._id || a.user_id) &&
+          String(q.course_id) === String(a.course_id) &&
+          Number(q.level_index || 0) === Number(a.level_index || 0)
+      );
+      return {
+        assignmentId: a._id.toString(),
+        facultyName: a.user_id?.name || a.user_id?.email || "Unknown",
+        courseId: String(a.course_id),
+        level_index: Number(a.level_index || 0),
+        targetCount: Number(a.question_count || 0),
+        submitted: matched.filter((m) => m.status === "submitted").length,
+        approved: matched.filter((m) => m.status === "approved").length,
+        rejected: matched.filter((m) => m.status === "rejected").length,
+      };
+    });
+
+    res.json({
+      filtersApplied: { from: from || null, to: to || null, course_id: course_id || null, department: department || null, year: year || null },
+      assessmentSlotPerformance: {
+        totalBookings: scopedBookings.length,
+        totalAttempts: scopedAttempts.length,
+        passCount: scopedAttempts.filter((a) => a.isPassed || Number(a.score || 0) >= 50).length,
+        failCount: scopedAttempts.filter((a) => !a.isPassed && Number(a.score || 0) < 50).length,
+        averageScore: scopedAttempts.length ? Number((scopedAttempts.reduce((s, a) => s + Number(a.score || 0), 0) / scopedAttempts.length).toFixed(2)) : 0,
+        slotUsage,
+      },
+      courseLevelFunnel: {
+        totalProgressRecords: scopedProgress.length,
+        enrolled: statusCounts.enrolled || 0,
+        completed: statusCounts.completed || 0,
+        failed: statusCounts.failed || 0,
+      },
+      leaveWorkflowSla: {
+        totalLeaves: scopedLeaves.length,
+        byStatus: leaveStatus,
+        pending: (leaveStatus.pending || 0),
+        approved: (leaveStatus.approved || 0),
+        rejected: (leaveStatus.rejected || 0),
+      },
+      questionBankThroughput: {
+        totalSubmissions: questionBanks.length,
+        byStatus: qbStatus,
+        approvedCoverageByCourseLevel: Array.from(approvedByCourseLevel.entries()).map(([key, count]) => ({ key, count })),
+      },
+      rewardsPointsLedger: {
+        totalTransactions: scopedTransactions.length,
+        totalPoints: scopedTransactions.reduce((s, t) => s + Number(t.points_earned || 0), 0),
+        byCategory: pointsByCategory,
+      },
+      codingPracticeEffectiveness: {
+        totalCodingSubmissions: scopedCodingSubs.length,
+        acceptedCodingSubmissions: codingAccepted,
+        totalWebSubmissions: scopedWebCodingSubs.length,
+        acceptedWebProblems: webAccepted,
+        averageCurrentStreak: codingStreaks.length
+          ? Number((codingStreaks.reduce((s, c) => s + Number(c.currentStreak || 0), 0) / codingStreaks.length).toFixed(2))
+          : 0,
+      },
+      movementPassCompliance: {
+        totalPasses: scopedMovementPasses.length,
+        active: scopedMovementPasses.filter((p) => p.status === "Active").length,
+        expired: scopedMovementPasses.filter((p) => p.status === "Expired").length,
+        bySession: scopedMovementPasses.reduce((acc, p) => {
+          const k = p.session || "unknown";
+          acc[k] = (acc[k] || 0) + 1;
+          return acc;
+        }, {}),
+      },
+      busReliability: {
+        totalBuses: busReliability.length,
+        live: busReliability.filter((b) => b.status === "live").length,
+        stale: busReliability.filter((b) => b.status === "stale").length,
+        offline: busReliability.filter((b) => b.status === "offline").length,
+        buses: busReliability,
+      },
+      malpracticeWatchlist: highRiskAttempts,
+      cooldownImpact: {
+        cooldownActiveStudents: cooldownActive,
+      },
+      facultyProductivity,
+      attendanceQuality: {
+        studentsTracked: attendanceSummary.count,
+        averagePercentage: attendanceSummary.count ? Number((attendanceSummary.totalPercentage / attendanceSummary.count).toFixed(2)) : 0,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Failed to compute admin reports" });
+  }
+};
+
+exports.getAdminAnalytics = async (req, res) => {
+  try {
+    const { dept = "All", year = "All" } = req.query;
+    const studentFilter = {};
+    if (dept && dept !== "All") studentFilter.department = dept;
+    if (year && year !== "All") studentFilter.year = year;
+
+    const students = await Student.find(studentFilter).lean();
+    const byReg = new Map(students.map((s) => [s.register_no, s]));
+    const regSet = new Set(students.map((s) => s.register_no));
+
+    const bookings = await CourseSlotBooking.find().lean();
+    const attempts = await StudentExamAttempt.find().lean();
+
+    const scopedBookings = bookings.filter((b) => {
+      if (studentFilter.department || studentFilter.year) return regSet.has(b.register_no);
+      return true;
+    });
+    const scopedAttempts = attempts.filter((a) => {
+      if (studentFilter.department || studentFilter.year) return regSet.has(a.register_no);
+      return true;
+    });
+
+    const coursesMap = new Map();
+    scopedBookings.forEach((b) => {
+      const st = byReg.get(b.register_no);
+      const deptVal = st?.department || "Unknown";
+      const yearVal = st?.year || "Unknown";
+      const key = `${b.course_name}|${yearVal}|${deptVal}`;
+      coursesMap.set(key, {
+        course: b.course_name || "Course",
+        year: yearVal,
+        dept: deptVal,
+        count: (coursesMap.get(key)?.count || 0) + 1,
+      });
+    });
+    const coursesData = Array.from(coursesMap.values()).sort((a, b) => b.count - a.count).slice(0, 20);
+
+    const slotsMap = new Map();
+    scopedBookings.forEach((b) => {
+      const slot = `${b.venue_label || "Venue"} ${b.time_label || "Time"}`;
+      const key = `${slot}|${b.venue_label || "Venue"}|${b.time_label || "Time"}`;
+      slotsMap.set(key, {
+        slot,
+        venue: b.venue_label || "Venue",
+        time: b.time_label || "Time",
+        bookings: (slotsMap.get(key)?.bookings || 0) + 1,
+      });
+    });
+    const slotsData = Array.from(slotsMap.values()).sort((a, b) => b.bookings - a.bookings).slice(0, 15);
+
+    const weeklyMap = new Map();
+    const getWeekLabel = (d) => {
+      const dt = new Date(d);
+      const start = new Date(dt);
+      start.setDate(dt.getDate() - dt.getDay());
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      return `${start.toLocaleDateString("en-US", { month: "short", day: "numeric" })}–${end.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`;
+    };
+    scopedAttempts.forEach((a) => {
+      const dt = a.submitted_at || a.createdAt || new Date();
+      const label = getWeekLabel(dt);
+      const item = weeklyMap.get(label) || { week: label, cleared: 0, notCleared: 0, clearPct: 0 };
+      const passed = !!(a.isPassed || Number(a.score || 0) >= 50);
+      if (passed) item.cleared += 1;
+      else item.notCleared += 1;
+      weeklyMap.set(label, item);
+    });
+    const weeklyData = Array.from(weeklyMap.values())
+      .map((w) => ({ ...w, clearPct: w.cleared + w.notCleared > 0 ? Math.round((w.cleared / (w.cleared + w.notCleared)) * 100) : 0 }))
+      .slice(-8);
+
+    const attendanceMap = new Map();
+    scopedBookings.forEach((b) => {
+      const item = attendanceMap.get(b.course_name) || { course: b.course_name || "Course", registered: 0, attended: 0, rank: "AVG" };
+      item.registered += 1;
+      attendanceMap.set(b.course_name, item);
+    });
+    scopedAttempts.forEach((a) => {
+      const booking = scopedBookings.find((b) => String(b.id || b._id) === String(a.booking_id));
+      const courseName = booking?.course_name || a.course_id || "Course";
+      const item = attendanceMap.get(courseName) || { course: courseName, registered: 0, attended: 0, rank: "AVG" };
+      item.attended += 1;
+      attendanceMap.set(courseName, item);
+    });
+    const attendanceData = Array.from(attendanceMap.values())
+      .sort((a, b) => b.registered - a.registered)
+      .slice(0, 8);
+    if (attendanceData.length > 0) {
+      attendanceData.forEach((d) => (d.rank = "AVG"));
+      attendanceData[0].rank = "MOST";
+      attendanceData[attendanceData.length - 1].rank = "LEAST";
+    }
+
+    const monthFmt = (d) => new Date(d).toLocaleDateString("en-US", { month: "short" });
+    const trendMap = new Map();
+    scopedBookings.forEach((b) => {
+      const st = byReg.get(b.register_no);
+      const deptName = String(st?.department || "OTHER").toUpperCase();
+      const month = monthFmt(b.booked_at || b.createdAt || new Date());
+      const item = trendMap.get(month) || { month, CSE: 0, ECE: 0, ME: 0, EE: 0 };
+      if (deptName.includes("CSE")) item.CSE += 1;
+      else if (deptName.includes("ECE")) item.ECE += 1;
+      else if (deptName.includes("ME")) item.ME += 1;
+      else if (deptName.includes("EE")) item.EE += 1;
+      trendMap.set(month, item);
+    });
+    const trendsData = Array.from(trendMap.values()).slice(-8);
+
+    const deptBase = {};
+    scopedAttempts.forEach((a) => {
+      const st = byReg.get(a.register_no);
+      const deptName = String(st?.department || "OTHER").toUpperCase();
+      if (!deptBase[deptName]) deptBase[deptName] = { attempts: 0, passed: 0 };
+      deptBase[deptName].attempts += 1;
+      if (a.isPassed || Number(a.score || 0) >= 50) deptBase[deptName].passed += 1;
+    });
+    const pickDept = (token) => Object.keys(deptBase).find((d) => d.includes(token));
+    const cse = deptBase[pickDept("CSE")] || { attempts: 0, passed: 0 };
+    const ece = deptBase[pickDept("ECE")] || { attempts: 0, passed: 0 };
+    const me = deptBase[pickDept("ME")] || { attempts: 0, passed: 0 };
+    const pct = (x) => (x.attempts ? Math.round((x.passed / x.attempts) * 100) : 0);
+    const deptRadar = [
+      { metric: "Enrollments", CSE: Math.min(100, cse.attempts), ECE: Math.min(100, ece.attempts), ME: Math.min(100, me.attempts) },
+      { metric: "Attendance", CSE: pct(cse), ECE: pct(ece), ME: pct(me) },
+      { metric: "Clearance", CSE: pct(cse), ECE: pct(ece), ME: pct(me) },
+      { metric: "Growth", CSE: Math.min(100, Math.round(cse.attempts * 0.6)), ECE: Math.min(100, Math.round(ece.attempts * 0.6)), ME: Math.min(100, Math.round(me.attempts * 0.6)) },
+      { metric: "Retention", CSE: Math.max(0, pct(cse) - 5), ECE: Math.max(0, pct(ece) - 5), ME: Math.max(0, pct(me) - 5) },
+    ];
+
+    res.json({
+      coursesData,
+      slotsData,
+      weeklyData,
+      attendanceData,
+      trendsData,
+      deptRadar,
+      generatedAt: new Date().toISOString(),
+    });
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Failed to build analytics dataset" });
   }
 };
