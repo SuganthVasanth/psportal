@@ -479,24 +479,6 @@ export default function AdminAnalyticsSuite() {
             </ResponsiveContainer>
           </ChartCard>
 
-          <ChartCard id="trends" visible={isChartVisible("trends")} title="Dept Enrollment Trends" subtitle="Monthly growth by department" onExpand={setExpanded}>
-            <ResponsiveContainer width="100%" height={260}>
-              <AreaChart data={data.trendsData}>
-                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748b" }} />
-                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} />
-                <Tooltip />
-                <Legend wrapperStyle={{ fontSize: 11, color: "#666" }} />
-                <Area type="monotone" dataKey="CSE" stroke={T.accent} fill={T.accent} fillOpacity={0.15} />
-                <Area type="monotone" dataKey="ECE" stroke={T.teal} fill={T.teal} fillOpacity={0.15} />
-                <Area type="monotone" dataKey="ME" stroke={T.purple} fill={T.purple} fillOpacity={0.12} />
-                <Area type="monotone" dataKey="EE" stroke={T.blue} fill={T.blue} fillOpacity={0.12} />
-              </AreaChart>
-            </ResponsiveContainer>
-          </ChartCard>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: simpleMode ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
           <ChartCard id="slots" visible={isChartVisible("slots")} title="Slot Booking Distribution" subtitle="Which venue-time slots see most demand" onExpand={setExpanded}>
             <ResponsiveContainer width="100%" height={240}>
               <BarChart data={data.slotsData.slice(0, 7)} layout="vertical">
@@ -510,7 +492,24 @@ export default function AdminAnalyticsSuite() {
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
+          {/* <ChartCard id="trends" visible={isChartVisible("trends")} title="Dept Enrollment Trends" subtitle="Monthly growth by department" onExpand={setExpanded}>
+            <ResponsiveContainer width="100%" height={260}>
+              <AreaChart data={data.trendsData}>
+                <CartesianGrid stroke="#e2e8f0" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="month" tick={{ fontSize: 10, fill: "#64748b" }} />
+                <YAxis tick={{ fontSize: 10, fill: "#64748b" }} />
+                <Tooltip />
+                <Legend wrapperStyle={{ fontSize: 11, color: "#666" }} />
+                <Area type="monotone" dataKey="CSE" stroke={T.accent} fill={T.accent} fillOpacity={0.15} />
+                <Area type="monotone" dataKey="ECE" stroke={T.teal} fill={T.teal} fillOpacity={0.15} />
+                <Area type="monotone" dataKey="ME" stroke={T.purple} fill={T.purple} fillOpacity={0.12} />
+                <Area type="monotone" dataKey="EE" stroke={T.blue} fill={T.blue} fillOpacity={0.12} />
+              </AreaChart>
+            </ResponsiveContainer>
+          </ChartCard> */}
+        </div>
 
+        <div style={{ display: "grid", gridTemplateColumns: simpleMode ? "1fr" : "1fr 1fr", gap: 16, marginBottom: 16 }}>
           <ChartCard id="weekly" visible={isChartVisible("weekly")} title="Weekly Clearance Rate" subtitle="Student clearance performance week-over-week" onExpand={setExpanded}>
             <ResponsiveContainer width="100%" height={240}>
               <LineChart data={data.weeklyData}>
@@ -522,9 +521,6 @@ export default function AdminAnalyticsSuite() {
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
-        </div>
-
-        <div style={{ display: "grid", gridTemplateColumns: simpleMode ? "1fr" : "1.2fr 1fr 0.8fr", gap: 16, marginBottom: 12 }}>
           <ChartCard id="attendance" visible={isChartVisible("attendance")} title="Registered vs Attended" subtitle="Attendance rate per course" onExpand={setExpanded}>
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={data.attendanceData}>
@@ -536,18 +532,6 @@ export default function AdminAnalyticsSuite() {
                 <Bar dataKey="registered" fill="#cbd5e1" radius={[3, 3, 0, 0]} />
                 <Bar dataKey="attended" fill={T.teal} radius={[3, 3, 0, 0]} />
               </BarChart>
-            </ResponsiveContainer>
-          </ChartCard>
-
-          <ChartCard id="radar" visible={isChartVisible("radar")} title="Dept Performance" subtitle="Multi-metric radar comparison" onExpand={setExpanded}>
-            <ResponsiveContainer width="100%" height={260}>
-              <RadarChart data={data.deptRadar}>
-                <PolarGrid stroke="#e2e8f0" />
-                <PolarAngleAxis dataKey="metric" tick={{ fontSize: 10, fill: "#64748b" }} />
-                <Radar name="CSE" dataKey="CSE" stroke={T.accent} fill={T.accent} fillOpacity={0.1} />
-                <Radar name="ECE" dataKey="ECE" stroke={T.teal} fill={T.teal} fillOpacity={0.1} />
-                <Radar name="ME" dataKey="ME" stroke={T.purple} fill={T.purple} fillOpacity={0.1} />
-              </RadarChart>
             </ResponsiveContainer>
           </ChartCard>
 
@@ -570,6 +554,11 @@ export default function AdminAnalyticsSuite() {
               })}
             </div>
           </ChartCard>
+          
+        </div>
+
+        <div style={{ display: "grid", gridTemplateColumns: simpleMode ? "1fr" : "1.2fr 1fr 0.8fr", gap: 16, marginBottom: 12 }}>
+          
         </div>
       </main>
 

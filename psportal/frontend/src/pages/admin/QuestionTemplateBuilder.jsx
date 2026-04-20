@@ -50,8 +50,11 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
   const [templatesLoading, setTemplatesLoading] = useState(false);
   const [templatesError, setTemplatesError] = useState(null);
   const [templateIdInput, setTemplateIdInput] = useState("");
+  const [templatesSearch, setTemplatesSearch] = useState("");
+  const [activeTemplateLoading, setActiveTemplateLoading] = useState(false);
 
   const lastLoadedTemplateIdRef = useRef(null);
+  const lastSavedSignatureRef = useRef("");
 
   const history = useTemplateHistory(layout, 50);
 
@@ -191,6 +194,18 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
     setTemplateDescription(template.description || "");
     setEditingId(template._id);
     setSelectedId(null);
+    setTemplatesError(null);
+    // mark as "clean"
+    try {
+      lastSavedSignatureRef.current = JSON.stringify({
+        id: template._id || null,
+        name: template.name || "",
+        description: template.description || "",
+        layout: layoutToTemplateSchema(layoutData),
+      });
+    } catch {
+      lastSavedSignatureRef.current = "";
+    }
   }, [history.reset]);
 
   useEffect(() => {
@@ -198,10 +213,12 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
     const id = String(initialTemplateId);
     if (lastLoadedTemplateIdRef.current === id) return;
     lastLoadedTemplateIdRef.current = id;
+    setActiveTemplateLoading(true);
     templateApi
       .getById(initialTemplateId)
       .then(loadTemplate)
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setActiveTemplateLoading(false));
   }, [initialTemplateId, loadTemplate]);
 
   useEffect(() => {
@@ -234,30 +251,90 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
         setEditingId(created._id);
         setSaveStatus("saved");
       }
+      try {
+        lastSavedSignatureRef.current = JSON.stringify({
+          id: editingId || null,
+          name,
+          description: payload.description,
+          layout: payload.layout,
+        });
+      } catch {
+        lastSavedSignatureRef.current = "";
+      }
     } catch (e) {
       setSaveStatus("error");
     }
     setTimeout(() => setSaveStatus(null), 2500);
   }, [templateName, templateDescription, layout, editingId]);
 
+  const currentSignature = useMemo(() => {
+    try {
+      return JSON.stringify({
+        id: editingId || null,
+        name: templateName.trim() || "",
+        description: templateDescription.trim() || "",
+        layout: layoutToTemplateSchema(layout),
+      });
+    } catch {
+      return "";
+    }
+  }, [editingId, templateName, templateDescription, layout]);
+
+  const isDirty = useMemo(() => {
+    if (!lastSavedSignatureRef.current) {
+      // new template starts dirty only after user starts editing something meaningful
+      const hasAny = (templateName || "").trim() || (templateDescription || "").trim() || (layout || []).length > 0;
+      return Boolean(hasAny);
+    }
+    return currentSignature !== lastSavedSignatureRef.current;
+  }, [currentSignature, layout, templateName, templateDescription]);
+
+  const confirmDiscardIfDirty = useCallback(async (actionLabel = "continue") => {
+    if (!isDirty) return true;
+    return window.confirm(`You have unsaved changes. Do you want to discard them and ${actionLabel}?`);
+  }, [isDirty]);
+
   const handleNew = useCallback(() => {
-    setLayoutState([]);
-    history.reset([]);
-    setTemplateName("");
-    setTemplateDescription("");
-    setEditingId(null);
-    setSelectedId(null);
-    setTemplateIdInput("");
+    (async () => {
+      const ok = await confirmDiscardIfDirty("start a new template");
+      if (!ok) return;
+      setLayoutState([]);
+      history.reset([]);
+      setTemplateName("");
+      setTemplateDescription("");
+      setEditingId(null);
+      setSelectedId(null);
+      setTemplateIdInput("");
+      setTemplatesSearch("");
+      lastSavedSignatureRef.current = "";
+    })();
   }, [history]);
 
   const handleLoadById = useCallback(() => {
-    const id = (templateIdInput || "").trim();
-    if (!id) return;
-    templateApi
-      .getById(id)
-      .then(loadTemplate)
-      .catch((e) => setTemplatesError(e?.message || "Failed to load template by id"));
-  }, [templateIdInput, loadTemplate]);
+    (async () => {
+      const id = (templateIdInput || "").trim();
+      if (!id) return;
+      const ok = await confirmDiscardIfDirty("load another template");
+      if (!ok) return;
+      setActiveTemplateLoading(true);
+      templateApi
+        .getById(id)
+        .then(loadTemplate)
+        .catch((e) => setTemplatesError(e?.message || "Failed to load template by id"))
+        .finally(() => setActiveTemplateLoading(false));
+    })();
+  }, [templateIdInput, loadTemplate, confirmDiscardIfDirty]);
+
+  const filteredTemplates = useMemo(() => {
+    const q = (templatesSearch || "").trim().toLowerCase();
+    const list = Array.isArray(templatesList) ? templatesList : [];
+    if (!q) return list;
+    return list.filter((t) => {
+      const name = String(t?.name || t?.key || "").toLowerCase();
+      const id = String(t?._id || "").toLowerCase();
+      return name.includes(q) || id.includes(q);
+    });
+  }, [templatesList, templatesSearch]);
 
   const canvasZoomBounds = { min: 0.6, max: 1.8, step: 0.1 };
   const zoomOutCanvas = () =>
@@ -282,7 +359,11 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
           {onClose && (
             <button
               type="button"
-              onClick={onClose}
+              onClick={async () => {
+                const ok = await confirmDiscardIfDirty("exit");
+                if (!ok) return;
+                onClose?.();
+              }}
               className="flex items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium transition-colors"
               style={{ borderColor: "var(--color-pastel-border)", backgroundColor: "var(--color-portal-card)", color: "var(--color-pastel-text)" }}
               title="Exit full screen"
@@ -319,37 +400,56 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
               onChange={(e) => setTemplateDescription(e.target.value)}
             />
             {!initialTemplateId && (
-              <select
-                value={editingId || ""}
-                onChange={(e) => {
-                  const id = e.target.value;
-                  if (!id) {
-                    handleNew();
-                    return;
-                  }
-                  templateApi
-                    .getById(id)
-                    .then(loadTemplate)
-                    .catch(() => {});
-                }}
-                disabled={templatesLoading}
-                className="rounded-lg border px-3 py-1.5 text-sm"
-                style={{
-                  borderColor: "var(--color-pastel-border)",
-                  backgroundColor: "var(--color-portal-card)",
-                  minWidth: 280,
-                }}
-                aria-label="Choose template to edit"
-              >
-                <option value="">
-                  {templatesLoading ? "Loading templates..." : "Choose template to edit"}
-                </option>
-                {(templatesList || []).map((t) => (
-                  <option key={t._id} value={t._id}>
-                    {t.name || t.key || "Untitled"}
+              <>
+                <input
+                  type="text"
+                  value={templatesSearch}
+                  onChange={(e) => setTemplatesSearch(e.target.value)}
+                  placeholder="Search templates..."
+                  className="rounded-lg border px-3 py-1.5 text-sm"
+                  style={{
+                    borderColor: "var(--color-pastel-border)",
+                    backgroundColor: "var(--color-portal-card)",
+                    minWidth: 220,
+                  }}
+                  aria-label="Search templates"
+                />
+                <select
+                  value={editingId || ""}
+                  onChange={async (e) => {
+                    const id = e.target.value;
+                    if (!id) {
+                      handleNew();
+                      return;
+                    }
+                    const ok = await confirmDiscardIfDirty("switch templates");
+                    if (!ok) return;
+                    setActiveTemplateLoading(true);
+                    templateApi
+                      .getById(id)
+                      .then(loadTemplate)
+                      .catch(() => {})
+                      .finally(() => setActiveTemplateLoading(false));
+                  }}
+                  disabled={templatesLoading}
+                  className="rounded-lg border px-3 py-1.5 text-sm"
+                  style={{
+                    borderColor: "var(--color-pastel-border)",
+                    backgroundColor: "var(--color-portal-card)",
+                    minWidth: 280,
+                  }}
+                  aria-label="Choose template to edit"
+                >
+                  <option value="">
+                    {templatesLoading ? "Loading templates..." : `Choose template (${filteredTemplates.length})`}
                   </option>
-                ))}
-              </select>
+                  {(filteredTemplates || []).map((t) => (
+                    <option key={t._id} value={t._id}>
+                      {t.name || t.key || "Untitled"}
+                    </option>
+                  ))}
+                </select>
+              </>
             )}
             {!initialTemplateId && templatesError && (
               <span className="text-xs text-red-500">
@@ -475,6 +575,11 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
             <Save size={16} />
             {saveStatus === "saving" ? "Saving…" : "Save Template"}
           </button>
+          {isDirty && saveStatus !== "saving" && (
+            <span className="text-xs font-semibold" style={{ color: "var(--color-portal-muted)" }}>
+              Unsaved changes
+            </span>
+          )}
           {saveStatus === "saved" && (
             <span className="text-sm" style={{ color: "var(--color-portal-success)" }}>Saved</span>
           )}
@@ -499,16 +604,22 @@ export default function QuestionTemplateBuilder({ initialTemplateId = null, onCl
             style={{ border: "1px solid var(--color-pastel-border)", backgroundColor: "var(--color-portal-card)" }}
           >
             <div className="flex-1 min-h-0 overflow-auto">
-              <div style={{ zoom: canvasZoom }} className="min-w-max">
-                <TemplateCanvas
-                  layout={layout}
-                  canvasSize={canvasSize}
-                  setLayout={setLayout}
-                  selectedId={selectedId}
-                  setSelectedId={setSelectedId}
-                  pushHistory={pushHistory}
-                />
-              </div>
+              {activeTemplateLoading ? (
+                <div className="p-6" style={{ color: "var(--color-portal-muted)" }}>
+                  Loading template…
+                </div>
+              ) : (
+                <div style={{ zoom: canvasZoom }} className="min-w-max">
+                  <TemplateCanvas
+                    layout={layout}
+                    canvasSize={canvasSize}
+                    setLayout={setLayout}
+                    selectedId={selectedId}
+                    setSelectedId={setSelectedId}
+                    pushHistory={pushHistory}
+                  />
+                </div>
+              )}
             </div>
           </div>
 

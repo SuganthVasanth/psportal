@@ -18,6 +18,7 @@ router.put("/users/:id", ctrl.updateUser);
 
 // Admin courses
 router.get("/courses", ctrl.getCourses);
+router.get("/courses/completion-by-level", ctrl.getCourseCompletionByLevel);
 router.post("/courses", ctrl.createCourse);
 router.put("/courses/:id", ctrl.updateCourse);
 

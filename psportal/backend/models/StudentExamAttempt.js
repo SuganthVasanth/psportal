@@ -4,6 +4,8 @@ const studentExamAttemptSchema = new mongoose.Schema(
   {
     register_no: { type: String, required: true },
     course_id: { type: String, required: true },
+    /** Level index within the course (0-based); omit or 0 for legacy rows. */
+    level_index: { type: Number, default: 0 },
     booking_id: { type: String, default: "" },
     score: { type: Number, default: 0 },
     isPassed: { type: Boolean, default: false },

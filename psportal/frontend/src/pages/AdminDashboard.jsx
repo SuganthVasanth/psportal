@@ -49,6 +49,16 @@ import {
   LineElement,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import {
+  ResponsiveContainer,
+  BarChart as RechartsBarChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  Bar as RechartsBar,
+  LabelList,
+} from "recharts";
 import * as XLSX from "xlsx";
 import "./SuperAdminDashboard.css";
 import "../components/SidebarPremium.css";
@@ -82,6 +92,7 @@ const NAV = [
     icon: BookOpen,
     sub: [
       { id: "course-upload", label: "Create", icon: Upload, path: "courses" },
+      { id: "course-completion", label: "Course Completion", icon: BarChart3, path: "course-completion" },
       // { id: "course-points", label: "Details", icon: List, path: "course-details" },
       // { id: "ps-courses", label: "PS Courses", icon: BookMarked, path: "ps-courses" },
       { id: "question-banks", label: "Question banks", icon: ClipboardList, path: "question-banks" },
@@ -124,9 +135,9 @@ const NAV = [
     icon: BarChart3,
     sub: [
       { id: "stats-course", label: "Students applied per course", icon: TrendingUp, path: "reports" },
-      { id: "stats-slot", label: "Slot used most often", icon: PieChart, path: "reports-slots" },
-      { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2, path: "reports-weekly" },
-      { id: "stats-registered", label: "Course registered/attended", icon: CalendarCheck, path: "reports-registered" },
+      // { id: "stats-slot", label: "Slot used most often", icon: PieChart, path: "reports-slots" },
+      // { id: "stats-weekly", label: "Weekly clearing %", icon: BarChart2, path: "reports-weekly" },
+      // { id: "stats-registered", label: "Course registered/attended", icon: CalendarCheck, path: "reports-registered" },
     ],
   },
   {
@@ -329,6 +340,16 @@ export default function AdminDashboard() {
   const [openSlotStartTime, setOpenSlotStartTime] = useState("");
   const [openSlotCapacity, setOpenSlotCapacity] = useState(30);
   const [isOpeningSlots, setIsOpeningSlots] = useState(false);
+  const [assessmentSlotCourseSearch, setAssessmentSlotCourseSearch] = useState("");
+  const [assessmentSlotsTableQuery, setAssessmentSlotsTableQuery] = useState("");
+  const [courseCompletionData, setCourseCompletionData] = useState([]);
+  const [courseCompletionLoading, setCourseCompletionLoading] = useState(false);
+  const [completionSelectedCourseId, setCompletionSelectedCourseId] = useState("");
+  const [completionMinAttempts, setCompletionMinAttempts] = useState("");
+  const [completionMaxAttempts, setCompletionMaxAttempts] = useState("");
+  const [completionFilterDept, setCompletionFilterDept] = useState("");
+  const [completionFilterYear, setCompletionFilterYear] = useState("");
+  const [completionCourseSearchQuery, setCompletionCourseSearchQuery] = useState("");
 
   const exportAssessmentSlots = useCallback(() => {
     const wb = XLSX.utils.book_new();
@@ -507,6 +528,30 @@ export default function AdminDashboard() {
     };
     fetchAll();
   }, []);
+
+  useEffect(() => {
+    if (activeSub !== "course-upload" && activeSub !== "course-completion") return;
+    let cancelled = false;
+
+    const fetchCourseCompletion = async () => {
+      setCourseCompletionLoading(true);
+      try {
+        const res = await fetch(`${API_BASE}/api/superadmin/courses/completion-by-level`);
+        const data = await res.json();
+        if (cancelled) return;
+        setCourseCompletionData(Array.isArray(data) ? data : []);
+      } catch (_) {
+        if (!cancelled) setCourseCompletionData([]);
+      } finally {
+        if (!cancelled) setCourseCompletionLoading(false);
+      }
+    };
+
+    fetchCourseCompletion();
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSub, coursesList]);
 
   useEffect(() => {
     if (activeSub !== "ps-courses") return;
@@ -925,6 +970,176 @@ export default function AdminDashboard() {
     maintainAspectRatio: false,
     plugins: { legend: { position: "top" }, title: { display: !!title, text: title } },
   });
+
+  /** One row per courseId (avoids duplicate labels if the API ever repeats). */
+  const completionCoursesDeduped = useMemo(() => {
+    const list = courseCompletionData || [];
+    const seen = new Map();
+    for (const c of list) {
+      if (!c || c.courseId == null || c.courseId === "") continue;
+      const id = String(c.courseId);
+      if (!seen.has(id)) seen.set(id, c);
+    }
+    return Array.from(seen.values()).sort((a, b) =>
+      String(a.courseName || "").localeCompare(String(b.courseName || ""), undefined, { sensitivity: "base", numeric: true })
+    );
+  }, [courseCompletionData]);
+
+  const completionCoursesFiltered = useMemo(() => {
+    const q = (completionCourseSearchQuery || "").trim().toLowerCase();
+    if (!q) return completionCoursesDeduped;
+    return completionCoursesDeduped.filter((c) => String(c.courseName || "").toLowerCase().includes(q));
+  }, [completionCoursesDeduped, completionCourseSearchQuery]);
+
+  const selectedCourseCompletion = useMemo(
+    () => completionCoursesDeduped.find((c) => c.courseId === completionSelectedCourseId) || null,
+    [completionCoursesDeduped, completionSelectedCourseId]
+  );
+
+  const completionLevelChartData = useMemo(() => {
+    const c = selectedCourseCompletion;
+    if (!c || !Array.isArray(c.levels)) return [];
+    return c.levels.map((lvl) => {
+      const enrolled = Number(lvl.enrolledCount || 0);
+      const completed = Number(lvl.completedCount ?? (lvl.completedStudents || []).length ?? 0);
+      const percentage = enrolled > 0 ? Number(((completed / enrolled) * 100).toFixed(1)) : 0;
+      return {
+        name: lvl.level || `Level ${lvl.levelIndex + 1}`,
+        levelIndex: lvl.levelIndex,
+        enrolled,
+        completed,
+        percentage,
+        completionLabel: `${completed} / ${enrolled} students`,
+      };
+    });
+  }, [selectedCourseCompletion]);
+
+  const completionDeptOptions = useMemo(() => {
+    const set = new Set();
+    (selectedCourseCompletion?.levels || []).forEach((lvl) => {
+      (lvl.completedStudents || []).forEach((s) => {
+        if (s.dept) set.add(s.dept);
+      });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base" }));
+  }, [selectedCourseCompletion]);
+
+  const completionYearOptions = useMemo(() => {
+    const set = new Set();
+    (selectedCourseCompletion?.levels || []).forEach((lvl) => {
+      (lvl.completedStudents || []).forEach((s) => {
+        if (s.year) set.add(String(s.year));
+      });
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: "base", numeric: true }));
+  }, [selectedCourseCompletion]);
+
+  const filterCompletionStudents = useCallback(
+    (list) => {
+      if (!Array.isArray(list)) return [];
+      return list.filter((s) => {
+        const att = Number(s.attempts ?? 0);
+        if (completionMinAttempts !== "" && !Number.isNaN(Number(completionMinAttempts)) && att < Number(completionMinAttempts)) {
+          return false;
+        }
+        if (completionMaxAttempts !== "" && !Number.isNaN(Number(completionMaxAttempts)) && att > Number(completionMaxAttempts)) {
+          return false;
+        }
+        if (completionFilterDept && String(s.dept || "") !== completionFilterDept) return false;
+        if (completionFilterYear && String(s.year || "") !== completionFilterYear) return false;
+        return true;
+      });
+    },
+    [completionMinAttempts, completionMaxAttempts, completionFilterDept, completionFilterYear]
+  );
+
+  useEffect(() => {
+    setCompletionMinAttempts("");
+    setCompletionMaxAttempts("");
+    setCompletionFilterDept("");
+    setCompletionFilterYear("");
+  }, [completionSelectedCourseId]);
+
+  const handleDownloadLevelExcel = useCallback((course, level, studentRows) => {
+    const rows = (studentRows || []).map((student) => ({
+      "Student Name": student.name || "",
+      Regno: student.regno || "",
+      Dept: student.dept || "",
+      Year: student.year || "",
+      Attempts: Number(student.attempts ?? 0),
+    }));
+    const ws = XLSX.utils.json_to_sheet(rows);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Completed");
+
+    const safeCourse = String(course?.courseName || "Course").replace(/[^a-zA-Z0-9]+/g, "_");
+    const safeLevel = String(level?.level || "Level").replace(/[^a-zA-Z0-9]+/g, "");
+    XLSX.writeFile(wb, `${safeCourse}_${safeLevel}_completed.xlsx`);
+  }, []);
+
+  const handleDownloadAllFilteredExcel = useCallback(
+    (course) => {
+      if (!course) return;
+      const rows = [];
+      (course.levels || []).forEach((lvl) => {
+        const filtered = filterCompletionStudents(lvl.completedStudents || []);
+        filtered.forEach((s) => {
+          rows.push({
+            Level: lvl.level || `Level ${(lvl.levelIndex ?? 0) + 1}`,
+            "Student Name": s.name || "",
+            Regno: s.regno || "",
+            Dept: s.dept || "",
+            Year: s.year || "",
+            Attempts: Number(s.attempts ?? 0),
+          });
+        });
+      });
+      if (rows.length === 0) {
+        alert("No rows match the current filters.");
+        return;
+      }
+      const ws = XLSX.utils.json_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Filtered");
+      const safeCourse = String(course.courseName || "Course").replace(/[^a-zA-Z0-9]+/g, "_");
+      const stamp = new Date().toISOString().slice(0, 10);
+      XLSX.writeFile(wb, `${safeCourse}_completion_filtered_${stamp}.xlsx`);
+    },
+    [filterCompletionStudents]
+  );
+
+  const assessmentSlotFilteredCourses = useMemo(() => {
+    const q = (assessmentSlotCourseSearch || "").trim().toLowerCase();
+    const sorted = [...(coursesList || [])].sort((a, b) =>
+      String(a.name || "").localeCompare(String(b.name || ""), undefined, { sensitivity: "base", numeric: true })
+    );
+    if (!q) return sorted;
+    return sorted.filter(
+      (c) =>
+        String(c.name || "").toLowerCase().includes(q) ||
+        String(c.type || "").toLowerCase().includes(q)
+    );
+  }, [coursesList, assessmentSlotCourseSearch]);
+
+  const filteredAssessmentSlotsList = useMemo(() => {
+    const q = (assessmentSlotsTableQuery || "").trim().toLowerCase();
+    if (!q) return assessmentSlots || [];
+    return (assessmentSlots || []).filter((row) => {
+      const courses = (row.allowedCourses || []).map((ac) => ac.courseName || "").join(" ");
+      const d = row.date ? new Date(row.date).toLocaleDateString("en-GB") : "";
+      return (
+        courses.toLowerCase().includes(q) ||
+        String(row.venueLabel || "").toLowerCase().includes(q) ||
+        d.toLowerCase().includes(q) ||
+        String(row.startTime || "").toLowerCase().includes(q)
+      );
+    });
+  }, [assessmentSlots, assessmentSlotsTableQuery]);
+
+  const openSlotStep1Done = Object.keys(openSlotSelectedCourses).length > 0;
+  const openSlotStep2Done =
+    !!openSlotDate && !!openSlotVenueId && !!openSlotStartTime && Number(openSlotCapacity) > 0;
+  const openSlotVenueName = (venuesList || []).find((v) => v.id === openSlotVenueId)?.name || "";
 
   const userInitials = userName.split(' ').map(n => n[0]).join('');
 
@@ -1571,6 +1786,267 @@ export default function AdminDashboard() {
             </div>
           )}
 
+          {activeSub === "course-completion" && (
+            <>
+              <div className="dashboard-card sa-roles-table-card completion-course-page">
+                <div className="sa-roles-table-header">
+                  <div>
+                    <h3 className="card-title">Course completion</h3>
+                    <p className="card-subtitle">Search and select a course to view per-level completion, attempts, and export filtered data.</p>
+                  </div>
+                </div>
+
+                {courseCompletionLoading && <div className="sa-loading">Loading course completion data…</div>}
+
+                {!courseCompletionLoading && completionCoursesDeduped.length > 0 && (
+                  <div className="completion-course-picker">
+                    <div className="completion-course-picker__toolbar">
+                      <label htmlFor="completion-course-search" className="completion-course-picker__label">
+                        Find a course
+                      </label>
+                      <div className="completion-course-picker__search-wrap">
+                        <Search className="completion-course-picker__search-icon" size={18} aria-hidden />
+                        <input
+                          id="completion-course-search"
+                          type="search"
+                          className="completion-course-picker__search-input"
+                          placeholder="Type to filter by course name…"
+                          value={completionCourseSearchQuery}
+                          onChange={(e) => setCompletionCourseSearchQuery(e.target.value)}
+                          autoComplete="off"
+                        />
+                        {completionCourseSearchQuery ? (
+                          <button
+                            type="button"
+                            className="completion-course-picker__search-clear"
+                            onClick={() => setCompletionCourseSearchQuery("")}
+                            aria-label="Clear search"
+                          >
+                            <X size={16} />
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="completion-course-picker__count">
+                        Showing <strong>{completionCoursesFiltered.length}</strong> of <strong>{completionCoursesDeduped.length}</strong> courses
+                        {completionSelectedCourseId && selectedCourseCompletion ? (
+                          <>
+                            {" · "}
+                            <span className="completion-course-picker__selected-pill">
+                              Current: {selectedCourseCompletion.courseName}
+                            </span>
+                            <button
+                              type="button"
+                              className="completion-course-picker__clear-course sa-btn sa-btn-ghost"
+                              onClick={() => {
+                                setCompletionSelectedCourseId("");
+                                setCompletionCourseSearchQuery("");
+                              }}
+                            >
+                              Clear selection
+                            </button>
+                          </>
+                        ) : null}
+                      </p>
+                    </div>
+
+                    <div className="completion-course-picker__list-scroll" role="listbox" aria-label="Courses">
+                      {completionCoursesFiltered.length === 0 ? (
+                        <div className="completion-course-picker__empty">No courses match “{completionCourseSearchQuery}”. Try another search.</div>
+                      ) : (
+                        completionCoursesFiltered.map((c) => {
+                          const isSelected = completionSelectedCourseId === c.courseId;
+                          return (
+                            <button
+                              key={c.courseId}
+                              type="button"
+                              role="option"
+                              aria-selected={isSelected}
+                              className={`completion-course-picker__row ${isSelected ? "is-selected" : ""}`}
+                              onClick={() => {
+                                setCompletionSelectedCourseId(c.courseId);
+                              }}
+                            >
+                              <span className="completion-course-picker__row-name">{c.courseName || "Untitled course"}</span>
+                              <span className="completion-course-picker__row-meta">
+                                {Number(c.completedCount || 0)} / {Number(c.enrolledCount || 0)} completed
+                              </span>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {!courseCompletionLoading && !completionSelectedCourseId && completionCoursesDeduped.length > 0 && (
+                  <p className="completion-course-picker__hint sa-muted">Select a course in the list above to load charts and tables.</p>
+                )}
+
+                {!courseCompletionLoading && completionSelectedCourseId && selectedCourseCompletion && (
+                  <>
+                    <div className="dashboard-card sa-roles-table-card" style={{ marginTop: 0 }}>
+                      <div className="sa-roles-table-header">
+                        <div>
+                          <h3 className="card-title">Completion by level — {selectedCourseCompletion.courseName}</h3>
+                          <p className="card-subtitle">
+                            Overall: {selectedCourseCompletion.completedCount} / {selectedCourseCompletion.enrolledCount} students completed at least one level · Per bar: completed / enrolled at that level
+                          </p>
+                        </div>
+                      </div>
+                      <div style={{ width: "100%", height: 320 }}>
+                        {completionLevelChartData.length === 0 ? (
+                          <p className="sa-muted">No level data for this course.</p>
+                        ) : (
+                          <ResponsiveContainer width="100%" height="100%">
+                            <RechartsBarChart data={completionLevelChartData} margin={{ top: 24, right: 16, left: 8, bottom: 56 }}>
+                              <CartesianGrid strokeDasharray="3 3" />
+                              <XAxis dataKey="name" angle={-20} textAnchor="end" interval={0} height={70} />
+                              <YAxis domain={[0, 100]} tickFormatter={(v) => `${v}%`} />
+                              <RechartsTooltip
+                                formatter={(value, _name, item) => [`${value}%`, `${item?.payload?.completionLabel || ""}`]}
+                                labelFormatter={(label) => `Level: ${label}`}
+                              />
+                              <RechartsBar dataKey="percentage" fill="#2563eb" radius={[6, 6, 0, 0]}>
+                                <LabelList dataKey="completionLabel" position="top" style={{ fontSize: 11, fill: "#334155" }} />
+                              </RechartsBar>
+                            </RechartsBarChart>
+                          </ResponsiveContainer>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="dashboard-card sa-roles-table-card">
+                      <div className="sa-roles-table-header">
+                        <div>
+                          <h3 className="card-title">Table filters</h3>
+                          <p className="card-subtitle">Filters apply to every level table below and to the combined Excel export.</p>
+                        </div>
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-primary"
+                          onClick={() => handleDownloadAllFilteredExcel(selectedCourseCompletion)}
+                        >
+                          Download Excel (filtered)
+                        </button>
+                      </div>
+                      <div style={{ display: "flex", flexWrap: "wrap", gap: 12, alignItems: "flex-end" }}>
+                        <div>
+                          <label className="sa-muted" style={{ display: "block", marginBottom: 6 }}>Min attempts</label>
+                          <input
+                            type="number"
+                            min={0}
+                            className="sa-roles-search-input"
+                            style={{ width: 100 }}
+                            placeholder="Any"
+                            value={completionMinAttempts}
+                            onChange={(e) => setCompletionMinAttempts(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="sa-muted" style={{ display: "block", marginBottom: 6 }}>Max attempts</label>
+                          <input
+                            type="number"
+                            min={0}
+                            className="sa-roles-search-input"
+                            style={{ width: 100 }}
+                            placeholder="Any"
+                            value={completionMaxAttempts}
+                            onChange={(e) => setCompletionMaxAttempts(e.target.value)}
+                          />
+                        </div>
+                        <div>
+                          <label className="sa-muted" style={{ display: "block", marginBottom: 6 }}>Department</label>
+                          <select
+                            className="sa-select"
+                            value={completionFilterDept}
+                            onChange={(e) => setCompletionFilterDept(e.target.value)}
+                          >
+                            <option value="">All departments</option>
+                            {completionDeptOptions.map((d) => (
+                              <option key={d} value={d}>{d}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="sa-muted" style={{ display: "block", marginBottom: 6 }}>Year</label>
+                          <select
+                            className="sa-select"
+                            value={completionFilterYear}
+                            onChange={(e) => setCompletionFilterYear(e.target.value)}
+                          >
+                            <option value="">All years</option>
+                            {completionYearOptions.map((y) => (
+                              <option key={y} value={y}>{y}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                      {(selectedCourseCompletion.levels || []).map((lvl) => {
+                        const allStudents = lvl.completedStudents || [];
+                        const filtered = filterCompletionStudents(allStudents);
+                        return (
+                          <div key={`${selectedCourseCompletion.courseId}-${lvl.levelIndex}`} className="dashboard-card sa-roles-table-card" style={{ margin: 0 }}>
+                            <div className="sa-roles-table-header">
+                              <div>
+                                <h3 className="card-title">{lvl.level || `Level ${(lvl.levelIndex ?? 0) + 1}`}</h3>
+                                <p className="card-subtitle">
+                                  {lvl.completedCount ?? allStudents.length} completed · {lvl.enrolledCount ?? "—"} enrolled at this level
+                                </p>
+                              </div>
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-ghost"
+                                disabled={filtered.length === 0}
+                                onClick={() => handleDownloadLevelExcel(selectedCourseCompletion, lvl, filtered)}
+                              >
+                                Download Excel (this level)
+                              </button>
+                            </div>
+                            {allStudents.length === 0 ? (
+                              <p className="sa-muted">No students have completed this level yet.</p>
+                            ) : filtered.length === 0 ? (
+                              <p className="sa-muted">No rows match the current filters.</p>
+                            ) : (
+                              <table className="sa-table">
+                                <thead>
+                                  <tr>
+                                    <th>Student Name</th>
+                                    <th>Register Number (Regno)</th>
+                                    <th>Attempts</th>
+                                    <th>Department (Dept)</th>
+                                    <th>Year</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {filtered.map((student, idx) => (
+                                    <tr key={`${lvl.levelIndex}-${student.regno || idx}`}>
+                                      <td>{student.name || "—"}</td>
+                                      <td>{student.regno || "—"}</td>
+                                      <td>{Number(student.attempts ?? 0)}</td>
+                                      <td>{student.dept || "—"}</td>
+                                      <td>{student.year || "—"}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+
+                {!courseCompletionLoading && courseCompletionData.length === 0 && (
+                  <p className="sa-muted">No course completion data available.</p>
+                )}
+              </div>
+            </>
+          )}
+
           {activeSub === "ps-courses" && (
             <div className="dashboard-card">
               <h3 className="card-title">PS Courses</h3>
@@ -2034,261 +2510,425 @@ export default function AdminDashboard() {
           )}
 
           {activeSub === "assessment-slots" && (
-            <div className="dashboard-card">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-                <div>
-                  <h3 className="card-title">Assessment Slots</h3>
-                  
-                </div>
-                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <div className="assessment-slots-page">
+              <div className="dashboard-card assessment-slots-hero">
+                <div className="assessment-slots-hero__row">
+                  <div className="assessment-slots-hero__titles">
+                    <h2 className="card-title assessment-slots-hero__title">Assessment slots</h2>
+                    <p className="card-subtitle assessment-slots-hero__sub">
+                      1) Pick courses and levels → 2) Set schedule → 3) Open the slot. Manage existing sessions below.
+                    </p>
+                  </div>
                   <button
                     type="button"
-                    className="sa-btn sa-btn-sm sa-btn-ghost"
-                    style={{ padding: "10px 12px", border: "1px solid #e2e8f0", borderRadius: 10, background: "#fff", color: "#1e293b", fontWeight: 700 }}
+                    className="sa-btn sa-btn-ghost assessment-slots-export-btn"
                     onClick={exportAssessmentSlots}
-                    title="Export assessment slots to Excel"
+                    title="Download all rows as Excel"
                   >
-                    Export
+                    <FileText size={18} />
+                    Export Excel
                   </button>
-                  <CalendarCheck size={32} style={{ color: "#3b82f6", opacity: 0.8 }} />
                 </div>
               </div>
-              
-              <div className="sa-open-slots-form" style={{ backgroundColor: "#f8fafc", padding: "24px", borderRadius: "16px", border: "1px solid #e2e8f0", marginBottom: "32px", boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "20px" }}>
-                  <PlusCircle size={20} style={{ color: "#3b82f6" }} />
-                  <h4 style={{ fontSize: "18px", fontWeight: "600", color: "#1e293b", margin: 0 }}>Open New Assessment Slots</h4>
+
+              <div className="dashboard-card assessment-slots-create">
+                <div className="assessment-slots-create__intro">
+                  <PlusCircle className="assessment-slots-create__intro-icon" size={22} aria-hidden />
+                  <div>
+                    <h3 className="assessment-slots-create__heading">Open a new slot</h3>
+                    <p className="assessment-slots-create__lede">Students book against these course/level combinations for one date, venue, and time window.</p>
+                  </div>
                 </div>
-                
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))", gap: "20px" }}>
-                  <div className="sa-form-group" style={{ gridColumn: "1/-1" }}>
-                    <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Select Courses & Levels</label>
-                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: "16px", maxHeight: "300px", overflowY: "auto", padding: "12px", border: "1px solid #cbd5e1", borderRadius: "12px", backgroundColor: "#fff" }}>
-                      {[...coursesList].sort((a,b) => (a.name || "").localeCompare(b.name || "", undefined, { sensitivity: "base", numeric: true })).map((course) => {
-                        const isSelected = openSlotSelectedCourses[course.id];
-                        const levels = Array.isArray(course.levels) ? course.levels : [];
-                        return (
-                          <div key={course.id} style={{ border: "1px solid #e2e8f0", borderRadius: "10px", padding: "12px", backgroundColor: isSelected ? "#f0f9ff" : "#fff" }}>
-                            <label style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", marginBottom: levels.length > 0 ? "8px" : 0 }}>
-                              <input 
-                                type="checkbox" 
-                                checked={!!isSelected}
-                                onChange={(e) => {
-                                  if (e.target.checked) {
-                                    setOpenSlotSelectedCourses(prev => ({
-                                      ...prev,
-                                      [course.id]: levels.map((_, idx) => idx)
-                                    }));
-                                  } else {
-                                    setOpenSlotSelectedCourses(prev => {
-                                      const next = { ...prev };
-                                      delete next[course.id];
-                                      return next;
-                                    });
-                                  }
-                                }}
-                              />
-                              <span style={{ fontWeight: "600", color: "#1e293b" }}>{course.name}</span>
-                            </label>
-                            {isSelected && levels.length > 0 && (
-                              <div style={{ marginLeft: "24px", display: "flex", flexDirection: "column", gap: "4px" }}>
-                                {levels.map((lvl, idx) => (
-                                  <label key={idx} style={{ display: "flex", alignItems: "center", gap: "8px", fontSize: "13px", color: "#475569", cursor: "pointer" }}>
-                                    <input 
-                                      type="checkbox" 
-                                      checked={isSelected.includes(idx)}
-                                      onChange={(e) => {
-                                        setOpenSlotSelectedCourses(prev => {
-                                          const currentLevels = prev[course.id] || [];
-                                          let nextLevels;
-                                          if (e.target.checked) nextLevels = [...currentLevels, idx];
-                                          else nextLevels = currentLevels.filter(i => i !== idx);
-                                          
-                                          if (nextLevels.length === 0) {
-                                            const next = { ...prev };
-                                            delete next[course.id];
-                                            return next;
-                                          }
-                                          return { ...prev, [course.id]: nextLevels };
-                                        });
-                                      }}
-                                    />
-                                    {lvl.name || `Level ${idx + 1}`}
-                                  </label>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
+
+                <ol className="assessment-slots-flow" aria-label="Steps to open a slot">
+                  <li className={`assessment-slots-flow__step ${openSlotStep1Done ? "is-done" : ""}`}>
+                    <div className="assessment-slots-flow__step-head">
+                      <span className="assessment-slots-flow__badge">1</span>
+                      <div>
+                        <h4 className="assessment-slots-flow__step-title">Courses & levels</h4>
+                        <p className="assessment-slots-flow__step-desc">Select at least one course. Refine which levels are included.</p>
+                      </div>
+                      {openSlotStep1Done ? <CheckCircle className="assessment-slots-flow__check" size={20} aria-hidden /> : null}
                     </div>
+                    <div className="assessment-slots-flow__body">
+                      <div className="assessment-slots-course-search">
+                        <Search size={18} className="assessment-slots-course-search__icon" aria-hidden />
+                        <input
+                          type="search"
+                          className="assessment-slots-course-search__input"
+                          placeholder="Filter courses by name or type…"
+                          value={assessmentSlotCourseSearch}
+                          onChange={(e) => setAssessmentSlotCourseSearch(e.target.value)}
+                          autoComplete="off"
+                        />
+                        {assessmentSlotCourseSearch ? (
+                          <button
+                            type="button"
+                            className="assessment-slots-course-search__clear"
+                            onClick={() => setAssessmentSlotCourseSearch("")}
+                            aria-label="Clear filter"
+                          >
+                            <X size={16} />
+                          </button>
+                        ) : null}
+                      </div>
+                      <p className="assessment-slots-flow__hint">
+                        Showing <strong>{assessmentSlotFilteredCourses.length}</strong> of <strong>{coursesList.length}</strong> courses
+                        {openSlotStep1Done ? (
+                          <span className="assessment-slots-flow__hint-ok"> — {Object.keys(openSlotSelectedCourses).length} course(s) selected</span>
+                        ) : null}
+                      </p>
+                      <div className="assessment-slots-course-grid">
+                        {assessmentSlotFilteredCourses.map((course) => {
+                          const levelSelection = openSlotSelectedCourses[course.id];
+                          const levels = Array.isArray(course.levels) ? course.levels : [];
+                          return (
+                            <div
+                              key={course.id}
+                              className={`assessment-slots-course-card ${levelSelection ? "is-on" : ""}`}
+                            >
+                              <label className="assessment-slots-course-card__top">
+                                <input
+                                  type="checkbox"
+                                  checked={!!levelSelection}
+                                  onChange={(e) => {
+                                    if (e.target.checked) {
+                                      setOpenSlotSelectedCourses((prev) => ({
+                                        ...prev,
+                                        [course.id]: levels.map((_, idx) => idx),
+                                      }));
+                                    } else {
+                                      setOpenSlotSelectedCourses((prev) => {
+                                        const next = { ...prev };
+                                        delete next[course.id];
+                                        return next;
+                                      });
+                                    }
+                                  }}
+                                />
+                                <span className="assessment-slots-course-card__name">{course.name}</span>
+                                {course.type ? <span className="assessment-slots-course-card__type">{course.type}</span> : null}
+                              </label>
+                              {levelSelection && levels.length > 0 ? (
+                                <div className="assessment-slots-course-card__levels">
+                                  {levels.map((lvl, idx) => (
+                                    <label key={idx} className="assessment-slots-course-card__level">
+                                      <input
+                                        type="checkbox"
+                                        checked={levelSelection.includes(idx)}
+                                        onChange={(e) => {
+                                          setOpenSlotSelectedCourses((prev) => {
+                                            const currentLevels = prev[course.id] || [];
+                                            let nextLevels;
+                                            if (e.target.checked) nextLevels = [...currentLevels, idx];
+                                            else nextLevels = currentLevels.filter((i) => i !== idx);
+                                            if (nextLevels.length === 0) {
+                                              const next = { ...prev };
+                                              delete next[course.id];
+                                              return next;
+                                            }
+                                            return { ...prev, [course.id]: nextLevels };
+                                          });
+                                        }}
+                                      />
+                                      {lvl.name || `Level ${idx + 1}`}
+                                    </label>
+                                  ))}
+                                </div>
+                              ) : null}
+                            </div>
+                          );
+                        })}
+                      </div>
+                      {assessmentSlotFilteredCourses.length === 0 ? (
+                        <p className="assessment-slots-flow__empty">No courses match this filter. Clear the search or add courses in Course details.</p>
+                      ) : null}
+                    </div>
+                  </li>
+
+                  <li className={`assessment-slots-flow__step ${openSlotStep2Done ? "is-done" : ""}`}>
+                    <div className="assessment-slots-flow__step-head">
+                      <span className="assessment-slots-flow__badge">2</span>
+                      <div>
+                        <h4 className="assessment-slots-flow__step-title">Schedule & capacity</h4>
+                        <p className="assessment-slots-flow__step-desc">When and where this session runs, and how many seats to offer.</p>
+                      </div>
+                      {openSlotStep2Done ? <CheckCircle className="assessment-slots-flow__check" size={20} aria-hidden /> : null}
+                    </div>
+                    <div className="assessment-slots-flow__body">
+                      <div className="assessment-slots-schedule-grid">
+                        <div className="sa-form-group assessment-slots-field">
+                          <label htmlFor="as-date">Date</label>
+                          <input
+                            id="as-date"
+                            type="date"
+                            className="sa-roles-search-input assessment-slots-field__input"
+                            value={openSlotDate}
+                            onChange={(e) => setOpenSlotDate(e.target.value)}
+                          />
+                        </div>
+                        <div className="sa-form-group assessment-slots-field">
+                          <label htmlFor="as-venue">Venue</label>
+                          <select
+                            id="as-venue"
+                            className="sa-select assessment-slots-field__input"
+                            value={openSlotVenueId}
+                            onChange={(e) => setOpenSlotVenueId(e.target.value)}
+                          >
+                            <option value="">Select venue…</option>
+                            {venuesList.map((v) => (
+                              <option key={v.id} value={v.id}>
+                                {v.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="sa-form-group assessment-slots-field">
+                          <label htmlFor="as-time">Start time</label>
+                          <input
+                            id="as-time"
+                            type="time"
+                            className="sa-roles-search-input assessment-slots-field__input"
+                            value={openSlotStartTime}
+                            onChange={(e) => setOpenSlotStartTime(e.target.value)}
+                          />
+                        </div>
+                        <div className="sa-form-group assessment-slots-field">
+                          <label htmlFor="as-cap">Seat capacity</label>
+                          <input
+                            id="as-cap"
+                            type="number"
+                            min={1}
+                            className="sa-roles-search-input assessment-slots-field__input"
+                            value={openSlotCapacity}
+                            onChange={(e) => setOpenSlotCapacity(Number(e.target.value) || 0)}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
+
+                  <li className="assessment-slots-flow__step assessment-slots-flow__step--review">
+                    <div className="assessment-slots-flow__step-head">
+                      <span className="assessment-slots-flow__badge">3</span>
+                      <div>
+                        <h4 className="assessment-slots-flow__step-title">Review & publish</h4>
+                        <p className="assessment-slots-flow__step-desc">Confirm details, then create the slot for students to book.</p>
+                      </div>
+                    </div>
+                    <div className="assessment-slots-flow__body">
+                      <div className="assessment-slots-summary" role="status">
+                        <div className="assessment-slots-summary__row">
+                          <span className="assessment-slots-summary__label">Courses</span>
+                          <span className="assessment-slots-summary__value">
+                            {openSlotStep1Done ? `${Object.keys(openSlotSelectedCourses).length} selected` : "—"}
+                          </span>
+                        </div>
+                        <div className="assessment-slots-summary__row">
+                          <span className="assessment-slots-summary__label">When</span>
+                          <span className="assessment-slots-summary__value">
+                            {openSlotDate
+                              ? new Date(openSlotDate).toLocaleDateString("en-GB", {
+                                  day: "numeric",
+                                  month: "short",
+                                  year: "numeric",
+                                })
+                              : "—"}
+                            {openSlotStartTime ? ` · ${formatTime(openSlotStartTime)} start` : ""}
+                          </span>
+                        </div>
+                        <div className="assessment-slots-summary__row">
+                          <span className="assessment-slots-summary__label">Where</span>
+                          <span className="assessment-slots-summary__value">{openSlotVenueName || "—"}</span>
+                        </div>
+                        <div className="assessment-slots-summary__row">
+                          <span className="assessment-slots-summary__label">Capacity</span>
+                          <span className="assessment-slots-summary__value">{Number(openSlotCapacity) > 0 ? openSlotCapacity : "—"}</span>
+                        </div>
+                      </div>
+                      {!openSlotStep1Done || !openSlotStep2Done ? (
+                        <p className="assessment-slots-summary__missing">
+                          Complete steps 1–2 to enable <strong>Open slot</strong>.
+                        </p>
+                      ) : null}
+                      <div className="assessment-slots-submit">
+                        <button
+                          type="button"
+                          className="sa-btn sa-btn-primary assessment-slots-submit__btn"
+                          disabled={!openSlotStep1Done || !openSlotStep2Done || isOpeningSlots}
+                          onClick={async () => {
+                            setIsOpeningSlots(true);
+                            try {
+                              const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots`, {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  allowed_courses: Object.entries(openSlotSelectedCourses).map(([id, levels]) => ({
+                                    course_id: id,
+                                    level_indices: levels,
+                                  })),
+                                  date: openSlotDate,
+                                  venue_id: openSlotVenueId,
+                                  startTime: openSlotStartTime,
+                                  capacity: openSlotCapacity,
+                                }),
+                              });
+                              const data = await res.json();
+                              if (!res.ok) throw new Error(data.message || "Failed to open slots");
+                              alert(data.message);
+                              setOpenSlotVenueId("");
+                              setOpenSlotStartTime("");
+                              setOpenSlotDate("");
+                              setOpenSlotSelectedCourses({});
+                              setOpenSlotCapacity(30);
+                              setAssessmentSlotCourseSearch("");
+                              const updatedRes = await fetch(`${API_BASE}/api/superadmin/assessment-slots`);
+                              const updatedData = await updatedRes.json();
+                              setAssessmentSlots(updatedData);
+                            } catch (err) {
+                              alert(err.message);
+                            } finally {
+                              setIsOpeningSlots(false);
+                            }
+                          }}
+                        >
+                          {isOpeningSlots ? "Opening slot…" : "Open slot"}
+                        </button>
+                      </div>
+                    </div>
+                  </li>
+                </ol>
+              </div>
+
+              <div className="dashboard-card assessment-slots-list-card">
+                <div className="assessment-slots-list-head">
+                  <div>
+                    <h3 className="assessment-slots-list-head__title">Scheduled slots</h3>
+                    <p className="assessment-slots-list-head__sub">{assessmentSlots.length} total — search to narrow by course, venue, or date</p>
                   </div>
-                  <div className="sa-form-group">
-                    <label style={{ fontWeight: "600", color: "#475569" }}>Assessment Date</label>
-                    <input type="date" value={openSlotDate} onChange={(e) => setOpenSlotDate(e.target.value)} style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} />
-                  </div>
-                  <div className="sa-form-group">
-                    <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Select Venue</label>
-                    <select 
-                      value={openSlotVenueId} 
-                      onChange={(e) => setOpenSlotVenueId(e.target.value)} 
-                      style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1", backgroundColor: "#fff" }}
-                    >
-                      <option value="">Choose Venue...</option>
-                      {venuesList.map(v => (
-                        <option key={v.id} value={v.id}>{v.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="sa-form-group">
-                    <label style={{ fontWeight: "600", color: "#475569", marginBottom: "8px", display: "block" }}>Start Time</label>
-                    <input 
-                      type="time" 
-                      value={openSlotStartTime} 
-                      onChange={(e) => setOpenSlotStartTime(e.target.value)} 
-                      style={{ width: "100%", padding: "10px", borderRadius: "8px", border: "1px solid #cbd5e1" }} 
+                  <div className="assessment-slots-list-search">
+                    <Search size={18} aria-hidden />
+                    <input
+                      type="search"
+                      placeholder="Filter table…"
+                      value={assessmentSlotsTableQuery}
+                      onChange={(e) => setAssessmentSlotsTableQuery(e.target.value)}
+                      className="assessment-slots-list-search__input"
+                      aria-label="Filter scheduled slots"
                     />
                   </div>
                 </div>
 
-                <div style={{ marginTop: "24px", display: "flex", justifyContent: "flex-end" }}>
-                  <button 
-                    className="sa-btn sa-btn-primary" 
-                    style={{ padding: "12px 32px", fontSize: "15px", borderRadius: "10px" }}
-                    disabled={Object.keys(openSlotSelectedCourses).length === 0 || !openSlotDate || !openSlotVenueId || !openSlotStartTime || isOpeningSlots}
-                    onClick={async () => {
-                      setIsOpeningSlots(true);
-                      try {
-                        const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots`, {
-                          method: "POST",
-                          headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify({
-                            allowed_courses: Object.entries(openSlotSelectedCourses).map(([id, levels]) => ({
-                              course_id: id,
-                              level_indices: levels
-                            })),
-                            date: openSlotDate,
-                            venue_id: openSlotVenueId,
-                            startTime: openSlotStartTime,
-                            capacity: openSlotCapacity
-                          })
-                        });
-                        const data = await res.json();
-                        if (!res.ok) throw new Error(data.message || "Failed to open slots");
-                        alert(data.message);
-                        setOpenSlotVenueId("");
-                        setOpenSlotStartTime("");
-                        setOpenSlotDate("");
-                        setOpenSlotSelectedCourses({});
-                        const updatedRes = await fetch(`${API_BASE}/api/superadmin/assessment-slots`);
-                        const updatedData = await updatedRes.json();
-                        setAssessmentSlots(updatedData);
-                      } catch (err) {
-                        alert(err.message);
-                      } finally {
-                        setIsOpeningSlots(false);
-                      }
-                    }}
-                  >
-                    {isOpeningSlots ? "Opening..." : "Confirm & Open Slots"}
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ display: "flex", alignItems: "center", gap: "10px", marginBottom: "16px" }}>
-                <CalendarDays size={20} style={{ color: "#64748b" }} />
-                <h4 style={{ fontSize: "18px", fontWeight: "600", color: "#1e293b", margin: 0 }}>Existing Assessment Slots</h4>
-              </div>
-
-              <div className="sa-table-wrap" style={{ borderRadius: "12px", border: "1px solid #e2e8f0", overflow: "hidden" }}>
-                <table className="sa-table">
-                  <thead style={{ backgroundColor: "#f8fafc" }}>
-                    <tr>
-                      <th style={{ padding: "16px" }}>Allowed Courses / Levels</th>
-                      <th>Date</th>
-                      <th>Venue</th>
-                      <th>Time</th>
-                      <th>Booked / Capacity</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {assessmentSlots.map((row) => (
-                      <tr key={row.id}>
-                        <td style={{ padding: "16px" }}>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "6px" }}>
-                            {(row.allowedCourses || []).map((ac, idx) => (
-                              <div key={idx} style={{ fontSize: "13px", lineHeight: "1.4" }}>
-                                <div style={{ fontWeight: "600", color: "#1e293b" }}>{ac.courseName}</div>
-                                <div style={{ color: "#64748b", fontSize: "11px" }}>
-                                  Levels: {ac.levelIndices.map(i => i + 1).join(", ")}
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        </td>
-                        <td>{new Date(row.date).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" })}</td>
-                        <td>{row.venueLabel}</td>
-                        <td>{formatTime(row.startTime)} – {calculateSlotEndTime(row.startTime, row.allowedCourses)}</td>
-                        <td>
-                          <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "11px", fontWeight: "600" }}>
-                              <span style={{ color: row.bookedCount >= row.capacity ? "#ef4444" : "#3b82f6" }}>{row.bookedCount} booked</span>
-                              <span style={{ color: "#64748b" }}>{row.capacity} total</span>
-                            </div>
-                            <div style={{ width: "100%", height: "8px", backgroundColor: "#f1f5f9", borderRadius: "4px", overflow: "hidden", border: "1px solid #e2e8f0" }}>
-                              <div style={{ width: `${Math.min(100, (row.bookedCount / row.capacity) * 100)}%`, height: "100%", backgroundColor: row.bookedCount >= row.capacity ? "#ef4444" : "#3b82f6", borderRadius: "4px", transition: "width 0.3s ease" }}></div>
-                            </div>
-                          </div>
-                        </td>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <button 
-                              type="button" 
-                              className="sa-btn sa-btn-sm sa-btn-ghost" 
-                              style={{ color: "#3b82f6", padding: "8px" }}
-                              title="View Report"
-                              onClick={() => navigate(`/admin/assessment-slots/${row.id}/report`)}
-                            >
-                              <BarChart3 size={16} />
-                            </button>
-                            <button 
-                              type="button" 
-                              className="sa-btn sa-btn-sm sa-btn-ghost" 
-                              style={{ color: "#ef4444", padding: "8px" }}
-                              title="Delete Slot"
-                              onClick={async () => {
-                                if (!window.confirm("Are you sure you want to delete this slot?")) return;
-                                try {
-                                  const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${row.id}`, {
-                                    method: "DELETE"
-                                  });
-                                  const data = await res.json();
-                                  if (!res.ok) throw new Error(data.message || "Delete failed");
-                                  setAssessmentSlots(prev => prev.filter(s => s.id !== row.id));
-                                } catch (err) {
-                                  alert(err.message);
-                                }
-                              }}
-                            >
-                              <Trash2 size={16} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                    {assessmentSlots.length === 0 && (
+                <div className="sa-table-wrap assessment-slots-table-wrap">
+                  <table className="sa-table assessment-slots-table">
+                    <thead>
                       <tr>
-                        <td colSpan="6" style={{ textAlign: "center", padding: "60px", color: "#64748b" }}>
-                          <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "12px" }}>
-                            <CalendarCheck size={48} style={{ opacity: 0.2 }} />
-                            <p>No assessment slots opened yet. Use the form above to open slots for students.</p>
-                          </div>
-                        </td>
+                        <th>Courses & levels</th>
+                        <th>Date</th>
+                        <th>Venue</th>
+                        <th>Time window</th>
+                        <th>Booking</th>
+                        <th>Actions</th>
                       </tr>
-                    )}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {filteredAssessmentSlotsList.map((row) => (
+                        <tr key={row.id}>
+                          <td data-label="Courses">
+                            <div className="assessment-slots-table__courses">
+                              {(row.allowedCourses || []).map((ac, idx) => (
+                                <div key={idx} className="assessment-slots-table__course-pill">
+                                  <span className="assessment-slots-table__course-name">{ac.courseName}</span>
+                                  <span className="assessment-slots-table__course-levels">
+                                    Levels {(ac.levelIndices || []).map((i) => i + 1).join(", ")}
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                          <td data-label="Date">
+                            {new Date(row.date).toLocaleDateString("en-GB", {
+                              day: "2-digit",
+                              month: "short",
+                              year: "numeric",
+                            })}
+                          </td>
+                          <td data-label="Venue">{row.venueLabel}</td>
+                          <td data-label="Time">
+                            <span className="assessment-slots-table__time">
+                              {formatTime(row.startTime)} – {calculateSlotEndTime(row.startTime, row.allowedCourses)}
+                            </span>
+                          </td>
+                          <td data-label="Booking">
+                            <div className="assessment-slots-booking">
+                              <div className="assessment-slots-booking__labels">
+                                <span className={row.bookedCount >= row.capacity ? "is-full" : ""}>{row.bookedCount} / {row.capacity}</span>
+                              </div>
+                              <div className="assessment-slots-booking__bar">
+                                <div
+                                  className="assessment-slots-booking__fill"
+                                  style={{
+                                    width: `${Math.min(100, (row.bookedCount / Math.max(1, row.capacity)) * 100)}%`,
+                                    backgroundColor: row.bookedCount >= row.capacity ? "#ef4444" : "#3b82f6",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          </td>
+                          <td data-label="Actions">
+                            <div className="assessment-slots-table__actions">
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-sm sa-btn-ghost"
+                                title="View report"
+                                onClick={() => navigate(`/admin/assessment-slots/${row.id}/report`)}
+                              >
+                                <BarChart3 size={16} />
+                                <span className="assessment-slots-table__btn-label">Report</span>
+                              </button>
+                              <button
+                                type="button"
+                                className="sa-btn sa-btn-sm sa-btn-ghost assessment-slots-table__btn-danger"
+                                title="Delete slot"
+                                onClick={async () => {
+                                  if (!window.confirm("Delete this assessment slot? Students can no longer book it.")) return;
+                                  try {
+                                    const res = await fetch(`${API_BASE}/api/superadmin/assessment-slots/${row.id}`, {
+                                      method: "DELETE",
+                                    });
+                                    const data = await res.json();
+                                    if (!res.ok) throw new Error(data.message || "Delete failed");
+                                    setAssessmentSlots((prev) => prev.filter((s) => s.id !== row.id));
+                                  } catch (err) {
+                                    alert(err.message);
+                                  }
+                                }}
+                              >
+                                <Trash2 size={16} />
+                                <span className="assessment-slots-table__btn-label">Delete</span>
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                      {assessmentSlots.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="assessment-slots-table__empty">
+                            <CalendarCheck size={40} className="assessment-slots-table__empty-icon" aria-hidden />
+                            <p>No slots yet. Use <strong>Open a new slot</strong> above to create one.</p>
+                          </td>
+                        </tr>
+                      ) : null}
+                      {assessmentSlots.length > 0 && filteredAssessmentSlotsList.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="assessment-slots-table__empty">
+                            <p>No slots match “{assessmentSlotsTableQuery}”. Try another search.</p>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
@@ -3866,6 +4506,25 @@ function SlotReportView({ slotId, onBack }) {
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
     s.registerNo.toLowerCase().includes(searchTerm.toLowerCase())
   );
+  const studentsWithAttempts = filteredStudents.filter((s) => s.hasLiveAttempt);
+  const submittedStudents = filteredStudents.filter((s) => s.submissionFinalized);
+  const inProgressStudents = filteredStudents.filter((s) => s.hasLiveAttempt && !s.submissionFinalized);
+  const absentStudents = filteredStudents.filter((s) => !s.hasLiveAttempt);
+  const highRiskStudents = filteredStudents
+    .filter((s) => Number(s.tabSwitches || 0) >= 3)
+    .sort((a, b) => Number(b.tabSwitches || 0) - Number(a.tabSwitches || 0));
+  const avgScore = studentsWithAttempts.length
+    ? (studentsWithAttempts.reduce((sum, s) => sum + Number(s.score || 0), 0) / studentsWithAttempts.length).toFixed(1)
+    : "0.0";
+  const attendanceRate = summary.totalBooked
+    ? ((summary.attended / summary.totalBooked) * 100).toFixed(1)
+    : "0.0";
+  const submissionRate = summary.totalBooked
+    ? ((submittedStudents.length / summary.totalBooked) * 100).toFixed(1)
+    : "0.0";
+  const passRate = submittedStudents.length
+    ? ((summary.passed / submittedStudents.length) * 100).toFixed(1)
+    : "0.0";
 
   const exportSlotReport = () => {
     const safe = (v) => (v === undefined || v === null ? "" : v);
@@ -3892,6 +4551,8 @@ function SlotReportView({ slotId, onBack }) {
       userId: safe(s.userId),
       name: safe(s.name),
       registerNo: safe(s.registerNo),
+      levelAttended: safe(s.levelAttended),
+      attendanceStatus: s.hasLiveAttempt ? "PRESENT" : "ABSENT",
       submissionFinalized: !!s.submissionFinalized,
       hasLiveAttempt: !!s.hasLiveAttempt,
       tabSwitches: Number(s.tabSwitches || 0),
@@ -3900,6 +4561,19 @@ function SlotReportView({ slotId, onBack }) {
       answersCount: Array.isArray(s.answers) ? s.answers.length : 0,
     }));
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(studentRows), "Students");
+    XLSX.utils.book_append_sheet(
+      wb,
+      XLSX.utils.json_to_sheet(
+        highRiskStudents.map((s) => ({
+          name: safe(s.name),
+          registerNo: safe(s.registerNo),
+          tabSwitches: Number(s.tabSwitches || 0),
+          status: s.submissionFinalized ? "Submitted" : s.hasLiveAttempt ? "In Progress" : "Absent",
+          score: s.hasLiveAttempt ? Number(s.score || 0) : "",
+        }))
+      ),
+      "HighRisk",
+    );
 
     const stamp = new Date().toISOString().slice(0, 10);
     XLSX.writeFile(wb, `assessment-slot-report-${safe(summary.date ? new Date(summary.date).toISOString().slice(0, 10) : stamp)}-${String(slotId).slice(0, 6)}.xlsx`);
@@ -3997,6 +4671,8 @@ function SlotReportView({ slotId, onBack }) {
             <thead>
               <tr style={{ backgroundColor: '#f8fafc' }}>
                 <th style={{ padding: "24px", color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Student Information</th>
+                <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Level Attended</th>
+                <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Presence</th>
                 <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Exam Status</th>
                 <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Focus / Switches</th>
                 <th style={{ color: '#64748b', fontSize: '11px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Score Achieved</th>
@@ -4010,6 +4686,20 @@ function SlotReportView({ slotId, onBack }) {
                   <td style={{ padding: "20px 24px" }}>
                     <div style={{ fontWeight: "800", color: "#1e293b", fontSize: '15px' }}>{s.name}</div>
                     <div style={{ fontSize: "12px", color: "#94a3b8", fontWeight: '700', letterSpacing: '0.05em' }}>{s.registerNo}</div>
+                  </td>
+                  <td>
+                    <span style={{ fontSize: "12px", fontWeight: 800, color: "#334155" }}>
+                      {s.levelAttended || "—"}
+                    </span>
+                  </td>
+                  <td>
+                    <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                      s.hasLiveAttempt
+                        ? "bg-emerald-50 text-emerald-700 border-emerald-100"
+                        : "bg-slate-50 text-slate-500 border-slate-100"
+                    }`}>
+                      {s.hasLiveAttempt ? "Present" : "Absent"}
+                    </span>
                   </td>
                   <td>
                     <span className={`px-3 py-1.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
@@ -4074,7 +4764,7 @@ function SlotReportView({ slotId, onBack }) {
               ))}
               {filteredStudents.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: "center", padding: "80px", color: "#94a3b8" }}>
+                  <td colSpan="8" style={{ textAlign: "center", padding: "80px", color: "#94a3b8" }}>
                     <div className="flex flex-col items-center gap-2">
                       <Search size={40} className="opacity-10 mb-2" />
                       <p className="font-bold">No candidates found matching your search</p>

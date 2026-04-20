@@ -252,6 +252,112 @@ exports.updateCourse = async (req, res) => {
   }
 };
 
+exports.getCourseCompletionByLevel = async (_req, res) => {
+  try {
+    const [courses, progressRows, students, examAttempts] = await Promise.all([
+      AdminCourse.find({}, { name: 1, levels: 1 }).lean(),
+      StudentLevelProgress.find({}, { register_no: 1, course_id: 1, level_index: 1, status: 1 }).lean(),
+      Student.find({}, { register_no: 1, name: 1, department: 1, year: 1 }).lean(),
+      StudentExamAttempt.find({}, { register_no: 1, course_id: 1, level_index: 1 }).lean(),
+    ]);
+
+    const studentByRegNo = new Map(
+      (students || []).map((s) => [
+        s.register_no,
+        {
+          name: s.name || "Unknown",
+          regno: s.register_no || "",
+          dept: s.department || "",
+          year: s.year || "",
+        },
+      ])
+    );
+
+    /** Count exam/assessment attempts per student per course per level (level_index may be absent in older docs → 0). */
+    const attemptCountMap = new Map();
+    (examAttempts || []).forEach((a) => {
+      if (!a.register_no) return;
+      const cid = String(a.course_id || "");
+      const lid = a.level_index !== undefined && a.level_index !== null ? Number(a.level_index) : 0;
+      const key = `${a.register_no}::${cid}::${lid}`;
+      attemptCountMap.set(key, (attemptCountMap.get(key) || 0) + 1);
+    });
+
+    const progressByCourse = new Map();
+    (progressRows || []).forEach((row) => {
+      const key = String(row.course_id || "");
+      if (!key) return;
+      if (!progressByCourse.has(key)) progressByCourse.set(key, []);
+      progressByCourse.get(key).push(row);
+    });
+
+    const payload = (courses || []).map((course) => {
+      const courseId = String(course._id);
+      const rows = progressByCourse.get(courseId) || [];
+      const enrolledSet = new Set(rows.map((r) => r.register_no).filter(Boolean));
+      const completedSet = new Set(
+        rows.filter((r) => r.status === "completed").map((r) => r.register_no).filter(Boolean)
+      );
+
+      const levelMeta = new Map();
+      (Array.isArray(course.levels) ? course.levels : []).forEach((lvl, idx) => {
+        levelMeta.set(Number(idx), lvl?.name || `Level ${idx + 1}`);
+      });
+      rows.forEach((r) => {
+        if (r.level_index !== undefined && r.level_index !== null) {
+          const idx = Number(r.level_index);
+          if (!levelMeta.has(idx)) levelMeta.set(idx, `Level ${idx + 1}`);
+        }
+      });
+
+      const levels = Array.from(levelMeta.entries())
+        .sort((a, b) => a[0] - b[0])
+        .map(([levelIndex, levelName]) => {
+          const atLevel = rows.filter((r) => Number(r.level_index || 0) === levelIndex);
+          const enrolledAtLevel = new Set(atLevel.map((r) => r.register_no).filter(Boolean)).size;
+
+          const completedRows = atLevel.filter((r) => r.status === "completed");
+          const uniqueStudents = new Map();
+          completedRows.forEach((r) => {
+            if (!r.register_no || uniqueStudents.has(r.register_no)) return;
+            const base =
+              studentByRegNo.get(r.register_no) || {
+                name: "Unknown",
+                regno: r.register_no,
+                dept: "",
+                year: "",
+              };
+            const attempts = attemptCountMap.get(`${r.register_no}::${courseId}::${levelIndex}`) || 0;
+            uniqueStudents.set(r.register_no, {
+              ...base,
+              attempts,
+            });
+          });
+
+          return {
+            level: levelName,
+            levelIndex,
+            enrolledCount: enrolledAtLevel,
+            completedCount: uniqueStudents.size,
+            completedStudents: Array.from(uniqueStudents.values()),
+          };
+        });
+
+      return {
+        courseId,
+        courseName: course.name || "Course",
+        enrolledCount: enrolledSet.size,
+        completedCount: completedSet.size,
+        levels,
+      };
+    });
+
+    res.json(payload);
+  } catch (err) {
+    res.status(500).json({ message: err.message || "Failed to load course completion data" });
+  }
+};
+
 // ——— Venues ———
 exports.getVenues = async (req, res) => {
   try {
@@ -887,6 +993,25 @@ exports.getSlotReport = async (req, res) => {
     const reportData = Array.from(unifiedRegs.values()).map((reg) => {
       const student = studentsList.find((s) => s.register_no === reg.registerNo) || {};
       const attempt = resolveAttemptForReg(reg);
+      const attemptLevelIndex =
+        attempt && attempt.level_index !== undefined && attempt.level_index !== null
+          ? Number(attempt.level_index)
+          : null;
+      const levelFallback = (() => {
+        const courseId = attempt?.course_id ? String(attempt.course_id) : null;
+        const candidates = (slot.allowed_courses || []).filter((ac) => {
+          if (!courseId || !ac?.course_id) return true;
+          return String(ac.course_id?._id || ac.course_id) === courseId;
+        });
+        const flat = candidates.flatMap((ac) =>
+          Array.isArray(ac.level_indices) ? ac.level_indices : []
+        );
+        const unique = Array.from(new Set(flat.map((x) => Number(x)).filter((x) => !Number.isNaN(x))));
+        if (unique.length === 1) return unique[0];
+        return null;
+      })();
+      const resolvedLevelIndex = attemptLevelIndex ?? levelFallback;
+      const levelLabel = resolvedLevelIndex != null ? `Level ${resolvedLevelIndex + 1}` : "—";
       let enrichedAnswers = [];
       if (attempt && Array.isArray(attempt.questions)) {
         enrichedAnswers = attempt.questions.map(q => {
@@ -927,6 +1052,8 @@ exports.getSlotReport = async (req, res) => {
         tabSwitches: attempt ? attempt.tab_switches : 0,
         isPassed: attemptPassed,
         submittedAt: attempt ? attempt.submitted_at : null,
+        levelIndex: resolvedLevelIndex,
+        levelAttended: levelLabel,
         answers: enrichedAnswers,
       };
     });

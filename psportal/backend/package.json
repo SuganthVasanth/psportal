@@ -11,7 +11,10 @@
     "seed:students": "node scripts/seedFakeStudents.js",
     "import:c1-questions": "node scripts/importC1Questions.js",
     "generate:role-json": "node scripts/generateSuperAdminRoleJson.js",
-    "generate:role-json:file": "node scripts/generateSuperAdminRoleJson.js --file"
+    "generate:role-json:file": "node scripts/generateSuperAdminRoleJson.js --file",
+    "synthetic:import": "node scripts/syntheticDataImport.js",
+    "synthetic:rollback": "node scripts/syntheticDataRollback.js",
+    "db:export-json": "node scripts/exportMongoDbToJson.js"
   },
   "keywords": [],
   "author": "",

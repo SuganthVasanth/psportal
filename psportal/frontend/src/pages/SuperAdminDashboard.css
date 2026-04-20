@@ -103,7 +103,7 @@
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  background-color: #f4f7fe;
+  background-color: var(--ps-bg, #f8fafc);
 }
 
 /* Reuse PS Portal top navbar (same as StudentDashboard) */
@@ -112,7 +112,7 @@
   justify-content: space-between;
   align-items: center;
   height: 60px;
-  background-color: #ffffff;
+  background-color: var(--ps-surface, #ffffff);
   padding: 0 40px 0 20px;
   position: fixed;
   top: 0;
@@ -120,7 +120,7 @@
   width: 100%;
   z-index: 110;
   box-sizing: border-box;
-  border-bottom: 1px solid #edf2f7;
+  border-bottom: 1px solid var(--ps-border, #e2e8f0);
 }
 
 .sa-dashboard-layout .top-nav-brand {
@@ -128,7 +128,7 @@
   align-items: center;
   gap: 12px;
   font-weight: 700;
-  color: #1a202c;
+  color: var(--ps-text, #0f172a);
   font-size: 18px;
 }
 
@@ -136,10 +136,10 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  background-color: #f7fafc;
+  background-color: var(--ps-surface-muted, #f1f5f9);
   padding: 6px 16px 6px 6px;
   border-radius: 50px;
-  border: 1px solid #edf2f7;
+  border: 1px solid var(--ps-border, #e2e8f0);
 }
 
 .sa-dashboard-layout .profile-avatar {
@@ -2213,4 +2213,706 @@
 .tp12-item.tp12-item-selected {
   background: #2563eb;
   color: #fff;
+}
+
+/* —— Admin → Course completion: searchable course list —— */
+.completion-course-page .completion-course-picker {
+  margin-bottom: 8px;
+}
+
+.completion-course-picker__toolbar {
+  margin-bottom: 12px;
+}
+
+.completion-course-picker__label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  margin-bottom: 8px;
+}
+
+.completion-course-picker__search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 520px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.completion-course-picker__search-wrap:focus-within {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+  background: #fff;
+}
+
+.completion-course-picker__search-icon {
+  flex-shrink: 0;
+  margin-left: 12px;
+  color: #94a3b8;
+}
+
+.completion-course-picker__search-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 12px 40px 12px 8px;
+  font-size: 15px;
+  color: #0f172a;
+  outline: none;
+  min-width: 0;
+}
+
+.completion-course-picker__search-input::placeholder {
+  color: #94a3b8;
+}
+
+.completion-course-picker__search-clear {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #64748b;
+  cursor: pointer;
+}
+
+.completion-course-picker__search-clear:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.completion-course-picker__count {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: #64748b;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.completion-course-picker__selected-pill {
+  color: #1d4ed8;
+  font-weight: 600;
+}
+
+.completion-course-picker__clear-course {
+  padding: 4px 10px !important;
+  font-size: 12px !important;
+  min-height: auto !important;
+}
+
+.completion-course-picker__list-scroll {
+  max-height: min(320px, 50vh);
+  overflow: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 6px;
+}
+
+.completion-course-picker__list-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.completion-course-picker__list-scroll::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.completion-course-picker__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  text-align: left;
+  padding: 12px 14px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.12s ease, box-shadow 0.12s ease;
+}
+
+.completion-course-picker__row:hover {
+  background: #f1f5f9;
+}
+
+.completion-course-picker__row.is-selected {
+  background: linear-gradient(90deg, #eff6ff 0%, #f8fafc 100%);
+  box-shadow: inset 3px 0 0 #2563eb;
+}
+
+.completion-course-picker__row-name {
+  font-weight: 600;
+  color: #0f172a;
+  font-size: 14px;
+}
+
+.completion-course-picker__row-meta {
+  flex-shrink: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: #64748b;
+  white-space: nowrap;
+}
+
+.completion-course-picker__empty {
+  padding: 24px 16px;
+  text-align: center;
+  color: #64748b;
+  font-size: 14px;
+}
+
+.completion-course-picker__hint {
+  margin-top: 12px;
+  margin-bottom: 0;
+}
+
+@media (max-width: 640px) {
+  .completion-course-picker__row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* —— Admin → Assessment slots —— */
+.assessment-slots-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.assessment-slots-hero__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.assessment-slots-hero__titles {
+  min-width: 0;
+  flex: 1;
+}
+
+.assessment-slots-hero__title {
+  margin-bottom: 6px;
+}
+
+.assessment-slots-hero__sub {
+  max-width: 52ch;
+  line-height: 1.5;
+}
+
+.assessment-slots-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px;
+  padding: 10px 14px !important;
+}
+
+.assessment-slots-create__intro {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.assessment-slots-create__intro-icon {
+  flex-shrink: 0;
+  color: #2563eb;
+  margin-top: 2px;
+}
+
+.assessment-slots-create__heading {
+  margin: 0 0 6px;
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.assessment-slots-create__lede {
+  margin: 0;
+  font-size: 14px;
+  color: #64748b;
+  line-height: 1.5;
+  max-width: 60ch;
+}
+
+.assessment-slots-flow {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.assessment-slots-flow__step {
+  position: relative;
+  padding: 20px 0 24px 0;
+  border-left: 3px solid #e2e8f0;
+  padding-left: 20px;
+  margin-left: 14px;
+}
+
+.assessment-slots-flow__step:last-child {
+  padding-bottom: 0;
+}
+
+.assessment-slots-flow__step.is-done {
+  border-left-color: #22c55e;
+}
+
+.assessment-slots-flow__step-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.assessment-slots-flow__badge {
+  position: absolute;
+  left: -15px;
+  top: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #f1f5f9;
+  border: 2px solid #e2e8f0;
+  color: #475569;
+  font-size: 13px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assessment-slots-flow__step.is-done .assessment-slots-flow__badge {
+  background: #ecfdf5;
+  border-color: #86efac;
+  color: #15803d;
+}
+
+.assessment-slots-flow__step-title {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.assessment-slots-flow__step-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.assessment-slots-flow__check {
+  flex-shrink: 0;
+  color: #22c55e;
+  margin-left: auto;
+}
+
+.assessment-slots-flow__body {
+  padding-left: 0;
+}
+
+.assessment-slots-flow__hint {
+  font-size: 13px;
+  color: #64748b;
+  margin: 0 0 12px;
+}
+
+.assessment-slots-flow__hint-ok {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.assessment-slots-flow__empty {
+  font-size: 14px;
+  color: #94a3b8;
+  margin: 8px 0 0;
+}
+
+.assessment-slots-course-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  max-width: 420px;
+  margin-bottom: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.assessment-slots-course-search:focus-within {
+  border-color: #93c5fd;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.assessment-slots-course-search__icon {
+  margin-left: 10px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
+
+.assessment-slots-course-search__input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 10px 36px 10px 8px;
+  font-size: 14px;
+  outline: none;
+  min-width: 0;
+}
+
+.assessment-slots-course-search__clear {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: none;
+  background: #f1f5f9;
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.assessment-slots-course-search__clear:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.assessment-slots-course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  max-height: min(340px, 45vh);
+  overflow: auto;
+  padding: 4px;
+  margin: 0 -4px;
+}
+
+.assessment-slots-course-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: #fff;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.assessment-slots-course-card.is-on {
+  border-color: #93c5fd;
+  background: linear-gradient(180deg, #f8fbff 0%, #fff 100%);
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.08);
+}
+
+.assessment-slots-course-card__top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin: 0;
+}
+
+.assessment-slots-course-card__name {
+  font-weight: 700;
+  font-size: 14px;
+  color: #0f172a;
+  flex: 1;
+}
+
+.assessment-slots-course-card__type {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+  background: #f1f5f9;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.assessment-slots-course-card__levels {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed #e2e8f0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.assessment-slots-course-card__level {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #475569;
+  cursor: pointer;
+  margin: 0;
+}
+
+.assessment-slots-schedule-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  max-width: 720px;
+}
+
+.assessment-slots-field label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.assessment-slots-field__input {
+  width: 100%;
+}
+
+.assessment-slots-summary {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 16px 18px;
+  max-width: 480px;
+  margin-bottom: 12px;
+}
+
+.assessment-slots-summary__row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 14px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.assessment-slots-summary__row:last-child {
+  border-bottom: none;
+}
+
+.assessment-slots-summary__label {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.assessment-slots-summary__value {
+  color: #0f172a;
+  font-weight: 600;
+  text-align: right;
+}
+
+.assessment-slots-summary__missing {
+  font-size: 13px;
+  color: #94a3b8;
+  margin: 0 0 12px;
+}
+
+.assessment-slots-submit__btn {
+  padding: 12px 28px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
+  border-radius: 10px !important;
+}
+
+.assessment-slots-list-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.assessment-slots-list-head__title {
+  margin: 0 0 4px;
+  font-size: 1.125rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.assessment-slots-list-head__sub {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.assessment-slots-list-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 8px 12px;
+  background: #fff;
+  min-width: 220px;
+  max-width: 320px;
+  flex: 1;
+}
+
+.assessment-slots-list-search:focus-within {
+  border-color: #93c5fd;
+}
+
+.assessment-slots-list-search__input {
+  flex: 1;
+  border: none;
+  outline: none;
+  font-size: 14px;
+  min-width: 0;
+}
+
+.assessment-slots-table-wrap {
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  overflow: hidden;
+}
+
+.assessment-slots-table thead th {
+  background: #f8fafc;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #64748b;
+  font-weight: 800;
+  padding: 14px 12px !important;
+}
+
+.assessment-slots-table tbody td {
+  vertical-align: middle;
+  padding: 14px 12px !important;
+}
+
+.assessment-slots-table__courses {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.assessment-slots-table__course-pill {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.assessment-slots-table__course-name {
+  font-weight: 700;
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.assessment-slots-table__course-levels {
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.assessment-slots-table__time {
+  font-size: 13px;
+  font-weight: 600;
+  color: #334155;
+  white-space: nowrap;
+}
+
+.assessment-slots-booking__labels {
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.assessment-slots-booking__labels .is-full {
+  color: #dc2626;
+}
+
+.assessment-slots-booking__bar {
+  height: 8px;
+  background: #f1f5f9;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+  max-width: 140px;
+}
+
+.assessment-slots-booking__fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.25s ease;
+}
+
+.assessment-slots-table__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.assessment-slots-table__actions .sa-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.assessment-slots-table__btn-danger {
+  color: #dc2626 !important;
+}
+
+.assessment-slots-table__btn-label {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .assessment-slots-table__btn-label {
+    display: none;
+  }
+}
+
+.assessment-slots-table__empty {
+  text-align: center;
+  padding: 48px 24px !important;
+  color: #64748b;
+}
+
+.assessment-slots-table__empty-icon {
+  opacity: 0.25;
+  margin-bottom: 12px;
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.assessment-slots-table__empty p {
+  margin: 0;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
 }
